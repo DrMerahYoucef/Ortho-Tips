@@ -2,7 +2,7 @@ package com.example.di
 
 import android.content.Context
 import com.example.data.backup.BackupManager
-import com.example.data.importer.JsonDatabaseImporter
+import com.example.data.importer.BoneDatabaseImporter
 import com.example.data.local.OrthoDatabase
 import com.example.data.prefs.SettingsRepository
 import com.example.data.repository.OrthoRepository
@@ -15,7 +15,7 @@ class AppModule(private val context: Context) {
     }
 
     private val importedFiguresDir: File by lazy {
-        File(context.filesDir, JsonDatabaseImporter.IMAGES_DIR_NAME)
+        File(context.filesDir, BoneDatabaseImporter.IMAGES_DIR_NAME)
     }
 
     val orthoRepository: OrthoRepository by lazy {
@@ -30,7 +30,7 @@ class AppModule(private val context: Context) {
         BackupManager(context, database)
     }
 
-    val jsonDatabaseImporter: JsonDatabaseImporter by lazy {
-        JsonDatabaseImporter(context, database)
+    val boneDatabaseImporter: BoneDatabaseImporter by lazy {
+        BoneDatabaseImporter(context, database)
     }
 }
