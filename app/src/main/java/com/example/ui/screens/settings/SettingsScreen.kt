@@ -471,7 +471,7 @@ fun SettingsScreen(
 
                     SettingsActionRow(
                         icon = Icons.Default.Download,
-                        title = "Import Custom Surgical Guidelines (JSON)",
+                        title = "Import Custom Surgical Guidelines (ZIP)",
                         subtitle = "Load new procedures, chapters, and reduction guides into database",
                         onClick = onNavigateToImport
                     )
