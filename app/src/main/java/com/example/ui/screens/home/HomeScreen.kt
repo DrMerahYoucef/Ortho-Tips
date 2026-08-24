@@ -403,7 +403,7 @@ private fun EmptyDatabaseState(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Ortho Tips ships with no built-in content. Import a JSON clinical database to load bones, fracture chapters, and surgical figures.",
+            text = "Ortho Tips ships with no built-in content. Import a ZIP clinical database to load bones, fracture chapters, and surgical figures.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
