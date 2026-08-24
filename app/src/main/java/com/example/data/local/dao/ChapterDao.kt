@@ -20,4 +20,8 @@ interface ChapterDao {
 
     @Query("SELECT COUNT(*) FROM chapters")
     suspend fun getChapterCount(): Int
+
+    // Deletes all chapters; cascades to bones, which cascades to sections/images.
+    @Query("DELETE FROM chapters")
+    suspend fun deleteAllChapters()
 }
