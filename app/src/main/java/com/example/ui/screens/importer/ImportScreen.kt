@@ -113,7 +113,7 @@ fun ImportScreen(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Select a JSON database file from your device to load bones, regions, fracture chapters, page text, and figures into Ortho Tips' offline library.",
+                    text = "Select a .zip database archive from your device to load bones, sections, chapter text, and figures into Ortho Tips' offline library.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -146,7 +146,7 @@ fun ImportScreen(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "A .json file with a top-level \"bones\" array. Each bone has a name, region, notes, and a list of pages containing chapter/section text and base64-encoded figures.",
+                                text = "A .zip archive containing a bones.json file at its root plus one folder per bone (matching the bone's ID) holding that bone's .jpg figures.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -158,13 +158,13 @@ fun ImportScreen(
             // File picker
             item {
                 Button(
-                    onClick = { filePickerLauncher.launch(arrayOf("application/json", "text/*", "*/*")) },
+                    onClick = { filePickerLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "*/*")) },
                     enabled = importState !is ImportState.Loading,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp)
-                        .testTag("select_json_file_button")
+                        .testTag("select_zip_file_button")
                 ) {
                     Icon(
                         imageVector = Icons.Default.UploadFile,
@@ -172,7 +172,7 @@ fun ImportScreen(
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Select JSON Database File", fontWeight = FontWeight.Bold)
+                    Text("Select ZIP Database File", fontWeight = FontWeight.Bold)
                 }
             }
 
