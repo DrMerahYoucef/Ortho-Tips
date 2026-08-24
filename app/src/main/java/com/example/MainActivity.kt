@@ -183,7 +183,7 @@ fun OrthoAppNavHost(appModule: AppModule) {
 
         composable(OrthoDestinations.IMPORT) {
             val importViewModel: ImportViewModel = viewModel(
-                factory = ImportViewModel.provideFactory(appModule.jsonDatabaseImporter)
+                factory = ImportViewModel.provideFactory(appModule.boneDatabaseImporter)
             )
             ImportScreen(
                 viewModel = importViewModel,
