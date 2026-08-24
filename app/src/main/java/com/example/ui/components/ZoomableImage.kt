@@ -1,6 +1,5 @@
 package com.example.ui.components
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -19,11 +18,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import coil.compose.AsyncImage
 
 @Composable
 fun ZoomableImage(
-    drawableResId: Int,
+    model: Any?,
     contentDescription: String?,
     modifier: Modifier = Modifier
 ) {
@@ -63,8 +62,8 @@ fun ZoomableImage(
             },
         contentAlignment = Alignment.Center
     ) {
-        Image(
-            painter = painterResource(id = drawableResId),
+        AsyncImage(
+            model = model,
             contentDescription = contentDescription,
             contentScale = ContentScale.Fit,
             modifier = Modifier
