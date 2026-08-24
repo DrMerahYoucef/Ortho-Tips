@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.data.local.entity.ImageEntity
 
 @Composable
@@ -95,11 +96,15 @@ fun FigureCard(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val resId = context.resources.getIdentifier(
-        image.drawableResName,
-        "drawable",
-        context.packageName
-    )
+    val resId = if (image.imagePath.isNullOrBlank()) {
+        context.resources.getIdentifier(
+            image.drawableResName,
+            "drawable",
+            context.packageName
+        )
+    } else {
+        0
+    }
 
     Card(
         shape = RoundedCornerShape(14.dp),
@@ -120,7 +125,14 @@ fun FigureCard(
                     .height(130.dp)
                     .background(Color(0xFF0F172A))
             ) {
-                if (resId != 0) {
+                if (!image.imagePath.isNullOrBlank()) {
+                    AsyncImage(
+                        model = image.imagePath,
+                        contentDescription = image.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else if (resId != 0) {
                     Image(
                         painter = painterResource(id = resId),
                         contentDescription = image.title,
