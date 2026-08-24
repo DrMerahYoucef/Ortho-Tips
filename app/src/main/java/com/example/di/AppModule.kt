@@ -6,6 +6,7 @@ import com.example.data.importer.JsonDatabaseImporter
 import com.example.data.local.OrthoDatabase
 import com.example.data.prefs.SettingsRepository
 import com.example.data.repository.OrthoRepository
+import java.io.File
 
 class AppModule(private val context: Context) {
 
@@ -13,8 +14,12 @@ class AppModule(private val context: Context) {
         OrthoDatabase.getInstance(context)
     }
 
+    private val importedFiguresDir: File by lazy {
+        File(context.filesDir, JsonDatabaseImporter.IMAGES_DIR_NAME)
+    }
+
     val orthoRepository: OrthoRepository by lazy {
-        OrthoRepository(database)
+        OrthoRepository(database, importedFiguresDir)
     }
 
     val settingsRepository: SettingsRepository by lazy {
@@ -26,6 +31,6 @@ class AppModule(private val context: Context) {
     }
 
     val jsonDatabaseImporter: JsonDatabaseImporter by lazy {
-        JsonDatabaseImporter(database)
+        JsonDatabaseImporter(context, database)
     }
 }
