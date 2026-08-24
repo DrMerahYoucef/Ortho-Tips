@@ -21,7 +21,11 @@ data class HomeUiState(
     val bookmarkedCount: Int = 0,
     val noteCount: Int = 0,
     val isLoading: Boolean = false
-)
+) {
+    // No sample/placeholder data is ever shown: an empty chapter list (once loading has
+    // finished) always means the user has not imported a clinical database yet.
+    val isDatabaseEmpty: Boolean get() = !isLoading && chapters.isEmpty()
+}
 
 class HomeViewModel(
     private val repository: OrthoRepository
