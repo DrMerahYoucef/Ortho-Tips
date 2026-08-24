@@ -52,10 +52,18 @@ data class ImportSummary(
  *       "notes": "",
  *       "pageStart": 253,
  *       "pageEnd": 270,
- *       "body": "full chapter text...",
  *       "figureCount": 19,
  *       "figures": [
  *         { "file": "p255-fig1.jpg", "page": 255, "index": 0, "label": "5-1", "width": 873, "height": 508, "mime": "image/jpeg" }
+ *       ],
+ *       "sections": [
+ *         { "type": "ANATOMY", "heading": "Pathoanatomy", "text": "..." },
+ *         { "type": "APPROACH", "heading": "Surgical Approaches", "text": "..." },
+ *         { "type": "REDUCTION", "heading": "Reduction and Implant Techniques", "text": "..." },
+ *         { "type": "FIXATION", "heading": "Implants", "text": "..." },
+ *         { "type": "PEARLS", "heading": "Tips", "text": "..." },
+ *         { "type": "COMPLICATIONS", "heading": "Complications", "text": "..." },
+ *         { "type": "REHAB", "heading": "Postoperative Care", "text": "..." }
  *       ]
  *     }
  *   }
@@ -63,9 +71,13 @@ data class ImportSummary(
  * ```
  *
  * Chapters (top-level nav groups) are derived from each bone's broad "section" field
- * (e.g. "Shoulder / Arm"). Each bone becomes a single [SectionEntity] holding its full
- * chapter "body" text, and every listed figure is copied out of the archive's matching
- * `<boneId>/` folder into local app storage under [IMAGES_DIR_NAME]/<boneId>/.
+ * (e.g. "Shoulder / Arm"). Each entry of a bone's "sections" array becomes its own
+ * [SectionEntity], with `type` mapped directly to `sectionType` so the app's
+ * Anatomy/Approach/Reduction/Fixation/Pearls/Complications/Rehab filter chips work.
+ * Archives from older exports that still ship a single "body" string per bone (no
+ * "sections" array) are still supported as a fallback. Every listed figure is copied
+ * out of the archive's matching `<boneId>/` folder into local app storage under
+ * [IMAGES_DIR_NAME]/<boneId>/.
  */
 class BoneDatabaseImporter(
     private val context: Context,
@@ -127,9 +139,10 @@ class BoneDatabaseImporter(
                 val region = boneObj.optString("region").ifBlank { "General" }
                 val sectionLabel = boneObj.optString("section").ifBlank { region }
                 val notes = boneObj.optString("notes", "")
-                val body = boneObj.optString("body", "")
                 val pageStart = boneObj.optInt("pageStart", -1)
                 val pageEnd = boneObj.optInt("pageEnd", -1)
+                val sectionsArray = boneObj.optJSONArray("sections")
+                val fallbackBody = boneObj.optString("body", "") // legacy archives without "sections"
 
                 val chapter = chaptersBySection.getOrPut(sectionLabel) {
                     ChapterEntity(
@@ -147,7 +160,7 @@ class BoneDatabaseImporter(
                         id = boneId,
                         chapterId = chapter.id,
                         name = boneName,
-                        subtitle = notes.ifBlank { body.take(140) },
+                        subtitle = notes.ifBlank { fallbackBody.take(140) },
                         region = region,
                         traumaType = "",
                         classificationSummary = notes,
@@ -156,20 +169,47 @@ class BoneDatabaseImporter(
                     )
                 )
 
-                val sectionId = "${boneId}_body"
-                val pageRange = if (pageStart >= 0 && pageEnd >= 0) "Pages $pageStart-$pageEnd" else "Reference"
-                sections.add(
-                    SectionEntity(
-                        id = sectionId,
-                        boneId = boneId,
-                        sectionType = pageRange,
-                        title = boneName,
-                        content = body,
-                        pearls = "",
-                        warnings = "",
-                        orderIndex = 1
+                // Each entry of the "sections" array becomes its own SectionEntity so the
+                // Anatomy/Approach/Reduction/Fixation/Pearls/Complications/Rehab filter chips
+                // in Bone Detail can match sections by sectionType.
+                if (sectionsArray != null && sectionsArray.length() > 0) {
+                    for (s in 0 until sectionsArray.length()) {
+                        val secObj = sectionsArray.optJSONObject(s) ?: continue
+                        val type = secObj.optString("type", "OVERVIEW").ifBlank { "OVERVIEW" }
+                        val heading = secObj.optString("heading", type)
+                        val text = secObj.optString("text", "")
+                        if (text.isBlank()) continue
+
+                        sections.add(
+                            SectionEntity(
+                                id = "${boneId}_sec_$s",
+                                boneId = boneId,
+                                sectionType = type,
+                                title = heading,
+                                content = text,
+                                pearls = "",
+                                warnings = "",
+                                orderIndex = s + 1
+                            )
+                        )
+                    }
+                } else if (fallbackBody.isNotBlank()) {
+                    // Backward compatibility with older archives that still ship a single
+                    // "body" string per bone instead of a pre-split "sections" array.
+                    val pageRange = if (pageStart >= 0 && pageEnd >= 0) "Pages $pageStart-$pageEnd" else "Reference"
+                    sections.add(
+                        SectionEntity(
+                            id = "${boneId}_body",
+                            boneId = boneId,
+                            sectionType = pageRange,
+                            title = boneName,
+                            content = fallbackBody,
+                            pearls = "",
+                            warnings = "",
+                            orderIndex = 1
+                        )
                     )
-                )
+                }
 
                 // The bone's own subfolder in the archive (named after its bones.json key)
                 // holds the jpg figures referenced by "file".
@@ -201,7 +241,7 @@ class BoneDatabaseImporter(
                             ImageEntity(
                                 id = "${boneId}_fig_${slug(fileName)}",
                                 boneId = boneId,
-                                sectionId = sectionId,
+                                sectionId = null,
                                 title = label,
                                 description = "$boneName • Fig $label",
                                 drawableResName = "",
