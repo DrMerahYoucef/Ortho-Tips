@@ -140,15 +140,20 @@ fun ImageViewerScreen(
             if (uiState.isLoading || image == null) {
                 CircularProgressIndicator(color = Color.White)
             } else {
-                val resId = context.resources.getIdentifier(
-                    image.drawableResName,
-                    "drawable",
-                    context.packageName
-                )
+                val model: Any? = if (!image.imagePath.isNullOrBlank()) {
+                    image.imagePath
+                } else {
+                    val resId = context.resources.getIdentifier(
+                        image.drawableResName,
+                        "drawable",
+                        context.packageName
+                    )
+                    if (resId != 0) resId else null
+                }
 
-                if (resId != 0) {
+                if (model != null) {
                     ZoomableImage(
-                        drawableResId = resId,
+                        model = model,
                         contentDescription = image.title
                     )
                 }
