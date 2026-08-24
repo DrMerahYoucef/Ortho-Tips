@@ -1,6 +1,5 @@
 package com.example.data.repository
 
-import com.example.data.local.DefaultOrthoData
 import com.example.data.local.OrthoDatabase
 import com.example.data.local.entity.BookmarkEntity
 import com.example.data.local.entity.BoneEntity
@@ -12,17 +11,24 @@ import com.example.data.local.model.BoneDetail
 import com.example.data.local.model.BoneSummary
 import com.example.data.local.model.ChapterWithCount
 import com.example.data.local.model.SearchResultItem
-import kotlinx.coroutines.CoroutineScope
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class OrthoRepository(private val database: OrthoDatabase) {
+/**
+ * [imagesDir] is where imported figures (decoded from base64) are written to disk.
+ * It is optional so the repository can be unit tested without a real filesystem;
+ * when null, [removeDatabase] and [reinitializeDatabase] simply skip file cleanup.
+ */
+class OrthoRepository(
+    private val database: OrthoDatabase,
+    private val imagesDir: File? = null
+) {
 
     private val chapterDao = database.chapterDao()
     private val boneDao = database.boneDao()
@@ -31,19 +37,36 @@ class OrthoRepository(private val database: OrthoDatabase) {
     private val userDataDao = database.userDataDao()
     private val searchDao = database.searchDao()
 
-    init {
-        CoroutineScope(Dispatchers.IO).launch {
-            ensureDatabaseSeeded()
-        }
+    /**
+     * The app never auto-loads sample/placeholder data. The local database starts
+     * empty and only ever contains what the user has imported via a JSON database file.
+     */
+    fun isDatabaseEmpty(): Flow<Boolean> {
+        return chapterDao.getAllChapters().map { it.isEmpty() }.flowOn(Dispatchers.IO)
     }
 
-    suspend fun ensureDatabaseSeeded() = withContext(Dispatchers.IO) {
-        if (chapterDao.getChapterCount() == 0) {
-            chapterDao.insertChapters(DefaultOrthoData.chapters)
-            boneDao.insertBones(DefaultOrthoData.bones)
-            contentDao.insertSections(DefaultOrthoData.sections)
-            imageDao.insertImages(DefaultOrthoData.images)
-        }
+    suspend fun getChapterCount(): Int = withContext(Dispatchers.IO) {
+        chapterDao.getChapterCount()
+    }
+
+    /**
+     * Removes all imported clinical data (chapters/bones/sections/images) so the app
+     * returns to the empty-database onboarding state. User notes and bookmarks are kept.
+     */
+    suspend fun removeDatabase() = withContext(Dispatchers.IO) {
+        chapterDao.deleteAllChapters() // cascades to bones -> sections/images
+        imagesDir?.let { dir -> if (dir.exists()) dir.deleteRecursively() }
+    }
+
+    /**
+     * Fully resets the local database: clears clinical data like [removeDatabase], and
+     * additionally clears user notes/bookmarks tied to the previously imported bones.
+     */
+    suspend fun reinitializeDatabase() = withContext(Dispatchers.IO) {
+        chapterDao.deleteAllChapters()
+        userDataDao.deleteAllNotes()
+        userDataDao.deleteAllBookmarks()
+        imagesDir?.let { dir -> if (dir.exists()) dir.deleteRecursively() }
     }
 
     fun getAllChaptersWithCounts(): Flow<List<ChapterWithCount>> {
