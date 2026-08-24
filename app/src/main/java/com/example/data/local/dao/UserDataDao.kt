@@ -51,4 +51,10 @@ interface UserDataDao {
 
     @Query("SELECT * FROM notes")
     suspend fun getAllNotesDirect(): List<NoteEntity>
+
+    @Query("DELETE FROM notes")
+    suspend fun deleteAllNotes()
+
+    @Query("DELETE FROM bookmarks")
+    suspend fun deleteAllBookmarks()
 }
