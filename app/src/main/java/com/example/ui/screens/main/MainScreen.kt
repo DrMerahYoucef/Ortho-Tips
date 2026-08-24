@@ -73,7 +73,8 @@ fun MainScreen(
     val settingsViewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModel.provideFactory(
             appModule.settingsRepository,
-            appModule.backupManager
+            appModule.backupManager,
+            appModule.orthoRepository
         )
     )
 
@@ -128,7 +129,8 @@ fun MainScreen(
                     viewModel = homeViewModel,
                     onNavigateToChapter = onNavigateToChapter,
                     onNavigateToBoneDetail = onNavigateToBoneDetail,
-                    onNavigateToSearch = { selectedItem = NavigationItem.SEARCH }
+                    onNavigateToSearch = { selectedItem = NavigationItem.SEARCH },
+                    onNavigateToImport = onNavigateToImport
                 )
                 NavigationItem.SEARCH -> SearchScreen(
                     viewModel = searchViewModel,
