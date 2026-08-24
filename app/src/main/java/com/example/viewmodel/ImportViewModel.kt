@@ -5,15 +5,15 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.data.importer.BoneDatabaseImporter
 import com.example.data.importer.ImportState
-import com.example.data.importer.JsonDatabaseImporter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class ImportViewModel(
-    private val importer: JsonDatabaseImporter
+    private val importer: BoneDatabaseImporter
 ) : ViewModel() {
 
     private val _importState = MutableStateFlow<ImportState>(ImportState.Idle)
@@ -27,31 +27,20 @@ class ImportViewModel(
         _importState.value = ImportState.Idle
 
         viewModelScope.launch {
-            _importState.value = ImportState.Loading("Reading database file...")
-            val jsonString = try {
-                context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
-            } catch (e: Exception) {
-                null
-            }
+            _importState.value = ImportState.Loading("Extracting archive and indexing clinical database...")
 
-            if (jsonString.isNullOrBlank()) {
-                _importState.value = ImportState.Error("Could not read the selected file.")
-                return@launch
-            }
-
-            _importState.value = ImportState.Loading("Parsing and indexing clinical database...")
-            val result = importer.importOrthoJson(jsonString)
+            val result = importer.importZip(uri)
             result.fold(
                 onSuccess = { summary ->
                     _importState.value = ImportState.Success(
                         summary = summary,
-                        details = "Imported ${summary.boneCount} bones across ${summary.chapterCount} regions, " +
-                            "${summary.pageCount} pages, and ${summary.figureCount} figures."
+                        details = "Imported ${summary.boneCount} bones across ${summary.chapterCount} sections " +
+                            "and ${summary.figureCount} figures."
                     )
                 },
                 onFailure = { error ->
                     _importState.value = ImportState.Error(
-                        error.localizedMessage ?: "Invalid or malformed JSON file."
+                        error.localizedMessage ?: "Invalid or malformed database archive."
                     )
                 }
             )
@@ -75,7 +64,7 @@ class ImportViewModel(
     }
 
     companion object {
-        fun provideFactory(importer: JsonDatabaseImporter): ViewModelProvider.Factory =
+        fun provideFactory(importer: BoneDatabaseImporter): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
