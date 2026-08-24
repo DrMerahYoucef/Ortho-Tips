@@ -80,7 +80,8 @@ data class ImageEntity(
     val sectionId: String? = null,
     val title: String,
     val description: String,
-    val drawableResName: String,
+    val drawableResName: String = "",
+    val imagePath: String? = null, // Absolute file path for images imported from a JSON database (base64 figures)
     val figureNumber: String,
     val tags: String = ""
 )
