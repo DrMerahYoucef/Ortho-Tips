@@ -35,6 +35,9 @@ class BoneDetailViewModel(
     private val _selectedFilter = MutableStateFlow(SectionFilter.ALL)
     val selectedFilter = _selectedFilter.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
+
     private val _isNoteDialogOpen = MutableStateFlow(false)
     val isNoteDialogOpen = _isNoteDialogOpen.asStateFlow()
 
@@ -60,6 +63,10 @@ class BoneDetailViewModel(
 
     fun setSectionFilter(filter: SectionFilter) {
         _selectedFilter.value = filter
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 
     fun toggleBookmark() {
