@@ -38,6 +38,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.local.entity.ImageEntity
 import com.example.data.local.entity.SectionEntity
 import com.example.ui.theme.ClinicalAnatomy
 import com.example.ui.theme.ClinicalApproach
@@ -51,7 +52,10 @@ import com.example.utils.MediaActions
 @Composable
 fun PageSectionCard(
     section: SectionEntity,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    images: List<ImageEntity> = emptyList(),
+    searchQuery: String = "",
+    onFigureClick: (ImageEntity) -> Unit = {}
 ) {
     val context = LocalContext.current
 
@@ -170,7 +174,12 @@ fun PageSectionCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Operative Content Body
-            OperativeText(content = section.content)
+            OperativeText(
+                content = section.content,
+                images = images,
+                searchQuery = searchQuery,
+                onFigureClick = onFigureClick
+            )
 
             // Pearls callout if present
             if (section.pearls.isNotBlank()) {
