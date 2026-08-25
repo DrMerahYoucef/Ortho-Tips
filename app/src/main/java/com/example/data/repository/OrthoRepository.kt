@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -224,6 +225,15 @@ class OrthoRepository(
     }
 
     fun getAllImages(): Flow<List<ImageEntity>> = imageDao.getAllImages().flowOn(Dispatchers.IO)
+
+    /**
+     * One-shot snapshot of every figure that belongs to [boneId], ordered the same way
+     * as [getAllImages] for a bone. Used by the full-screen image viewer to build its
+     * swipeable pager starting from whichever figure the user tapped.
+     */
+    suspend fun getImagesForBoneOnce(boneId: String): List<ImageEntity> = withContext(Dispatchers.IO) {
+        imageDao.getImagesForBone(boneId).first()
+    }
 
     suspend fun getImageById(imageId: String): ImageEntity? = withContext(Dispatchers.IO) {
         imageDao.getImageById(imageId)
