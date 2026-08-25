@@ -23,9 +23,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.Card
@@ -38,6 +40,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -74,6 +77,7 @@ fun BoneDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val selectedFilter by viewModel.selectedFilter.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val isNoteDialogOpen by viewModel.isNoteDialogOpen.collectAsStateWithLifecycle()
     val noteToEdit by viewModel.noteToEdit.collectAsStateWithLifecycle()
 
@@ -183,6 +187,15 @@ fun BoneDetailScreen(
                 SectionFilter.REHAB -> detail.sections.filter { it.sectionType.equals("REHAB", true) }
             }
 
+            val searchedSections = if (searchQuery.isBlank()) {
+                filteredSections
+            } else {
+                filteredSections.filter {
+                    it.title.contains(searchQuery, ignoreCase = true) ||
+                        it.content.contains(searchQuery, ignoreCase = true)
+                }
+            }
+
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -271,6 +284,39 @@ fun BoneDetailScreen(
                     }
                 }
 
+                // Search Bar
+                item {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { viewModel.setSearchQuery(it) },
+                        placeholder = { Text("Search this bone's content...") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { viewModel.setSearchQuery("") }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear search",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .testTag("bone_search_field")
+                    )
+                }
+
                 // Figures / Diagrams
                 if (detail.images.isNotEmpty()) {
                     item {
@@ -283,9 +329,23 @@ fun BoneDetailScreen(
                 }
 
                 // Sections List
-                items(filteredSections, key = { it.id }) { section ->
+                if (searchQuery.isNotBlank() && searchedSections.isEmpty()) {
+                    item {
+                        Text(
+                            text = "No matches for \"$searchQuery\" in this filter.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+                        )
+                    }
+                }
+
+                items(searchedSections, key = { it.id }) { section ->
                     PageSectionCard(
                         section = section,
+                        images = detail.images,
+                        searchQuery = searchQuery,
+                        onFigureClick = { onNavigateToImageViewer(it.id) },
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
                 }
