@@ -66,6 +66,7 @@ import com.example.ui.components.RegionBadge
 import com.example.utils.MediaActions
 import com.example.viewmodel.BoneDetailViewModel
 import com.example.viewmodel.SectionFilter
+import com.example.viewmodel.displayLabel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -268,7 +269,7 @@ fun BoneDetailScreen(
                                 onClick = { viewModel.setSectionFilter(filter) },
                                 label = {
                                     Text(
-                                        text = filter.name.replace("_", " "),
+                                        text = filter.displayLabel(),
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = if (selectedFilter == filter) FontWeight.Bold else FontWeight.Medium
                                     )
