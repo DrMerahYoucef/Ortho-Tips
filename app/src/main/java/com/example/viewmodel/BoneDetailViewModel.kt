@@ -19,22 +19,6 @@ enum class SectionFilter {
     ALL, ANATOMY, APPROACH, REDUCTION, FIXATION, PEARLS, COMPLICATIONS, REHAB
 }
 
-/**
- * French label shown on the filter chip. The enum name itself (ALL, ANATOMY, ...) is left
- * untouched and keeps being used to match each [com.example.data.local.entity.SectionEntity]'s
- * sectionType (set in English by the imported bone database) -- only the displayed text changes.
- */
-fun SectionFilter.displayLabel(): String = when (this) {
-    SectionFilter.ALL -> "TOUT"
-    SectionFilter.ANATOMY -> "ANATOMIE"
-    SectionFilter.APPROACH -> "VOIE D'ABORD"
-    SectionFilter.REDUCTION -> "RÉDUCTION"
-    SectionFilter.FIXATION -> "FIXATION"
-    SectionFilter.PEARLS -> "ASTUCES"
-    SectionFilter.COMPLICATIONS -> "COMPLICATIONS"
-    SectionFilter.REHAB -> "RÉÉDUCATION"
-}
-
 data class BoneDetailUiState(
     val detail: BoneDetail? = null,
     val selectedFilter: SectionFilter = SectionFilter.ALL,
