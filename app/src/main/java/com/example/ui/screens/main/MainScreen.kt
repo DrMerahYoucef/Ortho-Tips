@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.PeopleOutline
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
@@ -32,9 +34,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.di.AppModule
 import com.example.ui.screens.favorites.FavoritesScreen
 import com.example.ui.screens.home.HomeScreen
+import com.example.ui.screens.patients.PatientListScreen
 import com.example.ui.screens.search.SearchScreen
 import com.example.ui.screens.settings.SettingsScreen
 import com.example.viewmodel.HomeViewModel
+import com.example.viewmodel.PatientListViewModel
 import com.example.viewmodel.SavedViewModel
 import com.example.viewmodel.SearchViewModel
 import com.example.viewmodel.SettingsViewModel
@@ -46,6 +50,7 @@ enum class NavigationItem(
     val testTag: String
 ) {
     HOME("Home", Icons.Filled.Home, Icons.Outlined.Home, "nav_home"),
+    PATIENTS("Patients", Icons.Filled.People, Icons.Outlined.PeopleOutline, "nav_patients"),
     SEARCH("Search", Icons.Filled.Search, Icons.Outlined.Search, "nav_search"),
     SAVED("Saved", Icons.Filled.Bookmark, Icons.Outlined.BookmarkBorder, "nav_saved"),
     SETTINGS("Settings", Icons.Filled.Settings, Icons.Outlined.Settings, "nav_settings")
@@ -57,6 +62,10 @@ fun MainScreen(
     onNavigateToChapter: (String, String) -> Unit,
     onNavigateToBoneDetail: (String) -> Unit,
     onNavigateToImport: () -> Unit,
+    onNavigateToPatientDetail: (String) -> Unit,
+    onNavigateToAddPatient: () -> Unit,
+    onNavigateToSurgeonProfile: () -> Unit,
+    onNavigateToDataTransfer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedItem by rememberSaveable { mutableStateOf(NavigationItem.HOME) }
@@ -77,6 +86,13 @@ fun MainScreen(
             appModule.orthoRepository
         )
     )
+    val patientListViewModel: PatientListViewModel = viewModel(
+        factory = PatientListViewModel.provideFactory(appModule.patientRepository)
+    )
+    val dataTransferViewModel: com.example.viewmodel.PatientDataTransferViewModel = viewModel(
+        factory = com.example.viewmodel.PatientDataTransferViewModel.provideFactory(appModule.patientRepository)
+    )
+    val mainScreenContext = androidx.compose.ui.platform.LocalContext.current
 
     Scaffold(
         bottomBar = {
@@ -131,6 +147,14 @@ fun MainScreen(
                     onNavigateToBoneDetail = onNavigateToBoneDetail,
                     onNavigateToSearch = { selectedItem = NavigationItem.SEARCH },
                     onNavigateToImport = onNavigateToImport
+                )
+                NavigationItem.PATIENTS -> PatientListScreen(
+                    viewModel = patientListViewModel,
+                    onNavigateToPatientDetail = onNavigateToPatientDetail,
+                    onNavigateToAddPatient = onNavigateToAddPatient,
+                    onNavigateToSurgeonProfile = onNavigateToSurgeonProfile,
+                    onNavigateToDataTransfer = onNavigateToDataTransfer,
+                    onExportSelected = { ids -> dataTransferViewModel.exportPatients(mainScreenContext, ids) }
                 )
                 NavigationItem.SEARCH -> SearchScreen(
                     viewModel = searchViewModel,
