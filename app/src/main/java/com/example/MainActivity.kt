@@ -11,8 +11,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -30,12 +32,32 @@ import com.example.ui.screens.bone.BoneDetailScreen
 import com.example.ui.screens.bone.BoneListScreen
 import com.example.ui.screens.importer.ImportScreen
 import com.example.ui.screens.main.MainScreen
+import com.example.ui.screens.patients.ImageAnnotationScreen
+import com.example.ui.screens.patients.PatientCameraCaptureScreen
+import com.example.ui.screens.patients.PatientDataTransferScreen
+import com.example.ui.screens.patients.PatientDetailScreen
+import com.example.ui.screens.patients.PatientEditScreen
+import com.example.ui.screens.patients.SurgeryEditScreen
+import com.example.ui.screens.patients.SurgeonProfileScreen
+import com.example.ui.screens.patients.TimelineEventEditScreen
 import com.example.ui.screens.splash.SplashScreen
 import com.example.ui.screens.viewer.ImageViewerScreen
 import com.example.ui.theme.OrthoTipsTheme
+import com.example.utils.ProtocolLanguage
+import com.example.utils.rememberDocumentScannerLauncher
+import com.example.data.local.entity.ImageCategory
 import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.BoneDetailViewModel
+import com.example.viewmodel.ImageAnnotationViewModel
 import com.example.viewmodel.ImportViewModel
+import com.example.viewmodel.MediaCaptureViewModel
+import com.example.viewmodel.OperativeProtocolViewModel
+import com.example.viewmodel.PatientDataTransferViewModel
+import com.example.viewmodel.PatientDetailViewModel
+import com.example.viewmodel.PatientEditViewModel
+import com.example.viewmodel.SurgeonProfileViewModel
+import com.example.viewmodel.SurgeryEditViewModel
+import com.example.viewmodel.TimelineEventEditViewModel
 import com.example.viewmodel.ViewerViewModel
 
 class MainActivity : ComponentActivity() {
@@ -113,6 +135,18 @@ fun OrthoAppNavHost(appModule: AppModule) {
                 },
                 onNavigateToImport = {
                     navController.navigate(OrthoDestinations.IMPORT)
+                },
+                onNavigateToPatientDetail = { patientId ->
+                    navController.navigate(OrthoDestinations.patientDetail(patientId))
+                },
+                onNavigateToAddPatient = {
+                    navController.navigate(OrthoDestinations.patientEdit())
+                },
+                onNavigateToSurgeonProfile = {
+                    navController.navigate(OrthoDestinations.SURGEON_PROFILE)
+                },
+                onNavigateToDataTransfer = {
+                    navController.navigate(OrthoDestinations.PATIENT_DATA_IMPORT_EXPORT)
                 }
             )
         }
@@ -187,6 +221,191 @@ fun OrthoAppNavHost(appModule: AppModule) {
             )
             ImportScreen(
                 viewModel = importViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = OrthoDestinations.PATIENT_DETAIL,
+            arguments = listOf(navArgument("patientId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val patientId = backStackEntry.arguments?.getString("patientId")?.let { Uri.decode(it) } ?: ""
+            val detailViewModel: PatientDetailViewModel = viewModel(
+                key = "patient_detail_$patientId",
+                factory = PatientDetailViewModel.provideFactory(appModule.patientRepository, patientId)
+            )
+            val protocolContext = LocalContext.current
+            val protocolViewModel: OperativeProtocolViewModel = viewModel(
+                factory = OperativeProtocolViewModel.provideFactory(appModule.patientRepository, appModule.surgeonProfileRepository)
+            )
+            PatientDetailScreen(
+                viewModel = detailViewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToEdit = { navController.navigate(OrthoDestinations.patientEdit(patientId)) },
+                onNavigateToAddTimelineEvent = { navController.navigate(OrthoDestinations.timelineEventEdit(patientId)) },
+                onNavigateToEditTimelineEvent = { eventId ->
+                    navController.navigate(OrthoDestinations.timelineEventEdit(patientId, eventId))
+                },
+                onNavigateToAddSurgery = { navController.navigate(OrthoDestinations.surgeryEdit(patientId)) },
+                onNavigateToEditSurgery = { surgeryId ->
+                    navController.navigate(OrthoDestinations.surgeryEdit(patientId, surgeryId))
+                },
+                onNavigateToCapture = { navController.navigate(OrthoDestinations.mediaCapture(patientId)) },
+                onNavigateToAnnotate = { imageId -> navController.navigate(OrthoDestinations.imageAnnotate(imageId)) },
+                onGenerateProtocol = { surgeryId, language, anonymize ->
+                    protocolViewModel.generateAndShare(protocolContext, patientId, surgeryId, language, anonymize)
+                },
+                onGenerateChartPdf = { anonymize ->
+                    protocolViewModel.generatePatientChart(protocolContext, patientId, anonymize)
+                }
+            )
+        }
+
+        composable(
+            route = OrthoDestinations.PATIENT_EDIT,
+            arguments = listOf(
+                navArgument("patientId") { type = NavType.StringType; nullable = true; defaultValue = null }
+            )
+        ) { backStackEntry ->
+            val patientId = backStackEntry.arguments?.getString("patientId")?.let { Uri.decode(it) }
+            val editViewModel: PatientEditViewModel = viewModel(
+                key = "patient_edit_${patientId ?: "new"}",
+                factory = PatientEditViewModel.provideFactory(appModule.patientRepository, patientId)
+            )
+            PatientEditScreen(
+                viewModel = editViewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onSaved = { savedId ->
+                    navController.popBackStack()
+                    if (patientId == null) {
+                        // created from the list FAB: land straight on the new profile
+                        navController.navigate(OrthoDestinations.patientDetail(savedId))
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = OrthoDestinations.TIMELINE_EVENT_EDIT,
+            arguments = listOf(
+                navArgument("patientId") { type = NavType.StringType },
+                navArgument("eventId") { type = NavType.StringType; nullable = true; defaultValue = null }
+            )
+        ) { backStackEntry ->
+            val patientId = backStackEntry.arguments?.getString("patientId")?.let { Uri.decode(it) } ?: ""
+            val eventId = backStackEntry.arguments?.getString("eventId")?.let { Uri.decode(it) }
+
+            val existingEventState = androidx.compose.runtime.produceState<com.example.data.local.entity.TimelineEventEntity?>(
+                initialValue = null,
+                key1 = eventId
+            ) {
+                value = eventId?.let { appModule.patientRepository.getTimelineEvent(it) }
+            }
+            // Wait for the (possibly null) lookup so an edit doesn't briefly render as "new".
+            if (eventId != null && existingEventState.value == null) return@composable
+
+            val editViewModel: TimelineEventEditViewModel = viewModel(
+                key = "timeline_edit_${eventId ?: "new"}_$patientId",
+                factory = TimelineEventEditViewModel.provideFactory(appModule.patientRepository, patientId, existingEventState.value)
+            )
+            TimelineEventEditScreen(
+                viewModel = editViewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onSaved = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = OrthoDestinations.SURGERY_EDIT,
+            arguments = listOf(
+                navArgument("patientId") { type = NavType.StringType },
+                navArgument("surgeryId") { type = NavType.StringType; nullable = true; defaultValue = null }
+            )
+        ) { backStackEntry ->
+            val patientId = backStackEntry.arguments?.getString("patientId")?.let { Uri.decode(it) } ?: ""
+            val surgeryId = backStackEntry.arguments?.getString("surgeryId")?.let { Uri.decode(it) }
+
+            val existingSurgeryState = androidx.compose.runtime.produceState<com.example.data.local.entity.SurgeryEntity?>(
+                initialValue = null,
+                key1 = surgeryId
+            ) {
+                value = surgeryId?.let { appModule.patientRepository.getSurgery(it) }
+            }
+            if (surgeryId != null && existingSurgeryState.value == null) return@composable
+
+            val editViewModel: SurgeryEditViewModel = viewModel(
+                key = "surgery_edit_${surgeryId ?: "new"}_$patientId",
+                factory = SurgeryEditViewModel.provideFactory(appModule.patientRepository, patientId, existingSurgeryState.value)
+            )
+            SurgeryEditScreen(
+                viewModel = editViewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onSaved = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = OrthoDestinations.MEDIA_CAPTURE,
+            arguments = listOf(navArgument("patientId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val patientId = backStackEntry.arguments?.getString("patientId")?.let { Uri.decode(it) } ?: ""
+            val context = LocalContext.current
+            val captureViewModel: MediaCaptureViewModel = viewModel(
+                key = "media_capture_$patientId",
+                factory = MediaCaptureViewModel.provideFactory(appModule.patientRepository, patientId)
+            )
+            val captureState by captureViewModel.uiState.collectAsStateWithLifecycle()
+
+            val launchScanner = rememberDocumentScannerLauncher { scannedUris ->
+                captureViewModel.saveCapturedImages(context, scannedUris, ImageCategory.DOCUMENT_SCAN)
+            }
+
+            LaunchedEffect(captureState.isSaving, captureState.savedCount, captureState.totalToSave) {
+                if (!captureState.isSaving && captureState.totalToSave > 0 && captureState.savedCount == captureState.totalToSave) {
+                    navController.popBackStack()
+                }
+            }
+
+            PatientCameraCaptureScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onPhotoCaptured = { uri, category ->
+                    captureViewModel.saveCapturedImages(context, listOf(uri), category)
+                },
+                onOpenScanner = launchScanner
+            )
+        }
+
+        composable(
+            route = OrthoDestinations.IMAGE_ANNOTATE,
+            arguments = listOf(navArgument("imageId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val imageId = backStackEntry.arguments?.getString("imageId")?.let { Uri.decode(it) } ?: ""
+            val annotationViewModel: ImageAnnotationViewModel = viewModel(
+                key = "annotate_$imageId",
+                factory = ImageAnnotationViewModel.provideFactory(appModule.patientRepository, imageId)
+            )
+            ImageAnnotationScreen(
+                viewModel = annotationViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(OrthoDestinations.SURGEON_PROFILE) {
+            val profileViewModel: SurgeonProfileViewModel = viewModel(
+                factory = SurgeonProfileViewModel.provideFactory(appModule.surgeonProfileRepository)
+            )
+            SurgeonProfileScreen(
+                viewModel = profileViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(OrthoDestinations.PATIENT_DATA_IMPORT_EXPORT) {
+            val transferViewModel: PatientDataTransferViewModel = viewModel(
+                factory = PatientDataTransferViewModel.provideFactory(appModule.patientRepository)
+            )
+            PatientDataTransferScreen(
+                viewModel = transferViewModel,
                 onNavigateBack = { navController.popBackStack() }
             )
         }
