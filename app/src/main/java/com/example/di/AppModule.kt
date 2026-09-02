@@ -5,7 +5,10 @@ import com.example.data.backup.BackupManager
 import com.example.data.importer.BoneDatabaseImporter
 import com.example.data.local.OrthoDatabase
 import com.example.data.prefs.SettingsRepository
+import com.example.data.prefs.SurgeonProfileRepository
 import com.example.data.repository.OrthoRepository
+import com.example.data.repository.PatientRepository
+import com.example.utils.PatientMediaStorage
 import java.io.File
 
 class AppModule(private val context: Context) {
@@ -32,5 +35,18 @@ class AppModule(private val context: Context) {
 
     val boneDatabaseImporter: BoneDatabaseImporter by lazy {
         BoneDatabaseImporter(context, database)
+    }
+
+    // Patient management module
+    private val patientMediaRootDir: File by lazy {
+        PatientMediaStorage.rootDir(context)
+    }
+
+    val patientRepository: PatientRepository by lazy {
+        PatientRepository(database, patientMediaRootDir)
+    }
+
+    val surgeonProfileRepository: SurgeonProfileRepository by lazy {
+        SurgeonProfileRepository(context)
     }
 }
