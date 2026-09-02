@@ -486,7 +486,7 @@ private fun MediaTab(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(detail.images, key = { it.id }) { image ->
+                androidx.compose.foundation.lazy.grid.items(detail.images, key = { it.id }) { image ->
                     coil.compose.AsyncImage(
                         model = "file://${image.thumbnailPath ?: image.filePath}",
                         contentDescription = image.category,
