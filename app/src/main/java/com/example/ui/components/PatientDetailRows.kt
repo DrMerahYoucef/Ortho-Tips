@@ -18,7 +18,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,22 +29,7 @@ import com.example.data.local.entity.SurgeryEntity
 import com.example.data.local.entity.TimelineEventEntity
 import com.example.utils.DateFormat
 
-/** Small pill used for body region / side (e.g. "Tibia", "LEFT"). */
-@Composable
-fun RegionBadge(region: String, modifier: Modifier = Modifier) {
-    Surface(
-        shape = RoundedCornerShape(6.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
-        modifier = modifier
-    ) {
-        Text(
-            text = region.lowercase().replaceFirstChar { it.uppercase() },
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-        )
-    }
-}
+/** RegionBadge is already defined in Common.kt (same package) and reused as-is here. */
 
 @Composable
 fun TimelineEventRow(
