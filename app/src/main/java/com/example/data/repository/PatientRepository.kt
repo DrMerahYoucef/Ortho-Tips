@@ -1,0 +1,280 @@
+package com.example.data.repository
+
+import com.example.data.local.OrthoDatabase
+import com.example.data.local.entity.PatientDocumentEntity
+import com.example.data.local.entity.PatientEntity
+import com.example.data.local.entity.PatientImageEntity
+import com.example.data.local.entity.SurgeryEntity
+import com.example.data.local.entity.TimelineEventEntity
+import com.example.data.local.model.PatientDetail
+import com.example.data.local.model.PatientSearchMatchType
+import com.example.data.local.model.PatientSearchResult
+import com.example.data.local.model.PatientSummary
+import com.example.data.local.model.PatientTimeline
+import com.example.data.local.model.calculateAge
+import com.example.data.local.model.toSummary
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+
+/**
+ * [patientMediaDir] is the app-private root where captured/imported patient images and
+ * documents are written (see [com.example.utils.PatientMediaStorage]). Optional so the
+ * repository stays unit-testable without a real filesystem.
+ */
+class PatientRepository(
+    private val database: OrthoDatabase,
+    private val patientMediaDir: File? = null
+) {
+
+    private val patientDao = database.patientDao()
+    private val timelineDao = database.timelineEventDao()
+    private val surgeryDao = database.surgeryDao()
+    private val imageDao = database.patientImageDao()
+    private val documentDao = database.patientDocumentDao()
+
+    // ---- Patients ----------------------------------------------------------------
+
+    fun getActivePatientSummaries(): Flow<List<PatientSummary>> =
+        patientDao.getActivePatients().map { list -> list.map { it.toSummary() } }.flowOn(Dispatchers.IO)
+
+    fun getArchivedPatientSummaries(): Flow<List<PatientSummary>> =
+        patientDao.getArchivedPatients().map { list -> list.map { it.toSummary() } }.flowOn(Dispatchers.IO)
+
+    fun searchPatientSummaries(query: String): Flow<List<PatientSummary>> =
+        patientDao.searchPatients(query.trim()).map { list -> list.map { it.toSummary() } }.flowOn(Dispatchers.IO)
+
+    suspend fun getPatient(id: String): PatientEntity? = withContext(Dispatchers.IO) {
+        patientDao.getPatientDirect(id)
+    }
+
+    /**
+     * Full profile screen data: patient fields, bucketed timeline, surgeries and all
+     * attached media, combined into one stream so the UI recomposes as any part changes.
+     */
+    fun getPatientDetail(patientId: String): Flow<PatientDetail?> {
+        return combine(
+            patientDao.getPatientById(patientId),
+            timelineDao.getEventsForPatient(patientId),
+            surgeryDao.getSurgeriesForPatient(patientId),
+            imageDao.getImagesForPatient(patientId),
+            documentDao.getDocumentsForPatient(patientId)
+        ) { patient, events, surgeries, images, documents ->
+            if (patient == null) null
+            else PatientDetail(
+                patient = patient,
+                age = calculateAge(patient.dateOfBirth),
+                timeline = PatientTimeline.bucket(events),
+                surgeries = surgeries,
+                images = images,
+                documents = documents
+            )
+        }.flowOn(Dispatchers.IO)
+    }
+
+    /** Validates the human-readable patient ID is unique before create/update. */
+    suspend fun isPatientCodeAvailable(patientCode: String, excludePatientId: String = ""): Boolean =
+        withContext(Dispatchers.IO) {
+            !patientDao.isPatientCodeTaken(patientCode.trim(), excludePatientId)
+        }
+
+    suspend fun savePatient(patient: PatientEntity) = withContext(Dispatchers.IO) {
+        patientDao.insertPatient(patient.copy(updatedAt = System.currentTimeMillis()))
+    }
+
+    suspend fun setArchived(patientId: String, archived: Boolean) = withContext(Dispatchers.IO) {
+        patientDao.setArchived(patientId, archived)
+    }
+
+    /** Deletes the patient row (cascades to timeline/surgeries/images/documents) and their files on disk. */
+    suspend fun deletePatient(patientId: String) = withContext(Dispatchers.IO) {
+        val images = imageDao.getImagesForPatientDirect(patientId)
+        val documents = documentDao.getDocumentsForPatientDirect(patientId)
+        patientDao.deletePatient(patientId)
+        deleteMediaFiles(images, documents)
+    }
+
+    suspend fun deletePatients(patientIds: List<String>) = withContext(Dispatchers.IO) {
+        patientIds.forEach { id ->
+            val images = imageDao.getImagesForPatientDirect(id)
+            val documents = documentDao.getDocumentsForPatientDirect(id)
+            deleteMediaFiles(images, documents)
+        }
+        patientDao.deletePatients(patientIds)
+    }
+
+    private fun deleteMediaFiles(images: List<PatientImageEntity>, documents: List<PatientDocumentEntity>) {
+        images.forEach { img ->
+            File(img.filePath).delete()
+            img.thumbnailPath?.let { File(it).delete() }
+        }
+        documents.forEach { doc -> File(doc.filePath).delete() }
+    }
+
+    // ---- Timeline ------------------------------------------------------------------
+
+    fun getTimelineForPatient(patientId: String): Flow<PatientTimeline> =
+        timelineDao.getEventsForPatient(patientId).map { PatientTimeline.bucket(it) }.flowOn(Dispatchers.IO)
+
+    suspend fun getTimelineEvent(eventId: String): TimelineEventEntity? = withContext(Dispatchers.IO) {
+        timelineDao.getEventDirect(eventId)
+    }
+
+    suspend fun saveTimelineEvent(event: TimelineEventEntity) = withContext(Dispatchers.IO) {
+        timelineDao.insertEvent(event.copy(updatedAt = System.currentTimeMillis()))
+    }
+
+    suspend fun deleteTimelineEvent(eventId: String) = withContext(Dispatchers.IO) {
+        timelineDao.deleteEvent(eventId)
+    }
+
+    // ---- Surgeries -------------------------------------------------------------------
+
+    fun getSurgeriesForPatient(patientId: String): Flow<List<SurgeryEntity>> =
+        surgeryDao.getSurgeriesForPatient(patientId).flowOn(Dispatchers.IO)
+
+    suspend fun getSurgery(surgeryId: String): SurgeryEntity? = withContext(Dispatchers.IO) {
+        surgeryDao.getSurgeryDirect(surgeryId)
+    }
+
+    suspend fun saveSurgery(surgery: SurgeryEntity) = withContext(Dispatchers.IO) {
+        surgeryDao.insertSurgery(surgery.copy(updatedAt = System.currentTimeMillis()))
+    }
+
+    suspend fun deleteSurgery(surgeryId: String) = withContext(Dispatchers.IO) {
+        surgeryDao.deleteSurgery(surgeryId)
+    }
+
+    // ---- Images & documents ----------------------------------------------------------
+
+    fun getImagesForPatient(patientId: String): Flow<List<PatientImageEntity>> =
+        imageDao.getImagesForPatient(patientId).flowOn(Dispatchers.IO)
+
+    suspend fun getImageOrNull(imageId: String): PatientImageEntity? = withContext(Dispatchers.IO) {
+        imageDao.getImageDirect(imageId)
+    }
+
+    fun getImagesForEvent(eventId: String): Flow<List<PatientImageEntity>> =
+        imageDao.getImagesForEvent(eventId).flowOn(Dispatchers.IO)
+
+    fun getImagesForSurgery(surgeryId: String): Flow<List<PatientImageEntity>> =
+        imageDao.getImagesForSurgery(surgeryId).flowOn(Dispatchers.IO)
+
+    suspend fun saveImage(image: PatientImageEntity) = withContext(Dispatchers.IO) {
+        imageDao.insertImage(image)
+    }
+
+    suspend fun deleteImage(imageId: String) = withContext(Dispatchers.IO) {
+        val image = imageDao.getImageDirect(imageId)
+        imageDao.deleteImage(imageId)
+        image?.let {
+            File(it.filePath).delete()
+            it.thumbnailPath?.let { path -> File(path).delete() }
+        }
+    }
+
+    fun getDocumentsForPatient(patientId: String): Flow<List<PatientDocumentEntity>> =
+        documentDao.getDocumentsForPatient(patientId).flowOn(Dispatchers.IO)
+
+    suspend fun saveDocument(document: PatientDocumentEntity) = withContext(Dispatchers.IO) {
+        documentDao.insertDocument(document)
+    }
+
+    suspend fun deleteDocument(documentId: String) = withContext(Dispatchers.IO) {
+        val document = documentDao.getDocumentDirect(documentId)
+        documentDao.deleteDocument(documentId)
+        document?.let { File(it.filePath).delete() }
+    }
+
+    // ---- Unified search ----------------------------------------------------------------
+
+    /**
+     * Searches patient name/ID/diagnosis/fracture type, surgery procedure/diagnosis, and
+     * OCR'd text from images/documents, and merges the hits into one ranked-by-relevance list.
+     */
+    fun searchEverything(rawQuery: String): Flow<List<PatientSearchResult>> {
+        val query = rawQuery.trim()
+        if (query.isEmpty()) return flowOf(emptyList())
+
+        return combine(
+            patientDao.searchPatients(query),
+            surgeryDao.searchSurgeries(query),
+            imageDao.searchByOcrText(query),
+            documentDao.searchByOcrText(query),
+            patientDao.getAllPatients()
+        ) { patientMatches, surgeryMatches, imageMatches, documentMatches, allPatients ->
+            val patientMap = allPatients.associateBy { it.id }
+            val results = mutableListOf<PatientSearchResult>()
+
+            patientMatches.forEach { p ->
+                val matchType = when {
+                    p.fullName.contains(query, ignoreCase = true) -> PatientSearchMatchType.NAME
+                    p.patientCode.contains(query, ignoreCase = true) -> PatientSearchMatchType.PATIENT_ID
+                    p.fractureClassification.contains(query, ignoreCase = true) -> PatientSearchMatchType.FRACTURE_TYPE
+                    else -> PatientSearchMatchType.DIAGNOSIS
+                }
+                results.add(
+                    PatientSearchResult(
+                        patientId = p.id,
+                        patientName = p.fullName,
+                        patientCode = p.patientCode,
+                        matchType = matchType,
+                        snippet = p.diagnosis.ifBlank { p.fractureClassification }
+                    )
+                )
+            }
+
+            surgeryMatches.forEach { s ->
+                val patient = patientMap[s.patientId] ?: return@forEach
+                results.add(
+                    PatientSearchResult(
+                        patientId = patient.id,
+                        patientName = patient.fullName,
+                        patientCode = patient.patientCode,
+                        matchType = PatientSearchMatchType.SURGERY,
+                        snippet = s.procedure.ifBlank { s.diagnosis }
+                    )
+                )
+            }
+
+            (imageMatches.map { it.patientId to it.ocrText } + documentMatches.map { it.patientId to it.ocrText })
+                .forEach { (patientId, ocrText) ->
+                    val patient = patientMap[patientId] ?: return@forEach
+                    results.add(
+                        PatientSearchResult(
+                            patientId = patient.id,
+                            patientName = patient.fullName,
+                            patientCode = patient.patientCode,
+                            matchType = PatientSearchMatchType.OCR_TEXT,
+                            snippet = snippetAround(ocrText, query)
+                        )
+                    )
+                }
+
+            results
+        }.flowOn(Dispatchers.IO)
+    }
+
+    private fun snippetAround(text: String, query: String, radius: Int = 60): String {
+        val index = text.indexOf(query, ignoreCase = true)
+        if (index < 0) return text.take(120)
+        val start = (index - radius).coerceAtLeast(0)
+        val end = (index + query.length + radius).coerceAtMost(text.length)
+        val prefix = if (start > 0) "…" else ""
+        val suffix = if (end < text.length) "…" else ""
+        return prefix + text.substring(start, end).trim() + suffix
+    }
+
+    // ---- Stats -------------------------------------------------------------------------
+
+    suspend fun getPatientCount(): Int = withContext(Dispatchers.IO) { patientDao.getPatientCount() }
+
+    suspend fun getPatientsByIdsOnce(ids: List<String>): List<PatientEntity> = withContext(Dispatchers.IO) {
+        patientDao.getPatientsByIds(ids)
+    }
+}
