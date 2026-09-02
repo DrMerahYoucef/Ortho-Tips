@@ -10,6 +10,16 @@ object OrthoDestinations {
     const val IMAGE_VIEWER = "image/{imageId}"
     const val IMPORT = "import"
 
+    // Patient management module
+    const val PATIENT_DETAIL = "patient/{patientId}"
+    const val PATIENT_EDIT = "patient_edit?patientId={patientId}"
+    const val TIMELINE_EVENT_EDIT = "patient/{patientId}/timeline_edit?eventId={eventId}"
+    const val SURGERY_EDIT = "patient/{patientId}/surgery_edit?surgeryId={surgeryId}"
+    const val SURGEON_PROFILE = "surgeon_profile"
+    const val PATIENT_DATA_IMPORT_EXPORT = "patient_data_transfer"
+    const val MEDIA_CAPTURE = "patient/{patientId}/capture"
+    const val IMAGE_ANNOTATE = "image_annotate/{imageId}"
+
     fun chapterBones(chapterId: String, chapterTitle: String): String {
         return "chapter/${Uri.encode(chapterId)}/${Uri.encode(chapterTitle)}"
     }
@@ -21,4 +31,27 @@ object OrthoDestinations {
     fun imageViewer(imageId: String): String {
         return "image/${Uri.encode(imageId)}"
     }
+
+    fun patientDetail(patientId: String): String {
+        return "patient/${Uri.encode(patientId)}"
+    }
+
+    /** [patientId] null/blank means "create a new patient". */
+    fun patientEdit(patientId: String? = null): String {
+        return if (patientId.isNullOrBlank()) "patient_edit" else "patient_edit?patientId=${Uri.encode(patientId)}"
+    }
+
+    fun timelineEventEdit(patientId: String, eventId: String? = null): String {
+        val base = "patient/${Uri.encode(patientId)}/timeline_edit"
+        return if (eventId.isNullOrBlank()) base else "$base?eventId=${Uri.encode(eventId)}"
+    }
+
+    fun surgeryEdit(patientId: String, surgeryId: String? = null): String {
+        val base = "patient/${Uri.encode(patientId)}/surgery_edit"
+        return if (surgeryId.isNullOrBlank()) base else "$base?surgeryId=${Uri.encode(surgeryId)}"
+    }
+
+    fun mediaCapture(patientId: String): String = "patient/${Uri.encode(patientId)}/capture"
+
+    fun imageAnnotate(imageId: String): String = "image_annotate/${Uri.encode(imageId)}"
 }
