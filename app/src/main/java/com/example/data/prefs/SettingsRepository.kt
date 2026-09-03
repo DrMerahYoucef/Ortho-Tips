@@ -23,7 +23,8 @@ data class UserSettings(
     val operativeMode: Boolean = false, // Keep screen awake & high visibility for operating room
     val highContrast: Boolean = false,
     val fontSize: FontSizePreference = FontSizePreference.STANDARD,
-    val quickPearlsHome: Boolean = true
+    val quickPearlsHome: Boolean = true,
+    val smartSuggestionsEnabled: Boolean = true // Learning autocomplete on patient/surgery medical fields
 )
 
 class SettingsRepository(private val context: Context) {
@@ -34,6 +35,7 @@ class SettingsRepository(private val context: Context) {
         val HIGH_CONTRAST = booleanPreferencesKey("high_contrast")
         val FONT_SIZE = stringPreferencesKey("font_size")
         val QUICK_PEARLS = booleanPreferencesKey("quick_pearls")
+        val SMART_SUGGESTIONS = booleanPreferencesKey("smart_suggestions_enabled")
     }
 
     val settingsFlow: Flow<UserSettings> = context.dataStore.data.map { preferences ->
@@ -56,7 +58,8 @@ class SettingsRepository(private val context: Context) {
             operativeMode = preferences[PreferencesKeys.OPERATIVE_MODE] ?: false,
             highContrast = preferences[PreferencesKeys.HIGH_CONTRAST] ?: false,
             fontSize = fontSize,
-            quickPearlsHome = preferences[PreferencesKeys.QUICK_PEARLS] ?: true
+            quickPearlsHome = preferences[PreferencesKeys.QUICK_PEARLS] ?: true,
+            smartSuggestionsEnabled = preferences[PreferencesKeys.SMART_SUGGESTIONS] ?: true
         )
     }
 
@@ -87,6 +90,12 @@ class SettingsRepository(private val context: Context) {
     suspend fun setQuickPearls(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.QUICK_PEARLS] = enabled
+        }
+    }
+
+    suspend fun setSmartSuggestions(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SMART_SUGGESTIONS] = enabled
         }
     }
 }
