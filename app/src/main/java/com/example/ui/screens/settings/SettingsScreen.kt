@@ -452,6 +452,36 @@ fun SettingsScreen(
                 }
             }
 
+            // Smart Input Section
+            item {
+                SettingsSection(title = "SMART INPUT") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Smart suggestions & autofill",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "Learns medical terms, hospitals, surgeons and anesthesia types you type, and suggests them next time.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = settings.smartSuggestionsEnabled,
+                            onCheckedChange = { viewModel.setSmartSuggestions(it) }
+                        )
+                    }
+                }
+            }
+
             // Data & Backup Management
             item {
                 SettingsSection(title = "CLINICAL DATA MANAGEMENT") {
