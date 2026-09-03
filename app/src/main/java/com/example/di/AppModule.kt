@@ -8,6 +8,7 @@ import com.example.data.prefs.SettingsRepository
 import com.example.data.prefs.SurgeonProfileRepository
 import com.example.data.repository.OrthoRepository
 import com.example.data.repository.PatientRepository
+import com.example.data.repository.SuggestionRepository
 import com.example.utils.PatientMediaStorage
 import java.io.File
 
@@ -48,5 +49,9 @@ class AppModule(private val context: Context) {
 
     val surgeonProfileRepository: SurgeonProfileRepository by lazy {
         SurgeonProfileRepository(context)
+    }
+
+    val suggestionRepository: SuggestionRepository by lazy {
+        SuggestionRepository(database, settingsRepository)
     }
 }
