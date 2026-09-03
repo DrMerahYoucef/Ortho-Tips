@@ -70,6 +70,7 @@ fun SurgeonProfileScreen(
     modifier: Modifier = Modifier
 ) {
     val storedProfile by viewModel.profile.collectAsStateWithLifecycle()
+    val isProfileLoaded by viewModel.isLoaded.collectAsStateWithLifecycle()
     var form by remember { mutableStateOf(SurgeonProfile()) }
     var initialized by remember { mutableStateOf(false) }
     var isProcessingSignature by remember { mutableStateOf(false) }
@@ -79,8 +80,8 @@ fun SurgeonProfileScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(storedProfile) {
-        if (!initialized) {
+    LaunchedEffect(storedProfile, isProfileLoaded) {
+        if (!initialized && isProfileLoaded) {
             form = storedProfile
             initialized = true
         }
