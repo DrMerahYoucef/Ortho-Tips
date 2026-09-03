@@ -270,7 +270,7 @@ fun OrthoAppNavHost(appModule: AppModule) {
             val patientId = backStackEntry.arguments?.getString("patientId")?.let { Uri.decode(it) }
             val editViewModel: PatientEditViewModel = viewModel(
                 key = "patient_edit_${patientId ?: "new"}",
-                factory = PatientEditViewModel.provideFactory(appModule.patientRepository, patientId)
+                factory = PatientEditViewModel.provideFactory(appModule.patientRepository, appModule.suggestionRepository, patientId)
             )
             PatientEditScreen(
                 viewModel = editViewModel,
@@ -335,7 +335,7 @@ fun OrthoAppNavHost(appModule: AppModule) {
 
             val editViewModel: SurgeryEditViewModel = viewModel(
                 key = "surgery_edit_${surgeryId ?: "new"}_$patientId",
-                factory = SurgeryEditViewModel.provideFactory(appModule.patientRepository, patientId, existingSurgeryState.value)
+                factory = SurgeryEditViewModel.provideFactory(appModule.patientRepository, appModule.suggestionRepository, patientId, existingSurgeryState.value)
             )
             SurgeryEditScreen(
                 viewModel = editViewModel,
