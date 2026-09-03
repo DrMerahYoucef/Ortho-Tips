@@ -14,12 +14,14 @@ import com.example.data.local.dao.PatientDao
 import com.example.data.local.dao.PatientDocumentDao
 import com.example.data.local.dao.PatientImageDao
 import com.example.data.local.dao.SearchDao
+import com.example.data.local.dao.SuggestionDao
 import com.example.data.local.dao.SurgeryDao
 import com.example.data.local.dao.TimelineEventDao
 import com.example.data.local.dao.UserDataDao
 import com.example.data.local.entity.BookmarkEntity
 import com.example.data.local.entity.BoneEntity
 import com.example.data.local.entity.ChapterEntity
+import com.example.data.local.entity.FieldSuggestionEntity
 import com.example.data.local.entity.ImageEntity
 import com.example.data.local.entity.NoteEntity
 import com.example.data.local.entity.PatientDocumentEntity
@@ -41,9 +43,10 @@ import com.example.data.local.entity.TimelineEventEntity
         TimelineEventEntity::class,
         SurgeryEntity::class,
         PatientImageEntity::class,
-        PatientDocumentEntity::class
+        PatientDocumentEntity::class,
+        FieldSuggestionEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class OrthoDatabase : RoomDatabase() {
@@ -53,6 +56,7 @@ abstract class OrthoDatabase : RoomDatabase() {
     abstract fun imageDao(): ImageDao
     abstract fun userDataDao(): UserDataDao
     abstract fun searchDao(): SearchDao
+    abstract fun suggestionDao(): SuggestionDao
 
     // Patient management module
     abstract fun patientDao(): PatientDao
@@ -207,6 +211,29 @@ abstract class OrthoDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Adds the operative-protocol field to surgeries and the learned-suggestions
+         * table backing the smart autocomplete inputs. Nothing else is touched.
+         */
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE surgeries ADD COLUMN operativeProtocol TEXT NOT NULL DEFAULT ''")
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `field_suggestions` (
+                        `fieldKey` TEXT NOT NULL,
+                        `value` TEXT NOT NULL,
+                        `useCount` INTEGER NOT NULL,
+                        `lastUsedAt` INTEGER NOT NULL,
+                        PRIMARY KEY(`fieldKey`, `value`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_field_suggestions_fieldKey` ON `field_suggestions` (`fieldKey`)")
+            }
+        }
+
         fun getInstance(context: Context): OrthoDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -214,7 +241,7 @@ abstract class OrthoDatabase : RoomDatabase() {
                     OrthoDatabase::class.java,
                     "ortho_tips.db"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .fallbackToDestructiveMigration() // safety net only for the pre-patient-module schema jump
                     .build()
                 INSTANCE = instance
