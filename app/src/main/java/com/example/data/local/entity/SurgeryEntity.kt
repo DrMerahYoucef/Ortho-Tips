@@ -30,6 +30,8 @@ data class SurgeryEntity(
     val materialsUsed: String = "",
     val complications: String = "",
     val postOpInstructions: String = "",
+    /** Step-by-step operative technique, auto-formatted as bullet points by the editor. */
+    val operativeProtocol: String = "",
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )
