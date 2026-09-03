@@ -1,6 +1,7 @@
 package com.example.data.prefs
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -18,7 +19,9 @@ data class SurgeonProfile(
     val email: String = "",
     val registrationNumber: String = "",
     /** Absolute path, under app-private storage, to the signature image. */
-    val signatureImagePath: String? = null
+    val signatureImagePath: String? = null,
+    /** Lets the surgeon keep a signature on file but leave it off a given PDF export. */
+    val includeSignatureInPdf: Boolean = true
 ) {
     val isComplete: Boolean
         get() = name.isNotBlank() && hospital.isNotBlank()
@@ -39,6 +42,7 @@ class SurgeonProfileRepository(private val context: Context) {
         val EMAIL = stringPreferencesKey("surgeon_email")
         val REGISTRATION_NUMBER = stringPreferencesKey("surgeon_registration_number")
         val SIGNATURE_PATH = stringPreferencesKey("surgeon_signature_path")
+        val INCLUDE_SIGNATURE_IN_PDF = booleanPreferencesKey("surgeon_include_signature_in_pdf")
     }
 
     val profileFlow: Flow<SurgeonProfile> = context.surgeonProfileDataStore.data.map { prefs ->
@@ -50,7 +54,8 @@ class SurgeonProfileRepository(private val context: Context) {
             phone = prefs[Keys.PHONE] ?: "",
             email = prefs[Keys.EMAIL] ?: "",
             registrationNumber = prefs[Keys.REGISTRATION_NUMBER] ?: "",
-            signatureImagePath = prefs[Keys.SIGNATURE_PATH]
+            signatureImagePath = prefs[Keys.SIGNATURE_PATH],
+            includeSignatureInPdf = prefs[Keys.INCLUDE_SIGNATURE_IN_PDF] ?: true
         )
     }
 
@@ -63,7 +68,12 @@ class SurgeonProfileRepository(private val context: Context) {
             prefs[Keys.PHONE] = profile.phone
             prefs[Keys.EMAIL] = profile.email
             prefs[Keys.REGISTRATION_NUMBER] = profile.registrationNumber
-            profile.signatureImagePath?.let { prefs[Keys.SIGNATURE_PATH] = it }
+            if (profile.signatureImagePath != null) {
+                prefs[Keys.SIGNATURE_PATH] = profile.signatureImagePath
+            } else {
+                prefs.remove(Keys.SIGNATURE_PATH)
+            }
+            prefs[Keys.INCLUDE_SIGNATURE_IN_PDF] = profile.includeSignatureInPdf
         }
     }
 }
