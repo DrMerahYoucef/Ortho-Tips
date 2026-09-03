@@ -23,21 +23,25 @@ sealed class SignatureResult {
  * Turns a photographed or scanned signature (ink on white/off-white paper) into a
  * clean, transparent-background PNG ready to stamp onto PDF exports.
  *
- * Uses **local, block-based adaptive thresholding** rather than one fixed
- * brightness cutoff: a phone photo of a page is rarely evenly lit — shadows,
- * glare, and warm indoor light all shift what "white" looks like across the
- * frame. A single global threshold either keeps shadowed paper as a solid dark
- * block, or erases faint ink — so instead each pixel is compared against the
- * *local* background estimate around it (a coarse blurred luminance map).
+ * Deliberately simple and binary: every pixel is either kept exactly as photographed
+ * (ink) or made fully transparent (paper) — no partial/feathered alpha. Partially
+ * transparent pixels require correctly-premultiplied colour values, and some PDF/PNG
+ * viewers render that edge case as a dark halo — a full black background if enough
+ * pixels are affected. A hard cutoff sidesteps that entirely, and it's also just a
+ * closer match to "remove the white, keep the signature exactly as it is".
+ *
+ * The cutoff itself is computed automatically per photo with Otsu's method on the
+ * grayscale histogram, rather than a fixed brightness number — that's what makes it
+ * adapt to a photo's actual lighting instead of assuming a specific "white" value.
  */
 object SignatureProcessor {
 
     private const val MAX_DIMENSION_PX = 1400
-    private const val BLOCK_GRID = 14          // background is estimated on a ~14x14 grid, then interpolated
-    private const val MIN_BLOCK_PX = 20
-    private const val LOW_MARGIN = 16f          // luminance drop below local background still counts as paper
-    private const val HIGH_MARGIN = 55f         // luminance drop at/above this is unambiguous ink
     private const val CROP_PADDING_PX = 14
+    // Otsu finds the statistically optimal split, but it can sit a little too close to
+    // the ink side on a low-contrast photo; nudging it a bit brighter keeps thin/light
+    // pen strokes from being cut away.
+    private const val THRESHOLD_BIAS = 12
 
     fun processFromUri(contentResolver: ContentResolver, uri: Uri, destination: File): SignatureResult {
         val source = runCatching { decodeBounded(contentResolver, uri) }.getOrNull()
@@ -51,39 +55,27 @@ object SignatureProcessor {
 
         val width = bitmap.width
         val height = bitmap.height
-        val pixels = IntArray(width * height)
+        val pixelCount = width * height
+        val pixels = IntArray(pixelCount)
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
 
-        // --- 1. Luminance pass ---
-        val luminance = FloatArray(width * height)
-        for (i in pixels.indices) {
+        // --- 1. Luminance + 256-bin histogram in one pass ---
+        val luminance = IntArray(pixelCount)
+        val histogram = IntArray(256)
+        for (i in 0 until pixelCount) {
             val p = pixels[i]
             val r = (p shr 16) and 0xFF
             val g = (p shr 8) and 0xFF
             val b = p and 0xFF
-            luminance[i] = 0.299f * r + 0.587f * g + 0.114f * b
+            val l = (0.299f * r + 0.587f * g + 0.114f * b).toInt().coerceIn(0, 255)
+            luminance[i] = l
+            histogram[l]++
         }
 
-        // --- 2. Coarse local-background grid (mean luminance per block) ---
-        val blockW = max(MIN_BLOCK_PX, width / BLOCK_GRID)
-        val blockH = max(MIN_BLOCK_PX, height / BLOCK_GRID)
-        val cols = (width + blockW - 1) / blockW
-        val rows = (height + blockH - 1) / blockH
-        val blockSum = FloatArray(cols * rows)
-        val blockCount = IntArray(cols * rows)
+        // --- 2. Otsu's method: pick the brightness that best splits paper from ink ---
+        val threshold = (otsuThreshold(histogram, pixelCount) + THRESHOLD_BIAS).coerceIn(0, 255)
 
-        for (y in 0 until height) {
-            val by = (y / blockH).coerceAtMost(rows - 1)
-            for (x in 0 until width) {
-                val bx = (x / blockW).coerceAtMost(cols - 1)
-                val idx = by * cols + bx
-                blockSum[idx] += luminance[y * width + x]
-                blockCount[idx] += 1
-            }
-        }
-        val blockAvg = FloatArray(cols * rows) { i -> if (blockCount[i] > 0) blockSum[i] / blockCount[i] else 255f }
-
-        // --- 3. Per-pixel alpha via bilinear-interpolated local background ---
+        // --- 3. Binary cutout: keep ink pixels exactly as-is, zero out everything else ---
         var minX = width
         var minY = height
         var maxX = 0
@@ -91,45 +83,19 @@ object SignatureProcessor {
         var inkPixelCount = 0L
 
         for (y in 0 until height) {
-            // Block-center coordinates this row sits between, for vertical interpolation.
-            val fby = (y.toFloat() / blockH) - 0.5f
-            val by0 = fby.toInt().coerceIn(0, rows - 1)
-            val by1 = (by0 + 1).coerceIn(0, rows - 1)
-            val ty = (fby - by0).coerceIn(0f, 1f)
-
             for (x in 0 until width) {
-                val fbx = (x.toFloat() / blockW) - 0.5f
-                val bx0 = fbx.toInt().coerceIn(0, cols - 1)
-                val bx1 = (bx0 + 1).coerceIn(0, cols - 1)
-                val tx = (fbx - bx0).coerceIn(0f, 1f)
-
-                val top = blockAvg[by0 * cols + bx0] * (1 - tx) + blockAvg[by0 * cols + bx1] * tx
-                val bottom = blockAvg[by1 * cols + bx0] * (1 - tx) + blockAvg[by1 * cols + bx1] * tx
-                val localBackground = top * (1 - ty) + bottom * ty
-
                 val idx = y * width + x
-                val diff = localBackground - luminance[idx]
-
-                val alpha = when {
-                    diff <= LOW_MARGIN -> 0
-                    diff >= HIGH_MARGIN -> 255
-                    else -> (((diff - LOW_MARGIN) / (HIGH_MARGIN - LOW_MARGIN)) * 255f).toInt().coerceIn(0, 255)
-                }
-
-                if (alpha > 0) {
-                    val p = pixels[idx]
-                    val r = (p shr 16) and 0xFF
-                    val g = (p shr 8) and 0xFF
-                    val b = p and 0xFF
-                    val srcLum = (0.299f * r + 0.587f * g + 0.114f * b)
-                    val ink = (srcLum * 0.45f).toInt().coerceIn(0, 55)
-                    pixels[idx] = (alpha shl 24) or (ink shl 16) or (ink shl 8) or ink
-                    if (alpha > 60) inkPixelCount++
+                if (luminance[idx] < threshold) {
+                    // Ink — keep the original color untouched, fully opaque.
+                    inkPixelCount++
                     if (x < minX) minX = x
                     if (x > maxX) maxX = x
                     if (y < minY) minY = y
                     if (y > maxY) maxY = y
+                    val p = pixels[idx]
+                    pixels[idx] = (0xFF shl 24) or (p and 0x00FFFFFF)
                 } else {
+                    // Paper — fully transparent.
                     pixels[idx] = 0
                 }
             }
@@ -137,8 +103,7 @@ object SignatureProcessor {
 
         bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
 
-        val totalPixels = (width * height).toLong()
-        val inkFraction = inkPixelCount.toDouble() / totalPixels.toDouble()
+        val inkFraction = inkPixelCount.toDouble() / pixelCount.toDouble()
         val hasInk = maxX > minX && maxY > minY
 
         if (!hasInk || inkFraction < 0.0015) {
@@ -170,17 +135,52 @@ object SignatureProcessor {
         if (cropped !== bitmap) bitmap.recycle()
         cropped.recycle()
 
-        // Too much of the frame reads as "ink" — usually heavy shadow/glare rather than a clean
-        // background removal. Still saved (better than nothing) but flagged so the surgeon can retake.
+        // Too much of the frame reads as "ink" — usually heavy shadow rather than a clean
+        // background removal. Still saved (better than nothing) but flagged so the surgeon
+        // knows to check it and can retake if it looks wrong.
         return if (inkFraction > 0.35) {
             SignatureResult.Warning(
                 destination,
                 "The lighting made it hard to separate the signature from the page cleanly. " +
-                    "If it doesn't look right below, try retaking it in more even light."
+                    "If it doesn't look right below, try retaking it in more even light on a plain background."
             )
         } else {
             SignatureResult.Success(destination)
         }
+    }
+
+    /** Standard Otsu's method: the brightness cutoff that maximizes between-class variance. */
+    private fun otsuThreshold(histogram: IntArray, totalPixels: Int): Int {
+        if (totalPixels == 0) return 128
+
+        var sumAll = 0L
+        for (i in 0 until 256) sumAll += i.toLong() * histogram[i]
+
+        var sumBackground = 0L
+        var weightBackground = 0L
+        var bestThreshold = 128
+        var bestVariance = -1.0
+
+        for (t in 0 until 256) {
+            weightBackground += histogram[t]
+            if (weightBackground == 0L) continue
+
+            val weightForeground = totalPixels - weightBackground
+            if (weightForeground == 0L) break
+
+            sumBackground += t.toLong() * histogram[t]
+            val meanBackground = sumBackground.toDouble() / weightBackground
+            val meanForeground = (sumAll - sumBackground).toDouble() / weightForeground
+
+            val variance = weightBackground.toDouble() * weightForeground.toDouble() *
+                (meanBackground - meanForeground) * (meanBackground - meanForeground)
+
+            if (variance > bestVariance) {
+                bestVariance = variance
+                bestThreshold = t
+            }
+        }
+        return bestThreshold
     }
 
     private fun decodeBounded(contentResolver: ContentResolver, uri: Uri): Bitmap {
