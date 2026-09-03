@@ -1,7 +1,10 @@
 package com.example.utils
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
@@ -175,8 +178,16 @@ object OperativeProtocolGenerator {
         if (!anonymize && surgeon.includeSignatureInPdf && surgeon.signatureImagePath != null) {
             val signatureFile = File(surgeon.signatureImagePath)
             if (signatureFile.exists()) {
-                val bitmap = BitmapFactory.decodeFile(signatureFile.absolutePath)
-                if (bitmap != null && bitmap.width > 0) {
+                val decoded = BitmapFactory.decodeFile(signatureFile.absolutePath)
+                if (decoded != null && decoded.width > 0) {
+                    // Android's PdfDocument/Skia PDF backend does not reliably honor alpha on
+                    // bitmaps drawn into a page — transparent pixels can come out solid black
+                    // instead of letting the white page show through. Flatten the signature onto
+                    // a plain white bitmap ourselves first, so the PDF only ever receives fully
+                    // opaque pixels and that limitation never comes into play.
+                    val bitmap = flattenOntoWhite(decoded)
+                    decoded.recycle()
+
                     val targetWidth = 150f
                     val targetHeight = (targetWidth * bitmap.height / bitmap.width).coerceAtMost(90f)
                     val signatureBlockHeight = targetHeight + 32f // image + rule + name + specialty
@@ -215,6 +226,20 @@ object OperativeProtocolGenerator {
         document.close()
 
         return outputFile
+    }
+
+    /**
+     * Composites [source] (which may have transparent areas) onto a plain white bitmap of
+     * the same size, using a normal in-memory [Canvas] — standard bitmap-to-bitmap alpha
+     * blending, entirely separate from [PdfDocument]'s own (unreliable) alpha handling.
+     * The result is fully opaque everywhere, which is what actually gets drawn into the PDF.
+     */
+    private fun flattenOntoWhite(source: Bitmap): Bitmap {
+        val flattened = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(flattened)
+        canvas.drawColor(Color.WHITE)
+        canvas.drawBitmap(source, 0f, 0f, null)
+        return flattened
     }
 
     private data class Strings(
