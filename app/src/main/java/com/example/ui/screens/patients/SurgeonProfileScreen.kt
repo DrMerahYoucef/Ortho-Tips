@@ -13,15 +13,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Draw
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -30,7 +32,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -51,6 +55,7 @@ import coil.compose.AsyncImage
 import com.example.data.prefs.SurgeonProfile
 import com.example.utils.PatientMediaStorage
 import com.example.utils.SignatureProcessor
+import com.example.utils.SignatureResult
 import com.example.utils.rememberDocumentScannerLauncher
 import com.example.viewmodel.SurgeonProfileViewModel
 import java.io.File
@@ -69,6 +74,8 @@ fun SurgeonProfileScreen(
     var initialized by remember { mutableStateOf(false) }
     var isProcessingSignature by remember { mutableStateOf(false) }
     var signatureRevision by remember { mutableStateOf(0L) }
+    var signatureStatusMessage by remember { mutableStateOf<String?>(null) }
+    var signatureStatusIsWarning by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -81,16 +88,34 @@ fun SurgeonProfileScreen(
 
     fun processSignature(uri: Uri) {
         isProcessingSignature = true
+        signatureStatusMessage = null
         scope.launch(Dispatchers.IO) {
             val destination = File(PatientMediaStorage.rootDir(context), "surgeon_signature.png").also { file ->
                 file.parentFile?.mkdirs()
             }
-            runCatching {
+            val result = runCatching {
                 SignatureProcessor.processFromUri(context.contentResolver, uri, destination)
-            }
+            }.getOrElse { SignatureResult.Failure("Something went wrong processing that image.") }
+
             scope.launch {
-                form = form.copy(signatureImagePath = destination.absolutePath)
-                signatureRevision = System.currentTimeMillis()
+                when (result) {
+                    is SignatureResult.Success -> {
+                        form = form.copy(signatureImagePath = result.file.absolutePath)
+                        signatureRevision = System.currentTimeMillis()
+                        signatureStatusMessage = null
+                        signatureStatusIsWarning = false
+                    }
+                    is SignatureResult.Warning -> {
+                        form = form.copy(signatureImagePath = result.file.absolutePath)
+                        signatureRevision = System.currentTimeMillis()
+                        signatureStatusMessage = result.message
+                        signatureStatusIsWarning = true
+                    }
+                    is SignatureResult.Failure -> {
+                        signatureStatusMessage = result.message
+                        signatureStatusIsWarning = true
+                    }
+                }
                 isProcessingSignature = false
             }
         }
@@ -174,6 +199,15 @@ fun SurgeonProfileScreen(
                     }
                 }
             }
+            signatureStatusMessage?.let { message ->
+                item {
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (signatureStatusIsWarning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             item {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -194,6 +228,39 @@ fun SurgeonProfileScreen(
                     ) {
                         Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp))
                         Text(" Upload", modifier = Modifier.padding(start = 4.dp))
+                    }
+                }
+            }
+            if (form.signatureImagePath != null) {
+                item {
+                    TextButton(
+                        onClick = {
+                            form = form.copy(signatureImagePath = null)
+                            signatureStatusMessage = null
+                        },
+                        enabled = !isProcessingSignature
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text(" Remove signature", modifier = Modifier.padding(start = 4.dp))
+                    }
+                }
+                item {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp).fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Include signature on exported PDFs",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Switch(
+                                checked = form.includeSignatureInPdf,
+                                onCheckedChange = { form = form.copy(includeSignatureInPdf = it) }
+                            )
+                        }
                     }
                 }
             }
