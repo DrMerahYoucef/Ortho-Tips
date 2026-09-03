@@ -38,6 +38,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.repository.SuggestionField
+import com.example.ui.components.BulletProtocolField
+import com.example.ui.components.SmartSuggestionField
+import com.example.ui.components.SuggestionsToggleCard
 import com.example.utils.DateFormat
 import com.example.viewmodel.SurgeryEditViewModel
 
@@ -50,6 +54,8 @@ fun SurgeryEditScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val suggestionsEnabled by viewModel.suggestionsEnabled.collectAsStateWithLifecycle()
+    val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
     var showPicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.savedSurgeryId) {
@@ -81,6 +87,13 @@ fun SurgeryEditScreen(
             modifier = Modifier.fillMaxSize().padding(paddingValues)
         ) {
             item {
+                SuggestionsToggleCard(
+                    enabled = suggestionsEnabled,
+                    onToggle = { viewModel.setSuggestionsEnabled(it) },
+                    subtitle = "Autofills hospital, surgeon, assistants & anesthesia from past records"
+                )
+            }
+            item {
                 OutlinedTextField(
                     value = DateFormat.formatDate(uiState.form.surgeryDate),
                     onValueChange = {},
@@ -109,14 +122,89 @@ fun SurgeryEditScreen(
                     }
                 }
             }
-            item { LabeledField("Hospital / clinic", uiState.form.hospitalClinic) { v -> viewModel.update { it.copy(hospitalClinic = v) } } }
-            item { LabeledField("Surgeon", uiState.form.surgeon) { v -> viewModel.update { it.copy(surgeon = v) } } }
-            item { LabeledField("Assistants", uiState.form.assistants) { v -> viewModel.update { it.copy(assistants = v) } } }
-            item { LabeledField("Anesthesia", uiState.form.anesthesiaType) { v -> viewModel.update { it.copy(anesthesiaType = v) } } }
-            item { LabeledField("Diagnosis", uiState.form.diagnosis, singleLine = false) { v -> viewModel.update { it.copy(diagnosis = v) } } }
-            item { LabeledField("Materials used", uiState.form.materialsUsed, singleLine = false) { v -> viewModel.update { it.copy(materialsUsed = v) } } }
-            item { LabeledField("Complications", uiState.form.complications, singleLine = false) { v -> viewModel.update { it.copy(complications = v) } } }
-            item { LabeledField("Postoperative instructions", uiState.form.postOpInstructions, singleLine = false) { v -> viewModel.update { it.copy(postOpInstructions = v) } } }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.hospitalClinic,
+                    onValueChange = { v -> viewModel.update { it.copy(hospitalClinic = v) } },
+                    label = "Hospital / clinic",
+                    suggestions = suggestions[SuggestionField.SURGERY_HOSPITAL].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled
+                )
+            }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.surgeon,
+                    onValueChange = { v -> viewModel.update { it.copy(surgeon = v) } },
+                    label = "Surgeon",
+                    suggestions = suggestions[SuggestionField.SURGERY_SURGEON].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled
+                )
+            }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.assistants,
+                    onValueChange = { v -> viewModel.update { it.copy(assistants = v) } },
+                    label = "Assistants",
+                    suggestions = suggestions[SuggestionField.SURGERY_ASSISTANTS].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled
+                )
+            }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.anesthesiaType,
+                    onValueChange = { v -> viewModel.update { it.copy(anesthesiaType = v) } },
+                    label = "Anesthesia",
+                    suggestions = suggestions[SuggestionField.SURGERY_ANESTHESIA].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled
+                )
+            }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.diagnosis,
+                    onValueChange = { v -> viewModel.update { it.copy(diagnosis = v) } },
+                    label = "Diagnosis",
+                    suggestions = suggestions[SuggestionField.SURGERY_DIAGNOSIS].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled,
+                    singleLine = false
+                )
+            }
+            item {
+                BulletProtocolField(
+                    value = uiState.form.operativeProtocol,
+                    onValueChange = { v -> viewModel.update { it.copy(operativeProtocol = v) } },
+                    label = "Operative protocol (steps)"
+                )
+            }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.materialsUsed,
+                    onValueChange = { v -> viewModel.update { it.copy(materialsUsed = v) } },
+                    label = "Materials used",
+                    suggestions = suggestions[SuggestionField.SURGERY_MATERIALS].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled,
+                    singleLine = false
+                )
+            }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.complications,
+                    onValueChange = { v -> viewModel.update { it.copy(complications = v) } },
+                    label = "Complications",
+                    suggestions = suggestions[SuggestionField.SURGERY_COMPLICATIONS].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled,
+                    singleLine = false
+                )
+            }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.postOpInstructions,
+                    onValueChange = { v -> viewModel.update { it.copy(postOpInstructions = v) } },
+                    label = "Postoperative instructions",
+                    suggestions = suggestions[SuggestionField.SURGERY_POSTOP].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled,
+                    singleLine = false
+                )
+            }
             item {
                 Button(
                     onClick = { viewModel.save() },
@@ -144,15 +232,4 @@ fun SurgeryEditScreen(
             DatePicker(state = state)
         }
     }
-}
-
-@Composable
-private fun LabeledField(label: String, value: String, singleLine: Boolean = true, onValueChange: (String) -> Unit) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        singleLine = singleLine,
-        modifier = Modifier.fillMaxWidth()
-    )
 }

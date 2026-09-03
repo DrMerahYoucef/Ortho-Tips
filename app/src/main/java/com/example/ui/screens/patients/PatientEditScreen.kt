@@ -44,6 +44,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.local.entity.BodySide
+import com.example.data.repository.SuggestionField
+import com.example.ui.components.SmartSuggestionField
+import com.example.ui.components.SuggestionsToggleCard
 import com.example.utils.DateFormat
 import com.example.viewmodel.PatientEditViewModel
 import com.example.viewmodel.PatientFormState
@@ -57,6 +60,8 @@ fun PatientEditScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val suggestionsEnabled by viewModel.suggestionsEnabled.collectAsStateWithLifecycle()
+    val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
 
     LaunchedEffect(uiState.savedPatientId) {
         uiState.savedPatientId?.let { onSaved(it) }
@@ -132,17 +137,87 @@ fun PatientEditScreen(
             item { FormTextField(uiState.form.insuranceProvider, { v -> viewModel.update { it.copy(insuranceProvider = v) } }, "Provider") }
             item { FormTextField(uiState.form.insuranceNumber, { v -> viewModel.update { it.copy(insuranceNumber = v) } }, "Policy number") }
 
+            item {
+                SuggestionsToggleCard(
+                    enabled = suggestionsEnabled,
+                    onToggle = { viewModel.setSuggestionsEnabled(it) },
+                    subtitle = "Learns from what you type and autofills medical fields"
+                )
+            }
+
             item { FormSectionLabel("Medical history") }
-            item { FormTextField(uiState.form.medicalHistory, { v -> viewModel.update { it.copy(medicalHistory = v) } }, "Medical history", singleLine = false) }
-            item { FormTextField(uiState.form.allergies, { v -> viewModel.update { it.copy(allergies = v) } }, "Allergies", singleLine = false) }
-            item { FormTextField(uiState.form.chronicDiseases, { v -> viewModel.update { it.copy(chronicDiseases = v) } }, "Chronic diseases", singleLine = false) }
-            item { FormTextField(uiState.form.previousSurgeries, { v -> viewModel.update { it.copy(previousSurgeries = v) } }, "Previous surgeries", singleLine = false) }
-            item { FormTextField(uiState.form.medications, { v -> viewModel.update { it.copy(medications = v) } }, "Medications", singleLine = false) }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.medicalHistory,
+                    onValueChange = { v -> viewModel.update { it.copy(medicalHistory = v) } },
+                    label = "Medical history",
+                    suggestions = suggestions[SuggestionField.MEDICAL_HISTORY].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled,
+                    singleLine = false
+                )
+            }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.allergies,
+                    onValueChange = { v -> viewModel.update { it.copy(allergies = v) } },
+                    label = "Allergies",
+                    suggestions = suggestions[SuggestionField.ALLERGIES].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled,
+                    singleLine = false
+                )
+            }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.chronicDiseases,
+                    onValueChange = { v -> viewModel.update { it.copy(chronicDiseases = v) } },
+                    label = "Chronic diseases",
+                    suggestions = suggestions[SuggestionField.CHRONIC_DISEASES].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled,
+                    singleLine = false
+                )
+            }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.previousSurgeries,
+                    onValueChange = { v -> viewModel.update { it.copy(previousSurgeries = v) } },
+                    label = "Previous surgeries",
+                    suggestions = suggestions[SuggestionField.PREVIOUS_SURGERIES].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled,
+                    singleLine = false
+                )
+            }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.medications,
+                    onValueChange = { v -> viewModel.update { it.copy(medications = v) } },
+                    label = "Medications",
+                    suggestions = suggestions[SuggestionField.MEDICATIONS].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled,
+                    singleLine = false
+                )
+            }
             item { FormTextField(uiState.form.generalNotes, { v -> viewModel.update { it.copy(generalNotes = v) } }, "Notes", singleLine = false) }
 
             item { FormSectionLabel("Orthopedic information") }
-            item { FormTextField(uiState.form.diagnosis, { v -> viewModel.update { it.copy(diagnosis = v) } }, "Diagnosis", singleLine = false) }
-            item { FormTextField(uiState.form.bodyRegion, { v -> viewModel.update { it.copy(bodyRegion = v) } }, "Body region") }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.diagnosis,
+                    onValueChange = { v -> viewModel.update { it.copy(diagnosis = v) } },
+                    label = "Diagnosis",
+                    suggestions = suggestions[SuggestionField.DIAGNOSIS].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled,
+                    singleLine = false
+                )
+            }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.bodyRegion,
+                    onValueChange = { v -> viewModel.update { it.copy(bodyRegion = v) } },
+                    label = "Body region",
+                    suggestions = suggestions[SuggestionField.BODY_REGION].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled
+                )
+            }
             item {
                 SideDropdown(
                     value = uiState.form.side,
@@ -156,10 +231,45 @@ fun PatientEditScreen(
                     onDateSelected = { v -> viewModel.update { it.copy(injuryDate = v) } }
                 )
             }
-            item { FormTextField(uiState.form.traumaMechanism, { v -> viewModel.update { it.copy(traumaMechanism = v) } }, "Trauma mechanism", singleLine = false) }
-            item { FormTextField(uiState.form.fractureClassification, { v -> viewModel.update { it.copy(fractureClassification = v) } }, "Fracture classification") }
-            item { FormTextField(uiState.form.imagingFindings, { v -> viewModel.update { it.copy(imagingFindings = v) } }, "Imaging findings", singleLine = false) }
-            item { FormTextField(uiState.form.treatmentPlan, { v -> viewModel.update { it.copy(treatmentPlan = v) } }, "Treatment plan", singleLine = false) }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.traumaMechanism,
+                    onValueChange = { v -> viewModel.update { it.copy(traumaMechanism = v) } },
+                    label = "Trauma mechanism",
+                    suggestions = suggestions[SuggestionField.TRAUMA_MECHANISM].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled,
+                    singleLine = false
+                )
+            }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.fractureClassification,
+                    onValueChange = { v -> viewModel.update { it.copy(fractureClassification = v) } },
+                    label = "Fracture classification",
+                    suggestions = suggestions[SuggestionField.FRACTURE_CLASSIFICATION].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled
+                )
+            }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.imagingFindings,
+                    onValueChange = { v -> viewModel.update { it.copy(imagingFindings = v) } },
+                    label = "Imaging findings",
+                    suggestions = suggestions[SuggestionField.IMAGING_FINDINGS].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled,
+                    singleLine = false
+                )
+            }
+            item {
+                SmartSuggestionField(
+                    value = uiState.form.treatmentPlan,
+                    onValueChange = { v -> viewModel.update { it.copy(treatmentPlan = v) } },
+                    label = "Treatment plan",
+                    suggestions = suggestions[SuggestionField.TREATMENT_PLAN].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled,
+                    singleLine = false
+                )
+            }
 
             item {
                 Button(

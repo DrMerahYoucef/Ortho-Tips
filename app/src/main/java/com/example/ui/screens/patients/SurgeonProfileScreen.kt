@@ -3,20 +3,26 @@ package com.example.ui.screens.patients
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Draw
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,10 +49,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.data.prefs.SurgeonProfile
-import com.example.utils.ImageCompressor
 import com.example.utils.PatientMediaStorage
+import com.example.utils.SignatureProcessor
+import com.example.utils.rememberDocumentScannerLauncher
 import com.example.viewmodel.SurgeonProfileViewModel
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,7 +67,10 @@ fun SurgeonProfileScreen(
     val storedProfile by viewModel.profile.collectAsStateWithLifecycle()
     var form by remember { mutableStateOf(SurgeonProfile()) }
     var initialized by remember { mutableStateOf(false) }
+    var isProcessingSignature by remember { mutableStateOf(false) }
+    var signatureRevision by remember { mutableStateOf(0L) }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(storedProfile) {
         if (!initialized) {
@@ -66,14 +79,29 @@ fun SurgeonProfileScreen(
         }
     }
 
-    val signaturePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            val destination = File(PatientMediaStorage.rootDir(context), "surgeon_signature.jpg").also { file ->
+    fun processSignature(uri: Uri) {
+        isProcessingSignature = true
+        scope.launch(Dispatchers.IO) {
+            val destination = File(PatientMediaStorage.rootDir(context), "surgeon_signature.png").also { file ->
                 file.parentFile?.mkdirs()
             }
-            ImageCompressor.compressToFile(context.contentResolver, uri, destination)
-            form = form.copy(signatureImagePath = destination.absolutePath)
+            runCatching {
+                SignatureProcessor.processFromUri(context.contentResolver, uri, destination)
+            }
+            scope.launch {
+                form = form.copy(signatureImagePath = destination.absolutePath)
+                signatureRevision = System.currentTimeMillis()
+                isProcessingSignature = false
+            }
         }
+    }
+
+    val galleryPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { processSignature(it) }
+    }
+
+    val scanLauncher = rememberDocumentScannerLauncher { scannedUris ->
+        scannedUris.firstOrNull()?.let { processSignature(it) }
     }
 
     Scaffold(
@@ -117,34 +145,63 @@ fun SurgeonProfileScreen(
                 )
             }
             item {
+                Text(
+                    text = "Scan or upload a photo of your signature — the background is removed automatically.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            item {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(120.dp)
                         .clip(RoundedCornerShape(12.dp))
+                        // Faint checkerboard-like backdrop so a transparent-background
+                        // signature is visibly "cut out" rather than looking blank.
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                         .padding(bottom = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (form.signatureImagePath != null) {
-                        AsyncImage(
-                            model = "file://${form.signatureImagePath}",
+                    when {
+                        isProcessingSignature -> CircularProgressIndicator()
+                        form.signatureImagePath != null -> AsyncImage(
+                            model = "file://${form.signatureImagePath}?rev=$signatureRevision",
                             contentDescription = "Signature",
                             modifier = Modifier.fillMaxSize()
                         )
-                    } else {
-                        Icon(Icons.Default.Draw, contentDescription = null, modifier = Modifier.size(32.dp))
+                        else -> Icon(Icons.Default.Draw, contentDescription = null, modifier = Modifier.size(32.dp))
                     }
                 }
             }
             item {
-                OutlinedButton(onClick = { signaturePicker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (form.signatureImagePath != null) "Replace signature image" else "Add signature image")
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedButton(
+                        onClick = { scanLauncher() },
+                        enabled = !isProcessingSignature,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text(" Scan", modifier = Modifier.padding(start = 4.dp))
+                    }
+                    OutlinedButton(
+                        onClick = { galleryPicker.launch("image/*") },
+                        enabled = !isProcessingSignature,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text(" Upload", modifier = Modifier.padding(start = 4.dp))
+                    }
                 }
             }
 
             item {
                 Button(
                     onClick = { viewModel.save(form); onNavigateBack() },
+                    enabled = !isProcessingSignature,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Save")
