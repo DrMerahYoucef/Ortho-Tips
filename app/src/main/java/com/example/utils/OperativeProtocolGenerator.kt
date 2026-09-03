@@ -172,7 +172,7 @@ object OperativeProtocolGenerator {
         }
         y = closingLineY + 14f
 
-        if (!anonymize && surgeon.signatureImagePath != null) {
+        if (!anonymize && surgeon.includeSignatureInPdf && surgeon.signatureImagePath != null) {
             val signatureFile = File(surgeon.signatureImagePath)
             if (signatureFile.exists()) {
                 val bitmap = BitmapFactory.decodeFile(signatureFile.absolutePath)
