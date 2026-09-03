@@ -18,6 +18,11 @@ enum class ProtocolLanguage { FRENCH, ENGLISH }
  * Renders a one-page-per-overflow operative report using Android's built-in
  * [PdfDocument] — no third-party PDF library needed. Text is laid out manually
  * with word-wrapping and simple pagination (A4 at 72dpi: 595x842 pt).
+ *
+ * The last page is closed off deliberately: once the content ends, a horizontal
+ * rule is drawn immediately below it (so nothing can be appended into the blank
+ * area below), and the signature — if the surgeon has one on file — is anchored to
+ * the bottom-right corner of that same page rather than trailing right after the text.
  */
 object OperativeProtocolGenerator {
 
@@ -45,27 +50,32 @@ object OperativeProtocolGenerator {
         val headerPaint = Paint().apply { textSize = 11f; isAntiAlias = true; color = 0xFF444444.toInt() }
         val sectionPaint = Paint().apply { textSize = 13f; isFakeBoldText = true; isAntiAlias = true; color = 0xFF1A5276.toInt() }
         val bodyPaint = Paint().apply { textSize = 11.5f; isAntiAlias = true }
+        val closingLinePaint = Paint().apply { color = 0xFFB0B0B0.toInt(); strokeWidth = 1f }
+        val signatureLinePaint = Paint().apply { color = 0xFF999999.toInt(); strokeWidth = 1f }
+        val signatureNamePaint = Paint().apply { textSize = 11.5f; isAntiAlias = true; isFakeBoldText = true; textAlign = Paint.Align.RIGHT }
+        val signatureLabelPaint = Paint().apply { textSize = 9.5f; isAntiAlias = true; color = 0xFF666666.toInt(); textAlign = Paint.Align.RIGHT }
 
-        fun newPageIfNeeded(neededHeight: Float) {
-            if (y + neededHeight > PAGE_HEIGHT - MARGIN) {
-                document.finishPage(page)
-                pageNumber += 1
-                page = document.startPage(PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNumber).create())
-                canvas = page.canvas
-                y = MARGIN
-            }
+        fun newPage() {
+            document.finishPage(page)
+            pageNumber += 1
+            page = document.startPage(PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, pageNumber).create())
+            canvas = page.canvas
+            y = MARGIN
         }
 
-        fun drawWrapped(text: String, paint: Paint, lineHeight: Float) {
+        fun newPageIfNeeded(neededHeight: Float) {
+            if (y + neededHeight > PAGE_HEIGHT - MARGIN) newPage()
+        }
+
+        fun drawWrapped(text: String, paint: Paint, lineHeight: Float, startX: Float = MARGIN, maxWidth: Float = PAGE_WIDTH - 2 * MARGIN) {
             if (text.isBlank()) return
-            val maxWidth = PAGE_WIDTH - 2 * MARGIN
             val words = text.split(" ")
             var line = StringBuilder()
             words.forEach { word ->
                 val trial = if (line.isEmpty()) word else "$line $word"
                 if (paint.measureText(trial) > maxWidth) {
                     newPageIfNeeded(lineHeight)
-                    canvas.drawText(line.toString(), MARGIN, y, paint)
+                    canvas.drawText(line.toString(), startX, y, paint)
                     y += lineHeight
                     line = StringBuilder(word)
                 } else {
@@ -74,7 +84,7 @@ object OperativeProtocolGenerator {
             }
             if (line.isNotEmpty()) {
                 newPageIfNeeded(lineHeight)
-                canvas.drawText(line.toString(), MARGIN, y, paint)
+                canvas.drawText(line.toString(), startX, y, paint)
                 y += lineHeight
             }
         }
@@ -86,6 +96,32 @@ object OperativeProtocolGenerator {
             canvas.drawText(title.uppercase(), MARGIN, y, sectionPaint)
             y += 16f
             drawWrapped(body, bodyPaint, 15f)
+        }
+
+        /**
+         * Renders free text as bullet points: each non-blank line of [content] (the
+         * editor already breaks lines on "." / Enter) becomes its own bullet, wrapped
+         * with a hanging indent so continuation lines line up under the bullet text.
+         */
+        fun drawBulletSection(title: String, content: String) {
+            if (content.isBlank()) return
+            y += 6f
+            newPageIfNeeded(20f)
+            canvas.drawText(title.uppercase(), MARGIN, y, sectionPaint)
+            y += 16f
+
+            val textIndent = MARGIN + 12f
+            val maxWidth = PAGE_WIDTH - textIndent - MARGIN
+            val lineHeight = 15f
+
+            content.lines().forEach { rawLine ->
+                val line = rawLine.trim().removePrefix("\u2022").removePrefix("-").trim()
+                if (line.isEmpty()) return@forEach
+
+                newPageIfNeeded(lineHeight)
+                canvas.drawText("\u2022", MARGIN, y, bodyPaint)
+                drawWrapped(line, bodyPaint, lineHeight, startX = textIndent, maxWidth = maxWidth)
+            }
         }
 
         // Letterhead
@@ -124,24 +160,49 @@ object OperativeProtocolGenerator {
         drawSection(strings.anesthesia, surgery.anesthesiaType)
         drawSection(strings.diagnosis, surgery.diagnosis)
         drawSection(strings.procedure, surgery.procedure)
+        drawBulletSection(strings.operativeSteps, surgery.operativeProtocol)
         drawSection(strings.materials, surgery.materialsUsed)
         drawSection(strings.complications, surgery.complications.ifBlank { strings.none })
         drawSection(strings.postOp, surgery.postOpInstructions)
 
-        // Signature
+        // ---- Close out the page: no trailing blank space, signature bottom-right ----
+        val closingLineY = y + 4f
+        if (closingLineY < PAGE_HEIGHT - MARGIN - 4f) {
+            canvas.drawLine(MARGIN, closingLineY, PAGE_WIDTH - MARGIN, closingLineY, closingLinePaint)
+        }
+        y = closingLineY + 14f
+
         if (!anonymize && surgeon.signatureImagePath != null) {
             val signatureFile = File(surgeon.signatureImagePath)
             if (signatureFile.exists()) {
-                newPageIfNeeded(90f)
-                y += 20f
                 val bitmap = BitmapFactory.decodeFile(signatureFile.absolutePath)
-                if (bitmap != null) {
-                    val targetWidth = 140f
-                    val targetHeight = targetWidth * bitmap.height / bitmap.width
-                    canvas.drawBitmap(bitmap, null, RectF(MARGIN, y, MARGIN + targetWidth, y + targetHeight), null)
-                    y += targetHeight + 4f
+                if (bitmap != null && bitmap.width > 0) {
+                    val targetWidth = 150f
+                    val targetHeight = (targetWidth * bitmap.height / bitmap.width).coerceAtMost(90f)
+                    val signatureBlockHeight = targetHeight + 32f // image + rule + name + specialty
+
+                    val bottomAnchor = (PAGE_HEIGHT - MARGIN).toFloat()
+                    var sigTop = bottomAnchor - signatureBlockHeight
+
+                    // Not enough room left on this page for the whole signature block:
+                    // give it a fresh page rather than letting it collide with the text.
+                    if (sigTop < y) {
+                        newPage()
+                        sigTop = bottomAnchor - signatureBlockHeight
+                    }
+
+                    val sigRight = PAGE_WIDTH - MARGIN
+                    val sigLeft = sigRight - targetWidth
+                    canvas.drawBitmap(bitmap, null, RectF(sigLeft, sigTop, sigRight, sigTop + targetHeight), null)
+
+                    val ruleY = sigTop + targetHeight + 4f
+                    canvas.drawLine(sigLeft, ruleY, sigRight, ruleY, signatureLinePaint)
+                    canvas.drawText(surgeon.name.ifBlank { strings.unnamedSurgeon }, sigRight, ruleY + 14f, signatureNamePaint)
+                    if (surgeon.specialty.isNotBlank()) {
+                        canvas.drawText(surgeon.specialty, sigRight, ruleY + 26f, signatureLabelPaint)
+                    }
+                    bitmap.recycle()
                 }
-                canvas.drawText(surgeon.name, MARGIN, y, bodyPaint)
             }
         }
 
@@ -167,6 +228,7 @@ object OperativeProtocolGenerator {
         val anesthesia: String,
         val diagnosis: String,
         val procedure: String,
+        val operativeSteps: String,
         val materials: String,
         val complications: String,
         val postOp: String,
@@ -187,6 +249,7 @@ object OperativeProtocolGenerator {
                     anesthesia = "Anesthésie",
                     diagnosis = "Diagnostic",
                     procedure = "Intervention",
+                    operativeSteps = "Étapes opératoires (protocole)",
                     materials = "Matériel utilisé",
                     complications = "Complications",
                     postOp = "Consignes postopératoires",
@@ -205,6 +268,7 @@ object OperativeProtocolGenerator {
                     anesthesia = "Anesthesia",
                     diagnosis = "Diagnosis",
                     procedure = "Procedure",
+                    operativeSteps = "Operative steps (protocol)",
                     materials = "Materials used",
                     complications = "Complications",
                     postOp = "Postoperative instructions",
