@@ -88,6 +88,12 @@ class SettingsViewModel(
         }
     }
 
+    fun setSmartSuggestions(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setSmartSuggestions(enabled)
+        }
+    }
+
     fun generateBackup() {
         viewModelScope.launch {
             val json = backupManager.exportDataJson()

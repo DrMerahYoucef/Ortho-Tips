@@ -6,9 +6,14 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.local.entity.BodySide
 import com.example.data.local.entity.PatientEntity
 import com.example.data.repository.PatientRepository
+import com.example.data.repository.SuggestionField
+import com.example.data.repository.SuggestionRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** Mirrors [PatientEntity]'s editable fields as plain strings for two-way text field binding. */
@@ -50,13 +55,39 @@ data class PatientEditUiState(
     val savedPatientId: String? = null
 )
 
+/** Every patient field wired to smart suggestions, in the order the form learns from on save. */
+private val SUGGESTION_FIELDS = listOf(
+    SuggestionField.MEDICAL_HISTORY,
+    SuggestionField.ALLERGIES,
+    SuggestionField.CHRONIC_DISEASES,
+    SuggestionField.PREVIOUS_SURGERIES,
+    SuggestionField.MEDICATIONS,
+    SuggestionField.DIAGNOSIS,
+    SuggestionField.BODY_REGION,
+    SuggestionField.TRAUMA_MECHANISM,
+    SuggestionField.FRACTURE_CLASSIFICATION,
+    SuggestionField.IMAGING_FINDINGS,
+    SuggestionField.TREATMENT_PLAN
+)
+
 class PatientEditViewModel(
     private val repository: PatientRepository,
+    private val suggestionRepository: SuggestionRepository,
     private val existingPatientId: String?
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PatientEditUiState(isEditMode = existingPatientId != null))
     val uiState: StateFlow<PatientEditUiState> = _uiState.asStateFlow()
+
+    val suggestionsEnabled: StateFlow<Boolean> = suggestionRepository.suggestionsEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    /** fieldKey -> ranked list of previously-typed values, for every smart field on this form. */
+    val suggestions: StateFlow<Map<String, List<String>>> = combine(
+        SUGGESTION_FIELDS.map { key -> suggestionRepository.suggestionsFor(key) }
+    ) { lists ->
+        SUGGESTION_FIELDS.zip(lists).toMap()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     init {
         if (existingPatientId != null) {
@@ -84,6 +115,10 @@ class PatientEditViewModel(
             nameError = null,
             patientCodeError = null
         )
+    }
+
+    fun setSuggestionsEnabled(enabled: Boolean) {
+        viewModelScope.launch { suggestionRepository.setEnabled(enabled) }
     }
 
     fun save() {
@@ -119,18 +154,34 @@ class PatientEditViewModel(
             val entity = form.toEntity(id = id, createdAt = existing?.createdAt, isArchived = existing?.isArchived ?: false)
 
             repository.savePatient(entity)
+            learnFromForm(form)
             _uiState.value = _uiState.value.copy(isSaving = false, savedPatientId = id)
         }
+    }
+
+    private suspend fun learnFromForm(form: PatientFormState) {
+        suggestionRepository.learn(SuggestionField.MEDICAL_HISTORY, form.medicalHistory)
+        suggestionRepository.learn(SuggestionField.ALLERGIES, form.allergies)
+        suggestionRepository.learn(SuggestionField.CHRONIC_DISEASES, form.chronicDiseases)
+        suggestionRepository.learn(SuggestionField.PREVIOUS_SURGERIES, form.previousSurgeries)
+        suggestionRepository.learn(SuggestionField.MEDICATIONS, form.medications)
+        suggestionRepository.learn(SuggestionField.DIAGNOSIS, form.diagnosis)
+        suggestionRepository.learn(SuggestionField.BODY_REGION, form.bodyRegion)
+        suggestionRepository.learn(SuggestionField.TRAUMA_MECHANISM, form.traumaMechanism)
+        suggestionRepository.learn(SuggestionField.FRACTURE_CLASSIFICATION, form.fractureClassification)
+        suggestionRepository.learn(SuggestionField.IMAGING_FINDINGS, form.imagingFindings)
+        suggestionRepository.learn(SuggestionField.TREATMENT_PLAN, form.treatmentPlan)
     }
 
     companion object {
         fun provideFactory(
             repository: PatientRepository,
+            suggestionRepository: SuggestionRepository,
             existingPatientId: String?
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return PatientEditViewModel(repository, existingPatientId) as T
+                return PatientEditViewModel(repository, suggestionRepository, existingPatientId) as T
             }
         }
     }
