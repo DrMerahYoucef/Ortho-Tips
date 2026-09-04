@@ -64,6 +64,12 @@ object ImageCompressor {
         cropped.recycle()
     }
 
+    /** Writes [bitmap] as a JPEG to [destination] — exposed for callers (like perspective
+     *  crop) that produce their own bitmap outside this object's normal pipeline. */
+    fun saveJpeg(bitmap: Bitmap, destination: File) {
+        writeJpeg(bitmap, destination, JPEG_QUALITY)
+    }
+
     private fun decodeBounded(contentResolver: android.content.ContentResolver, uri: Uri, maxDimension: Int): Bitmap {
         val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, boundsOptions) }

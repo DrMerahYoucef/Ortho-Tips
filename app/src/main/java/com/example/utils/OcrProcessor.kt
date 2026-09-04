@@ -1,6 +1,7 @@
 package com.example.utils
 
 import android.content.Context
+import android.graphics.Bitmap
 import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
@@ -29,4 +30,20 @@ object OcrProcessor {
             recognizer.close()
         }
     }
+
+    /** Same as [extractText] but against an in-memory bitmap — used for scanning just a
+     *  quad-selected region without writing anything to disk first. */
+    suspend fun extractTextFromBitmap(bitmap: Bitmap): String = withContext(Dispatchers.IO) {
+        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+        try {
+            val inputImage = InputImage.fromBitmap(bitmap, 0)
+            val result = Tasks.await(recognizer.process(inputImage))
+            result.text
+        } catch (_: Exception) {
+            ""
+        } finally {
+            recognizer.close()
+        }
+    }
 }
+

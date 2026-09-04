@@ -28,4 +28,20 @@ object ShareHelper {
         }
         context.startActivity(Intent.createChooser(intent, chooserTitle))
     }
+
+    /** Same as [shareFile] but for sending several files (e.g. a multi-select from Media) at once. */
+    fun shareFiles(context: Context, files: List<File>, mimeType: String, chooserTitle: String = "Share files") {
+        if (files.isEmpty()) return
+        if (files.size == 1) {
+            shareFile(context, files.first(), mimeType, chooserTitle)
+            return
+        }
+        val uris = ArrayList(files.map { FileProvider.getUriForFile(context, providerAuthority(context), it) })
+        val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+            type = mimeType
+            putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, chooserTitle))
+    }
 }
