@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.data.backup.BackupManager
 import com.example.data.importer.BoneDatabaseImporter
 import com.example.data.local.OrthoDatabase
+import com.example.data.prefs.PdfOptionsRepository
 import com.example.data.prefs.SettingsRepository
 import com.example.data.prefs.SurgeonProfileRepository
 import com.example.data.repository.OrthoRepository
@@ -49,6 +50,10 @@ class AppModule(private val context: Context) {
 
     val surgeonProfileRepository: SurgeonProfileRepository by lazy {
         SurgeonProfileRepository(context)
+    }
+
+    val pdfOptionsRepository: PdfOptionsRepository by lazy {
+        PdfOptionsRepository(context)
     }
 
     val suggestionRepository: SuggestionRepository by lazy {
