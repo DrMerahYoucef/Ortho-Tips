@@ -1,5 +1,8 @@
 package com.example.viewmodel
 
+import android.content.Context
+import android.graphics.BitmapFactory
+import android.graphics.PointF
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -8,6 +11,8 @@ import com.example.utils.AnnotationSerializer
 import com.example.utils.AnnotationShape
 import com.example.utils.ImageCompressor
 import com.example.utils.OcrProcessor
+import com.example.utils.PerspectiveCrop
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,8 +29,14 @@ data class ImageAnnotationUiState(
     val notes: String = "",
     val ocrText: String = "",
     val isRunningOcr: Boolean = false,
+    /** Result of scanning just a quad-selected region — kept separate from [ocrText]
+     *  (the whole-image scan) since it isn't persisted unless the user asks to keep it. */
+    val quadOcrText: String? = null,
+    val isRunningQuadOcr: Boolean = false,
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
+    /** True once a pre-edit backup exists, so the screen can offer "Restore original". */
+    val hasBackup: Boolean = false,
     /** Bumped whenever the underlying file is overwritten (crop/rotate) so AsyncImage re-reads it. */
     val fileRevision: Int = 0
 )
@@ -51,6 +62,7 @@ class ImageAnnotationViewModel(
                     shapes = AnnotationSerializer.deserialize(image.annotationsJson),
                     notes = image.notes,
                     ocrText = image.ocrText,
+                    hasBackup = backupFile(File(image.filePath)).exists(),
                     isLoading = false
                 )
             } else {
@@ -90,16 +102,53 @@ class ImageAnnotationViewModel(
         }
     }
 
-    /** Re-runs ML Kit Text Recognition against the current file and persists the result. */
-    fun rerunOcr(context: android.content.Context) {
+    /** Re-runs ML Kit Text Recognition against the whole current file and persists the result. */
+    fun rerunOcr(context: Context) {
         viewModelScope.launch {
             val path = _uiState.value.filePath ?: return@launch
             _uiState.value = _uiState.value.copy(isRunningOcr = true)
-            val text = OcrProcessor.extractText(context, java.io.File(path))
+            val text = OcrProcessor.extractText(context, File(path))
             _uiState.value = _uiState.value.copy(ocrText = text, isRunningOcr = false)
             val image = repository.getImageOrNull(imageId) ?: return@launch
             repository.saveImage(image.copy(ocrText = text))
         }
+    }
+
+    /**
+     * Scans just the quad-selected region for text, without touching the saved file or its
+     * canonical [ImageAnnotationUiState.ocrText]. [corners] are in source-bitmap pixel space,
+     * clockwise from top-left (see [PerspectiveCrop.warp]).
+     */
+    fun scanQuadText(corners: List<PointF>) {
+        viewModelScope.launch {
+            val path = _uiState.value.filePath ?: return@launch
+            _uiState.value = _uiState.value.copy(isRunningQuadOcr = true, quadOcrText = null)
+            val text = withContext(Dispatchers.IO) {
+                val source = BitmapFactory.decodeFile(path) ?: return@withContext ""
+                val warped = runCatching { PerspectiveCrop.warp(source, corners) }.getOrNull()
+                source.recycle()
+                val result = warped?.let { OcrProcessor.extractTextFromBitmap(it) } ?: ""
+                warped?.recycle()
+                result
+            }
+            _uiState.value = _uiState.value.copy(quadOcrText = text, isRunningQuadOcr = false)
+        }
+    }
+
+    /** Saves the last quad-scanned text into the image's persisted OCR text (appending if it
+     *  already has some), so a region scan can be kept without needing a full-image re-scan. */
+    fun keepQuadOcrText() {
+        val extracted = _uiState.value.quadOcrText ?: return
+        viewModelScope.launch {
+            val image = repository.getImageOrNull(imageId) ?: return@launch
+            val merged = listOf(image.ocrText, extracted).filter { it.isNotBlank() }.joinToString("\n\n")
+            repository.saveImage(image.copy(ocrText = merged))
+            _uiState.value = _uiState.value.copy(ocrText = merged, quadOcrText = null)
+        }
+    }
+
+    fun dismissQuadOcr() {
+        _uiState.value = _uiState.value.copy(quadOcrText = null)
     }
 
     /** Rotates the underlying JPEG 90° clockwise and refreshes the thumbnail. */
@@ -107,27 +156,74 @@ class ImageAnnotationViewModel(
         viewModelScope.launch {
             val image = repository.getImageOrNull(imageId) ?: return@launch
             withContext(Dispatchers.IO) {
-                val file = java.io.File(image.filePath)
+                val file = File(image.filePath)
+                backupOriginalIfNeeded(file)
                 ImageCompressor.rotateFile(file, 90f)
-                image.thumbnailPath?.let { ImageCompressor.writeThumbnail(file, java.io.File(it)) }
+                image.thumbnailPath?.let { ImageCompressor.writeThumbnail(file, File(it)) }
             }
-            _uiState.value = _uiState.value.copy(fileRevision = _uiState.value.fileRevision + 1)
+            _uiState.value = _uiState.value.copy(fileRevision = _uiState.value.fileRevision + 1, hasBackup = true)
         }
     }
 
-    /** Crops to a normalized rect (0f..1f), refreshes the thumbnail, and re-runs OCR since the
-     *  pixel content changed. Clears prior overlay shapes, since their coordinates were relative
-     *  to the pre-crop frame. */
-    fun crop(context: android.content.Context, leftFrac: Float, topFrac: Float, rightFrac: Float, bottomFrac: Float) {
+    /**
+     * Perspective-crops to the quad defined by [corners] (source-bitmap pixel space,
+     * clockwise from top-left — see [PerspectiveCrop.warp]), overwrites the file, refreshes
+     * the thumbnail, and re-runs whole-image OCR since the pixel content changed. Clears
+     * prior overlay shapes, since their coordinates were relative to the pre-crop frame.
+     * A backup of the pre-crop file is kept so [restoreOriginal] can undo this.
+     */
+    fun cropQuad(context: Context, corners: List<PointF>) {
         viewModelScope.launch {
             val image = repository.getImageOrNull(imageId) ?: return@launch
-            withContext(Dispatchers.IO) {
-                val file = java.io.File(image.filePath)
-                ImageCompressor.cropFile(file, leftFrac, topFrac, rightFrac, bottomFrac)
-                image.thumbnailPath?.let { ImageCompressor.writeThumbnail(file, java.io.File(it)) }
+            val cropSucceeded = withContext(Dispatchers.IO) {
+                val file = File(image.filePath)
+                backupOriginalIfNeeded(file)
+                val source = BitmapFactory.decodeFile(file.absolutePath) ?: return@withContext false
+                val warped = runCatching { PerspectiveCrop.warp(source, corners) }.getOrNull()
+                source.recycle()
+                if (warped == null) return@withContext false
+                ImageCompressor.saveJpeg(warped, file)
+                warped.recycle()
+                image.thumbnailPath?.let { ImageCompressor.writeThumbnail(file, File(it)) }
+                true
             }
-            _uiState.value = _uiState.value.copy(shapes = emptyList(), fileRevision = _uiState.value.fileRevision + 1)
-            rerunOcr(context)
+            if (cropSucceeded) {
+                _uiState.value = _uiState.value.copy(
+                    shapes = emptyList(),
+                    fileRevision = _uiState.value.fileRevision + 1,
+                    hasBackup = true
+                )
+                rerunOcr(context)
+            }
+        }
+    }
+
+    /** Restores the file as it was before the first crop/rotate in this session. */
+    fun restoreOriginal(context: Context) {
+        viewModelScope.launch {
+            val image = repository.getImageOrNull(imageId) ?: return@launch
+            val restored = withContext(Dispatchers.IO) {
+                val file = File(image.filePath)
+                val backup = backupFile(file)
+                if (!backup.exists()) return@withContext false
+                backup.copyTo(file, overwrite = true)
+                image.thumbnailPath?.let { ImageCompressor.writeThumbnail(file, File(it)) }
+                true
+            }
+            if (restored) {
+                _uiState.value = _uiState.value.copy(shapes = emptyList(), fileRevision = _uiState.value.fileRevision + 1)
+                rerunOcr(context)
+            }
+        }
+    }
+
+    private fun backupFile(file: File): File = File(file.parentFile, "${file.nameWithoutExtension}.original.jpg")
+
+    /** Only ever keeps the *first* backup — a second crop shouldn't overwrite the true original. */
+    private fun backupOriginalIfNeeded(file: File) {
+        val backup = backupFile(file)
+        if (!backup.exists() && file.exists()) {
+            file.copyTo(backup, overwrite = false)
         }
     }
 

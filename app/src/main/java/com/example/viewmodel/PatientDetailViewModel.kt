@@ -55,6 +55,19 @@ class PatientDetailViewModel(
         viewModelScope.launch { repository.deleteImage(imageId) }
     }
 
+    fun deleteImages(imageIds: Set<String>) {
+        viewModelScope.launch { imageIds.forEach { repository.deleteImage(it) } }
+    }
+
+    fun updateImageCategory(imageIds: Set<String>, category: com.example.data.local.entity.ImageCategory) {
+        viewModelScope.launch {
+            imageIds.forEach { id ->
+                val image = repository.getImageOrNull(id) ?: return@forEach
+                repository.saveImage(image.copy(category = category.name))
+            }
+        }
+    }
+
     fun deleteDocument(documentId: String) {
         viewModelScope.launch { repository.deleteDocument(documentId) }
     }
