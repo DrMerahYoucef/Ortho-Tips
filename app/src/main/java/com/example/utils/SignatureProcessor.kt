@@ -103,6 +103,15 @@ object SignatureProcessor {
 
         bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
 
+        // Root cause of the black background: the source photo is a JPEG, which has no
+        // alpha channel — so even after copying to ARGB_8888, Android's Bitmap keeps an
+        // internal "this bitmap is fully opaque" flag from the original. That flag is an
+        // optimization hint Skia's PNG encoder trusts *instead of* re-scanning every pixel,
+        // so despite writing real alpha=0 values above, compress() was silently encoding an
+        // opaque RGB-only PNG — every "transparent" pixel got baked in as solid black.
+        // Must be set on this still-mutable bitmap; the cropped sub-bitmap below is immutable.
+        bitmap.setHasAlpha(true)
+
         val inkFraction = inkPixelCount.toDouble() / pixelCount.toDouble()
         val hasInk = maxX > minX && maxY > minY
 
