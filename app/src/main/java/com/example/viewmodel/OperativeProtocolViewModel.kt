@@ -4,16 +4,21 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.data.prefs.PdfOptionsRepository
 import com.example.data.prefs.SurgeonProfileRepository
 import com.example.data.repository.PatientRepository
 import com.example.utils.OperativeProtocolGenerator
+import com.example.utils.PatientChartPdfOptions
 import com.example.utils.ProtocolLanguage
 import com.example.utils.ShareHelper
+import com.example.utils.SurgeryPdfOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -24,22 +29,34 @@ data class ProtocolGenerationUiState(
 
 class OperativeProtocolViewModel(
     private val patientRepository: PatientRepository,
-    private val surgeonProfileRepository: SurgeonProfileRepository
+    private val surgeonProfileRepository: SurgeonProfileRepository,
+    private val pdfOptionsRepository: PdfOptionsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProtocolGenerationUiState())
     val uiState: StateFlow<ProtocolGenerationUiState> = _uiState.asStateFlow()
+
+    /** The surgeon's last-used "include in PDF" selections — dialogs seed their checkboxes
+     *  from these instead of always resetting to everything-on. */
+    val savedSurgeryOptions: StateFlow<SurgeryPdfOptions> = pdfOptionsRepository.surgeryOptionsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SurgeryPdfOptions())
+
+    val savedChartOptions: StateFlow<PatientChartPdfOptions> = pdfOptionsRepository.chartOptionsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), PatientChartPdfOptions())
 
     fun generateAndShare(
         context: Context,
         patientId: String,
         surgeryId: String,
         language: ProtocolLanguage,
-        anonymize: Boolean
+        anonymize: Boolean,
+        options: SurgeryPdfOptions = SurgeryPdfOptions()
     ) {
         viewModelScope.launch {
             _uiState.value = ProtocolGenerationUiState(isGenerating = true)
             try {
+                pdfOptionsRepository.saveSurgeryOptions(options)
+
                 val patient = patientRepository.getPatient(patientId)
                 val surgery = patientRepository.getSurgery(surgeryId)
                 val surgeon = surgeonProfileRepository.profileFlow.first()
@@ -50,7 +67,7 @@ class OperativeProtocolViewModel(
                 }
 
                 val file = withContext(Dispatchers.IO) {
-                    OperativeProtocolGenerator.generate(context, patient, surgery, surgeon, language, anonymize)
+                    OperativeProtocolGenerator.generate(context, patient, surgery, surgeon, language, anonymize, options)
                 }
                 ShareHelper.sharePdf(context, file, chooserTitle = "Share operative protocol")
                 _uiState.value = ProtocolGenerationUiState()
@@ -60,10 +77,17 @@ class OperativeProtocolViewModel(
         }
     }
 
-    fun generatePatientChart(context: Context, patientId: String, anonymize: Boolean) {
+    fun generatePatientChart(
+        context: Context,
+        patientId: String,
+        anonymize: Boolean,
+        options: PatientChartPdfOptions = PatientChartPdfOptions()
+    ) {
         viewModelScope.launch {
             _uiState.value = ProtocolGenerationUiState(isGenerating = true)
             try {
+                pdfOptionsRepository.saveChartOptions(options)
+
                 val patient = patientRepository.getPatient(patientId)
                 if (patient == null) {
                     _uiState.value = ProtocolGenerationUiState(error = "Patient not found")
@@ -73,7 +97,7 @@ class OperativeProtocolViewModel(
                 val surgeries = patientRepository.getSurgeriesForPatient(patientId).first()
 
                 val file = withContext(Dispatchers.IO) {
-                    com.example.utils.PatientChartPdfGenerator.generate(context, patient, timeline, surgeries, anonymize)
+                    com.example.utils.PatientChartPdfGenerator.generate(context, patient, timeline, surgeries, anonymize, options)
                 }
                 ShareHelper.sharePdf(context, file, chooserTitle = "Share patient chart")
                 _uiState.value = ProtocolGenerationUiState()
@@ -86,11 +110,12 @@ class OperativeProtocolViewModel(
     companion object {
         fun provideFactory(
             patientRepository: PatientRepository,
-            surgeonProfileRepository: SurgeonProfileRepository
+            surgeonProfileRepository: SurgeonProfileRepository,
+            pdfOptionsRepository: PdfOptionsRepository
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return OperativeProtocolViewModel(patientRepository, surgeonProfileRepository) as T
+                return OperativeProtocolViewModel(patientRepository, surgeonProfileRepository, pdfOptionsRepository) as T
             }
         }
     }
