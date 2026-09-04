@@ -1,5 +1,9 @@
 package com.example.ui.screens.patients
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +22,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.DriveFileMove
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
@@ -174,6 +183,7 @@ fun PatientDetailScreen(
                 )
                 DetailTab.MEDIA -> MediaTab(
                     detail = detail,
+                    viewModel = viewModel,
                     onAddMedia = onNavigateToCapture,
                     onImageClick = onNavigateToAnnotate
                 )
@@ -465,12 +475,53 @@ private fun SurgeriesTab(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MediaTab(
     detail: PatientDetail,
+    viewModel: PatientDetailViewModel,
     onAddMedia: () -> Unit,
     onImageClick: (String) -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var selectedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showMoveMenu by remember { mutableStateOf(false) }
+    var pendingGallerySaveIds by remember { mutableStateOf<Set<String>?>(null) }
+
+    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val ids = pendingGallerySaveIds
+        pendingGallerySaveIds = null
+        if (granted && ids != null) {
+            saveImagesToGallery(context, detail, ids)
+        }
+    }
+
+    fun requestSaveToGallery(ids: Set<String>) {
+        val needsLegacyPermission = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q &&
+            androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (needsLegacyPermission) {
+            pendingGallerySaveIds = ids
+            permissionLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        } else {
+            saveImagesToGallery(context, detail, ids)
+        }
+    }
+
+    val sections = remember(detail.images) {
+        listOf(
+            "Radiology" to detail.images.filter { it.category == com.example.data.local.entity.ImageCategory.RADIOLOGY.name },
+            "Clinical" to detail.images.filter { it.category == com.example.data.local.entity.ImageCategory.CLINICAL_PHOTO.name },
+            "Other" to detail.images.filter {
+                it.category != com.example.data.local.entity.ImageCategory.RADIOLOGY.name &&
+                    it.category != com.example.data.local.entity.ImageCategory.CLINICAL_PHOTO.name
+            }
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         if (detail.images.isEmpty() && detail.documents.isEmpty()) {
             EmptyStateView(
@@ -480,33 +531,192 @@ private fun MediaTab(
                 modifier = Modifier.fillMaxSize()
             )
         } else {
-            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(3),
-                contentPadding = PaddingValues(16.dp, top = 16.dp, bottom = 96.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                gridItems(detail.images, key = { it.id }) { image ->
-                    coil.compose.AsyncImage(
-                        model = "file://${image.thumbnailPath ?: image.filePath}",
-                        contentDescription = image.category,
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(110.dp)
-                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                            .clickable { onImageClick(image.id) }
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (selectedIds.isNotEmpty()) {
+                    MediaSelectionBar(
+                        count = selectedIds.size,
+                        onClose = { selectedIds = emptySet() },
+                        onShare = {
+                            val files = detail.images.filter { it.id in selectedIds }.map { java.io.File(it.filePath) }
+                            com.example.utils.ShareHelper.shareFiles(context, files, "image/jpeg", "Share images")
+                        },
+                        onSave = { requestSaveToGallery(selectedIds) },
+                        onMove = { showMoveMenu = true },
+                        onDelete = { showDeleteConfirm = true }
                     )
+                }
+
+                androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                    columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(3),
+                    contentPadding = PaddingValues(16.dp, top = 16.dp, bottom = 96.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    sections.forEach { (label, images) ->
+                        if (images.isNotEmpty()) {
+                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+                                )
+                            }
+                            gridItems(images, key = { it.id }) { image ->
+                                val isSelected = image.id in selectedIds
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(110.dp)
+                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                        .then(
+                                            if (isSelected) {
+                                                Modifier.border(3.dp, MaterialTheme.colorScheme.primary, androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                            } else {
+                                                Modifier
+                                            }
+                                        )
+                                        .combinedClickable(
+                                            onClick = {
+                                                if (selectedIds.isNotEmpty()) {
+                                                    selectedIds = if (isSelected) selectedIds - image.id else selectedIds + image.id
+                                                } else {
+                                                    onImageClick(image.id)
+                                                }
+                                            },
+                                            onLongClick = {
+                                                selectedIds = if (isSelected) selectedIds - image.id else selectedIds + image.id
+                                            }
+                                        )
+                                ) {
+                                    coil.compose.AsyncImage(
+                                        model = "file://${image.thumbnailPath ?: image.filePath}",
+                                        contentDescription = image.category,
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                    if (isSelected) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = "Selected",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        FloatingActionButton(
-            onClick = onAddMedia,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "Add media")
+        if (selectedIds.isEmpty()) {
+            FloatingActionButton(
+                onClick = onAddMedia,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add media")
+            }
         }
     }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete ${selectedIds.size} item${if (selectedIds.size == 1) "" else "s"}?") },
+            text = { Text("This cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteImages(selectedIds)
+                    selectedIds = emptySet()
+                    showDeleteConfirm = false
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") } }
+        )
+    }
+
+    if (showMoveMenu) {
+        AlertDialog(
+            onDismissRequest = { showMoveMenu = false },
+            title = { Text("Move to section") },
+            text = {
+                Column {
+                    listOf(
+                        "Radiology" to com.example.data.local.entity.ImageCategory.RADIOLOGY,
+                        "Clinical" to com.example.data.local.entity.ImageCategory.CLINICAL_PHOTO,
+                        "Other" to com.example.data.local.entity.ImageCategory.OTHER
+                    ).forEach { (label, category) ->
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.updateImageCategory(selectedIds, category)
+                                    selectedIds = emptySet()
+                                    showMoveMenu = false
+                                }
+                                .padding(vertical = 12.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { showMoveMenu = false }) { Text("Cancel") } }
+        )
+    }
+}
+
+@Composable
+private fun MediaSelectionBar(
+    count: Int,
+    onClose: () -> Unit,
+    onShare: () -> Unit,
+    onSave: () -> Unit,
+    onMove: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onClose) {
+            Icon(Icons.Default.Close, contentDescription = "Clear selection")
+        }
+        Text(
+            text = "$count selected",
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.weight(1f)
+        )
+        IconButton(onClick = onShare) { Icon(Icons.Default.Share, contentDescription = "Share") }
+        IconButton(onClick = onSave) { Icon(Icons.Default.Download, contentDescription = "Save to gallery") }
+        IconButton(onClick = onMove) { Icon(Icons.Default.DriveFileMove, contentDescription = "Move to section") }
+        IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error) }
+    }
+}
+
+private fun saveImagesToGallery(context: android.content.Context, detail: PatientDetail, ids: Set<String>) {
+    val images = detail.images.filter { it.id in ids }
+    var successCount = 0
+    images.forEach { image ->
+        val result = com.example.utils.GallerySaver.saveToGallery(context, java.io.File(image.filePath), "IMG_${image.id}.jpg")
+        if (result is com.example.utils.GallerySaver.Result.Success) successCount++
+    }
+    val message = if (successCount == images.size) {
+        "Saved $successCount photo${if (successCount == 1) "" else "s"} to gallery"
+    } else {
+        "Saved $successCount of ${images.size} photos to gallery"
+    }
+    android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
 }

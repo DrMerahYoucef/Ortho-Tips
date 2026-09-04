@@ -1,5 +1,6 @@
 package com.example.ui.screens.patients
 
+import android.graphics.PointF
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -17,7 +18,9 @@ import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.CropFree
+import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Gesture
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.RotateRight
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.TextFields
@@ -49,6 +52,9 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -61,6 +67,49 @@ import kotlin.math.min
 
 private val ANNOTATION_COLOR = 0xFFFF3B30
 
+/** Which corner-drag mode is active — they share the same 4-point overlay UI. */
+private enum class QuadMode { NONE, CROP, OCR }
+
+/** Displayed bounds of the (letterboxed, `ContentScale.Fit`) image within the canvas Box. */
+private data class FitRect(val left: Float, val top: Float, val width: Float, val height: Float)
+
+private fun computeFitRect(canvasW: Float, canvasH: Float, imgW: Int, imgH: Int): FitRect {
+    if (imgW <= 0 || imgH <= 0 || canvasW <= 0 || canvasH <= 0) {
+        return FitRect(0f, 0f, canvasW, canvasH)
+    }
+    val scale = min(canvasW / imgW, canvasH / imgH)
+    val displayedW = imgW * scale
+    val displayedH = imgH * scale
+    return FitRect(left = (canvasW - displayedW) / 2f, top = (canvasH - displayedH) / 2f, width = displayedW, height = displayedH)
+}
+
+/** Canvas-space point → source-bitmap pixel space, accounting for the Fit letterbox/scale. */
+private fun canvasToBitmap(point: Offset, fit: FitRect, imgW: Int, imgH: Int): PointF {
+    val fracX = if (fit.width > 0f) ((point.x - fit.left) / fit.width).coerceIn(0f, 1f) else 0f
+    val fracY = if (fit.height > 0f) ((point.y - fit.top) / fit.height).coerceIn(0f, 1f) else 0f
+    return PointF(fracX * imgW, fracY * imgH)
+}
+
+private fun quadCorners(fit: FitRect): List<Offset> = listOf(
+    Offset(fit.left, fit.top),                          // top-left
+    Offset(fit.left + fit.width, fit.top),               // top-right
+    Offset(fit.left + fit.width, fit.top + fit.height),  // bottom-right
+    Offset(fit.left, fit.top + fit.height)                // bottom-left
+)
+
+private fun nearestHandleIndex(points: List<Offset>, touch: Offset, maxDistancePx: Float): Int? {
+    var bestIndex: Int? = null
+    var bestDistance = Float.MAX_VALUE
+    points.forEachIndexed { index, point ->
+        val d = (point - touch).getDistance()
+        if (d < bestDistance) {
+            bestDistance = d
+            bestIndex = index
+        }
+    }
+    return if (bestDistance <= maxDistancePx) bestIndex else null
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImageAnnotationScreen(
@@ -69,21 +118,62 @@ fun ImageAnnotationScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
 
     var canvasSizePx by remember { mutableStateOf(Offset(1f, 1f)) }
+    var imageIntrinsicSize by remember(uiState.fileRevision) { mutableStateOf<Pair<Int, Int>?>(null) }
     var pendingTextPosition by remember { mutableStateOf<NormalizedPoint?>(null) }
     var textInput by remember { mutableStateOf("") }
-    var cropRect by remember { mutableStateOf<Pair<Offset, Offset>?>(null) }
-    var isCropping by remember { mutableStateOf(false) }
     var dragStart by remember { mutableStateOf<Offset?>(null) }
     var freehandPoints by remember { mutableStateOf<List<Offset>>(emptyList()) }
     var showOcrPanel by remember { mutableStateOf(false) }
+
+    var quadMode by remember { mutableStateOf(QuadMode.NONE) }
+    var quadPoints by remember { mutableStateOf<List<Offset>?>(null) }
+    var activeHandleIndex by remember { mutableStateOf<Int?>(null) }
+    var showQuadOcrDialog by remember { mutableStateOf(false) }
 
     fun normalize(offset: Offset) = NormalizedPoint(
         x = (offset.x / canvasSizePx.x).coerceIn(0f, 1f),
         y = (offset.y / canvasSizePx.y).coerceIn(0f, 1f)
     )
+
+    fun startQuadMode(mode: QuadMode) {
+        if (quadMode == mode) {
+            quadMode = QuadMode.NONE
+            quadPoints = null
+            return
+        }
+        val (imgW, imgH) = imageIntrinsicSize ?: (0 to 0)
+        quadMode = mode
+        quadPoints = if (imgW > 0 && imgH > 0) {
+            quadCorners(computeFitRect(canvasSizePx.x, canvasSizePx.y, imgW, imgH))
+        } else {
+            // Image size not resolved yet (rare race right after opening) — fall back to
+            // the full canvas rather than blocking the tool.
+            quadCorners(FitRect(0f, 0f, canvasSizePx.x, canvasSizePx.y))
+        }
+    }
+
+    fun applyQuad() {
+        val points = quadPoints
+        val (imgW, imgH) = imageIntrinsicSize ?: (0 to 0)
+        if (points != null && imgW > 0 && imgH > 0) {
+            val fit = computeFitRect(canvasSizePx.x, canvasSizePx.y, imgW, imgH)
+            val bitmapCorners = points.map { canvasToBitmap(it, fit, imgW, imgH) }
+            when (quadMode) {
+                QuadMode.CROP -> viewModel.cropQuad(context, bitmapCorners)
+                QuadMode.OCR -> {
+                    viewModel.scanQuadText(bitmapCorners)
+                    showQuadOcrDialog = true
+                }
+                QuadMode.NONE -> {}
+            }
+        }
+        quadMode = QuadMode.NONE
+        quadPoints = null
+    }
 
     Scaffold(
         topBar = {
@@ -106,13 +196,29 @@ fun ImageAnnotationScreen(
                         Icon(Icons.Default.Share, contentDescription = "Share image")
                     }
                     IconButton(onClick = { showOcrPanel = true }) {
-                        Icon(Icons.Default.TextSnippet, contentDescription = "OCR text")
+                        Icon(Icons.Default.TextSnippet, contentDescription = "Scan whole image (OCR)")
+                    }
+                    IconButton(onClick = { startQuadMode(QuadMode.OCR) }) {
+                        Icon(
+                            Icons.Default.DocumentScanner,
+                            contentDescription = "Scan text from a selected region",
+                            tint = if (quadMode == QuadMode.OCR) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
                     }
                     IconButton(onClick = { viewModel.rotate90() }) {
                         Icon(Icons.Default.RotateRight, contentDescription = "Rotate")
                     }
-                    IconButton(onClick = { isCropping = !isCropping; cropRect = null }) {
-                        Icon(Icons.Default.Crop, contentDescription = "Crop", tint = if (isCropping) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                    IconButton(onClick = { startQuadMode(QuadMode.CROP) }) {
+                        Icon(
+                            Icons.Default.Crop,
+                            contentDescription = "Crop",
+                            tint = if (quadMode == QuadMode.CROP) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    if (uiState.hasBackup) {
+                        IconButton(onClick = { viewModel.restoreOriginal(context) }) {
+                            Icon(Icons.Default.Restore, contentDescription = "Restore original photo")
+                        }
                     }
                     TextButton(onClick = { viewModel.saveAnnotations(); onNavigateBack() }) {
                         Icon(Icons.Default.Check, contentDescription = null)
@@ -123,7 +229,7 @@ fun ImageAnnotationScreen(
             )
         },
         bottomBar = {
-            if (!isCropping) {
+            if (quadMode == QuadMode.NONE) {
                 Row(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
@@ -142,25 +248,19 @@ fun ImageAnnotationScreen(
                     }
                 }
             } else {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-                ) {
-                    TextButton(onClick = { isCropping = false; cropRect = null }) { Text("Cancel") }
-                    TextButton(
-                        onClick = {
-                            cropRect?.let { (start, end) ->
-                                val left = min(start.x, end.x) / canvasSizePx.x
-                                val top = min(start.y, end.y) / canvasSizePx.y
-                                val right = max(start.x, end.x) / canvasSizePx.x
-                                val bottom = max(start.y, end.y) / canvasSizePx.y
-                                viewModel.crop(context, left, top, right, bottom)
-                            }
-                            isCropping = false
-                            cropRect = null
-                        },
-                        enabled = cropRect != null
-                    ) { Text("Apply crop") }
+                Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                    Text(
+                        text = "Drag each corner onto the document's edges.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                    Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
+                        TextButton(onClick = { quadMode = QuadMode.NONE; quadPoints = null }) { Text("Cancel") }
+                        TextButton(onClick = { applyQuad() }, enabled = quadPoints != null) {
+                            Text(if (quadMode == QuadMode.OCR) "Scan text" else "Apply crop")
+                        }
+                    }
                 }
             }
         },
@@ -175,14 +275,22 @@ fun ImageAnnotationScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .pointerInput(canvasSizePx, uiState.activeTool, isCropping) {
-                        if (isCropping) {
+                    .pointerInput(canvasSizePx, uiState.activeTool, quadMode) {
+                        if (quadMode != QuadMode.NONE) {
                             detectDragGestures(
-                                onDragStart = { dragStart = it; cropRect = it to it },
-                                onDrag = { change, _ ->
-                                    dragStart?.let { start -> cropRect = start to change.position }
+                                onDragStart = { start ->
+                                    activeHandleIndex = quadPoints?.let { nearestHandleIndex(it, start, maxDistancePx = 72f) }
                                 },
-                                onDragEnd = { dragStart = null }
+                                onDrag = { change, _ ->
+                                    val idx = activeHandleIndex ?: return@detectDragGestures
+                                    val current = quadPoints ?: return@detectDragGestures
+                                    val clamped = Offset(
+                                        change.position.x.coerceIn(0f, canvasSizePx.x),
+                                        change.position.y.coerceIn(0f, canvasSizePx.y)
+                                    )
+                                    quadPoints = current.toMutableList().also { it[idx] = clamped }
+                                },
+                                onDragEnd = { activeHandleIndex = null }
                             )
                         } else {
                             when (uiState.activeTool) {
@@ -223,32 +331,37 @@ fun ImageAnnotationScreen(
                                     }
                                 )
                                 AnnotationTool.RECTANGLE -> detectDragGestures(
-                                    onDragStart = { dragStart = it; cropRect = it to it },
-                                    onDrag = { change, _ -> dragStart?.let { start -> cropRect = start to change.position } },
+                                    onDragStart = { dragStart = it; freehandPoints = listOf(it, it) },
+                                    onDrag = { change, _ -> dragStart?.let { start -> freehandPoints = listOf(start, change.position) } },
                                     onDragEnd = {
-                                        cropRect?.let { (start, end) ->
-                                            viewModel.addShape(
-                                                AnnotationShape.Rectangle(
-                                                    id = java.util.UUID.randomUUID().toString(),
-                                                    colorArgb = ANNOTATION_COLOR,
-                                                    topLeft = normalize(Offset(min(start.x, end.x), min(start.y, end.y))),
-                                                    bottomRight = normalize(Offset(max(start.x, end.x), max(start.y, end.y)))
+                                        freehandPoints.let { pts ->
+                                            if (pts.size == 2) {
+                                                val (start, end) = pts
+                                                viewModel.addShape(
+                                                    AnnotationShape.Rectangle(
+                                                        id = java.util.UUID.randomUUID().toString(),
+                                                        colorArgb = ANNOTATION_COLOR,
+                                                        topLeft = normalize(Offset(min(start.x, end.x), min(start.y, end.y))),
+                                                        bottomRight = normalize(Offset(max(start.x, end.x), max(start.y, end.y)))
+                                                    )
                                                 )
-                                            )
+                                            }
                                         }
                                         dragStart = null
-                                        cropRect = null
+                                        freehandPoints = emptyList()
                                     }
                                 )
                                 else -> {}
                             }
                         }
                     }
-                    .pointerInput(uiState.activeTool) {
-                        detectTapGestures { tapOffset ->
-                            when (uiState.activeTool) {
-                                AnnotationTool.TEXT -> pendingTextPosition = normalize(tapOffset)
-                                else -> {}
+                    .pointerInput(uiState.activeTool, quadMode) {
+                        if (quadMode == QuadMode.NONE) {
+                            detectTapGestures { tapOffset ->
+                                when (uiState.activeTool) {
+                                    AnnotationTool.TEXT -> pendingTextPosition = normalize(tapOffset)
+                                    else -> {}
+                                }
                             }
                         }
                     }
@@ -257,6 +370,10 @@ fun ImageAnnotationScreen(
                     model = uiState.filePath?.let { "file://$it?rev=${uiState.fileRevision}" },
                     contentDescription = "Patient image",
                     contentScale = ContentScale.Fit,
+                    onSuccess = { state ->
+                        val drawable = state.result.drawable
+                        imageIntrinsicSize = drawable.intrinsicWidth to drawable.intrinsicHeight
+                    },
                     modifier = Modifier
                         .fillMaxSize()
                         .onGloballyPositioned { coordinates ->
@@ -308,22 +425,40 @@ fun ImageAnnotationScreen(
                         }
                     }
 
-                    if (freehandPoints.size > 1) {
-                        val path = androidx.compose.ui.graphics.Path()
-                        freehandPoints.forEachIndexed { index, point ->
-                            if (index == 0) path.moveTo(point.x, point.y) else path.lineTo(point.x, point.y)
+                    if (quadMode == QuadMode.NONE && freehandPoints.size > 1) {
+                        when (uiState.activeTool) {
+                            AnnotationTool.RECTANGLE -> {
+                                val (start, end) = freehandPoints
+                                drawRect(
+                                    color = Color.White,
+                                    topLeft = Offset(min(start.x, end.x), min(start.y, end.y)),
+                                    size = androidx.compose.ui.geometry.Size(kotlin.math.abs(end.x - start.x), kotlin.math.abs(end.y - start.y)),
+                                    style = Stroke(width = 3f)
+                                )
+                            }
+                            else -> {
+                                val path = androidx.compose.ui.graphics.Path()
+                                freehandPoints.forEachIndexed { index, point ->
+                                    if (index == 0) path.moveTo(point.x, point.y) else path.lineTo(point.x, point.y)
+                                }
+                                drawPath(path, color = Color(ANNOTATION_COLOR), style = Stroke(width = 4f))
+                            }
                         }
-                        drawPath(path, color = Color(ANNOTATION_COLOR), style = Stroke(width = 4f))
                     }
 
-                    if (isCropping) {
-                        cropRect?.let { (start, end) ->
-                            drawRect(
-                                color = Color.White,
-                                topLeft = Offset(min(start.x, end.x), min(start.y, end.y)),
-                                size = androidx.compose.ui.geometry.Size(kotlin.math.abs(end.x - start.x), kotlin.math.abs(end.y - start.y)),
-                                style = Stroke(width = 3f)
-                            )
+                    quadPoints?.let { points ->
+                        val path = androidx.compose.ui.graphics.Path().apply {
+                            moveTo(points[0].x, points[0].y)
+                            lineTo(points[1].x, points[1].y)
+                            lineTo(points[2].x, points[2].y)
+                            lineTo(points[3].x, points[3].y)
+                            close()
+                        }
+                        drawPath(path, color = Color.White, style = Stroke(width = 3f))
+                        points.forEach { p ->
+                            drawCircle(color = Color.Black, radius = 16f, center = p, alpha = 0.35f)
+                            drawCircle(color = Color.White, radius = 14f, center = p, style = Stroke(width = 3f))
+                            drawCircle(color = Color(0xFF4285F4), radius = 8f, center = p)
                         }
                     }
                 }
@@ -361,10 +496,9 @@ fun ImageAnnotationScreen(
     }
 
     if (showOcrPanel) {
-        val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
         AlertDialog(
             onDismissRequest = { showOcrPanel = false },
-            title = { Text("Extracted text (OCR)") },
+            title = { Text("Extracted text (whole image)") },
             text = {
                 Column {
                     if (uiState.isRunningOcr) {
@@ -379,7 +513,7 @@ fun ImageAnnotationScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(uiState.ocrText))
+                    clipboardManager.setText(AnnotatedString(uiState.ocrText))
                 }) { Text("Copy") }
             },
             dismissButton = {
@@ -388,6 +522,40 @@ fun ImageAnnotationScreen(
                         Text("Re-scan")
                     }
                     TextButton(onClick = { showOcrPanel = false }) { Text("Close") }
+                }
+            }
+        )
+    }
+
+    if (showQuadOcrDialog) {
+        AlertDialog(
+            onDismissRequest = { showQuadOcrDialog = false; viewModel.dismissQuadOcr() },
+            title = { Text("Scanned text (selected region)") },
+            text = {
+                Column {
+                    if (uiState.isRunningQuadOcr) {
+                        CircularProgressIndicator(modifier = Modifier.padding(bottom = 8.dp))
+                    }
+                    Text(
+                        text = uiState.quadOcrText?.ifBlank { "No text detected in that selection." } ?: "Scanning…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { clipboardManager.setText(AnnotatedString(uiState.quadOcrText ?: "")) },
+                    enabled = !uiState.quadOcrText.isNullOrBlank()
+                ) { Text("Copy") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(
+                        onClick = { viewModel.keepQuadOcrText(); showQuadOcrDialog = false },
+                        enabled = !uiState.quadOcrText.isNullOrBlank()
+                    ) { Text("Save to image") }
+                    TextButton(onClick = { showQuadOcrDialog = false; viewModel.dismissQuadOcr() }) { Text("Close") }
                 }
             }
         )
