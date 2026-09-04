@@ -19,6 +19,7 @@ object OrthoDestinations {
     const val PATIENT_DATA_IMPORT_EXPORT = "patient_data_transfer"
     const val MEDIA_CAPTURE = "patient/{patientId}/capture"
     const val IMAGE_ANNOTATE = "image_annotate/{imageId}"
+    const val QR_SCANNER = "qr_scanner"
 
     fun chapterBones(chapterId: String, chapterTitle: String): String {
         return "chapter/${Uri.encode(chapterId)}/${Uri.encode(chapterTitle)}"
