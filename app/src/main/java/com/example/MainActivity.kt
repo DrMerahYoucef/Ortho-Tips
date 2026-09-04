@@ -37,6 +37,7 @@ import com.example.ui.screens.patients.PatientCameraCaptureScreen
 import com.example.ui.screens.patients.PatientDataTransferScreen
 import com.example.ui.screens.patients.PatientDetailScreen
 import com.example.ui.screens.patients.PatientEditScreen
+import com.example.ui.screens.patients.QrScannerScreen
 import com.example.ui.screens.patients.SurgeryEditScreen
 import com.example.ui.screens.patients.SurgeonProfileScreen
 import com.example.ui.screens.patients.TimelineEventEditScreen
@@ -147,6 +148,9 @@ fun OrthoAppNavHost(appModule: AppModule) {
                 },
                 onNavigateToDataTransfer = {
                     navController.navigate(OrthoDestinations.PATIENT_DATA_IMPORT_EXPORT)
+                },
+                onNavigateToQrScanner = {
+                    navController.navigate(OrthoDestinations.QR_SCANNER)
                 }
             )
         }
@@ -236,8 +240,14 @@ fun OrthoAppNavHost(appModule: AppModule) {
             )
             val protocolContext = LocalContext.current
             val protocolViewModel: OperativeProtocolViewModel = viewModel(
-                factory = OperativeProtocolViewModel.provideFactory(appModule.patientRepository, appModule.surgeonProfileRepository)
+                factory = OperativeProtocolViewModel.provideFactory(
+                    appModule.patientRepository,
+                    appModule.surgeonProfileRepository,
+                    appModule.pdfOptionsRepository
+                )
             )
+            val savedSurgeryPdfOptions by protocolViewModel.savedSurgeryOptions.collectAsStateWithLifecycle()
+            val savedChartPdfOptions by protocolViewModel.savedChartOptions.collectAsStateWithLifecycle()
             PatientDetailScreen(
                 viewModel = detailViewModel,
                 onNavigateBack = { navController.popBackStack() },
@@ -252,11 +262,13 @@ fun OrthoAppNavHost(appModule: AppModule) {
                 },
                 onNavigateToCapture = { navController.navigate(OrthoDestinations.mediaCapture(patientId)) },
                 onNavigateToAnnotate = { imageId -> navController.navigate(OrthoDestinations.imageAnnotate(imageId)) },
-                onGenerateProtocol = { surgeryId, language, anonymize ->
-                    protocolViewModel.generateAndShare(protocolContext, patientId, surgeryId, language, anonymize)
+                savedSurgeryPdfOptions = savedSurgeryPdfOptions,
+                savedChartPdfOptions = savedChartPdfOptions,
+                onGenerateProtocol = { surgeryId, language, anonymize, options ->
+                    protocolViewModel.generateAndShare(protocolContext, patientId, surgeryId, language, anonymize, options)
                 },
-                onGenerateChartPdf = { anonymize ->
-                    protocolViewModel.generatePatientChart(protocolContext, patientId, anonymize)
+                onGenerateChartPdf = { anonymize, options ->
+                    protocolViewModel.generatePatientChart(protocolContext, patientId, anonymize, options)
                 }
             )
         }
@@ -387,6 +399,17 @@ fun OrthoAppNavHost(appModule: AppModule) {
             ImageAnnotationScreen(
                 viewModel = annotationViewModel,
                 onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(OrthoDestinations.QR_SCANNER) {
+            QrScannerScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onPatientFound = { patientId ->
+                    navController.navigate(OrthoDestinations.patientDetail(patientId)) {
+                        popUpTo(OrthoDestinations.QR_SCANNER) { inclusive = true }
+                    }
+                }
             )
         }
 
