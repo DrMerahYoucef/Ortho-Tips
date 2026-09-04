@@ -17,6 +17,24 @@ import java.io.FileOutputStream
 
 enum class ProtocolLanguage { FRENCH, ENGLISH }
 
+/** Which sections the surgeon chose to include when exporting a surgery record to PDF. */
+data class SurgeryPdfOptions(
+    val includeHospital: Boolean = true,
+    val includeSurgeon: Boolean = true,
+    val includeAssistants: Boolean = true,
+    val includeAnesthesia: Boolean = true,
+    val includeDiagnosis: Boolean = true,
+    val includeProcedure: Boolean = true,
+    val includeOperativeSteps: Boolean = true,
+    val includeMaterials: Boolean = true,
+    val includeComplications: Boolean = true,
+    val includePostOp: Boolean = true,
+    val includeSignature: Boolean = true,
+    /** Encodes the patient's id — left off by default whenever [OperativeProtocolGenerator.generate]'s
+     *  own `anonymize` flag is on, since it would otherwise defeat the point of anonymizing. */
+    val includeQrCode: Boolean = true
+)
+
 /**
  * Renders a one-page-per-overflow operative report using Android's built-in
  * [PdfDocument] — no third-party PDF library needed. Text is laid out manually
@@ -32,6 +50,7 @@ object OperativeProtocolGenerator {
     private const val PAGE_WIDTH = 595
     private const val PAGE_HEIGHT = 842
     private const val MARGIN = 48f
+    private const val QR_SIZE = 64f
 
     fun generate(
         context: Context,
@@ -39,7 +58,8 @@ object OperativeProtocolGenerator {
         surgery: SurgeryEntity,
         surgeon: SurgeonProfile,
         language: ProtocolLanguage,
-        anonymize: Boolean = false
+        anonymize: Boolean = false,
+        options: SurgeryPdfOptions = SurgeryPdfOptions()
     ): File {
         val strings = Strings.forLanguage(language)
         val document = PdfDocument()
@@ -127,6 +147,18 @@ object OperativeProtocolGenerator {
             }
         }
 
+        // QR code — top-right of the first page, so the printed report can be scanned back
+        // to this patient. Skipped whenever the report itself is anonymized: encoding the
+        // patient's id would quietly undo the point of anonymizing.
+        if (options.includeQrCode && !anonymize) {
+            QrCodeGenerator.generate(QrPatientLink.encode(patient.id), sizePx = 240)?.let { qrBitmap ->
+                val qrRight = PAGE_WIDTH - MARGIN
+                val qrTop = MARGIN
+                canvas.drawBitmap(qrBitmap, null, RectF(qrRight - QR_SIZE, qrTop, qrRight, qrTop + QR_SIZE), null)
+                qrBitmap.recycle()
+            }
+        }
+
         // Letterhead
         canvas.drawText(surgeon.name.ifBlank { strings.unnamedSurgeon }, MARGIN, y, titlePaint)
         y += 20f
@@ -157,16 +189,16 @@ object OperativeProtocolGenerator {
         canvas.drawText("${strings.date}: ${DateFormat.formatDate(surgery.surgeryDate)}", MARGIN, y, bodyPaint)
         y += 15f
 
-        drawSection(strings.hospital, surgery.hospitalClinic)
-        if (!anonymize) drawSection(strings.surgeon, surgery.surgeon)
-        drawSection(strings.assistants, surgery.assistants)
-        drawSection(strings.anesthesia, surgery.anesthesiaType)
-        drawSection(strings.diagnosis, surgery.diagnosis)
-        drawSection(strings.procedure, surgery.procedure)
-        drawBulletSection(strings.operativeSteps, surgery.operativeProtocol)
-        drawSection(strings.materials, surgery.materialsUsed)
-        drawSection(strings.complications, surgery.complications.ifBlank { strings.none })
-        drawSection(strings.postOp, surgery.postOpInstructions)
+        if (options.includeHospital) drawSection(strings.hospital, surgery.hospitalClinic)
+        if (!anonymize && options.includeSurgeon) drawSection(strings.surgeon, surgery.surgeon)
+        if (options.includeAssistants) drawSection(strings.assistants, surgery.assistants)
+        if (options.includeAnesthesia) drawSection(strings.anesthesia, surgery.anesthesiaType)
+        if (options.includeDiagnosis) drawSection(strings.diagnosis, surgery.diagnosis)
+        if (options.includeProcedure) drawSection(strings.procedure, surgery.procedure)
+        if (options.includeOperativeSteps) drawBulletSection(strings.operativeSteps, surgery.operativeProtocol)
+        if (options.includeMaterials) drawSection(strings.materials, surgery.materialsUsed)
+        if (options.includeComplications) drawSection(strings.complications, surgery.complications.ifBlank { strings.none })
+        if (options.includePostOp) drawSection(strings.postOp, surgery.postOpInstructions)
 
         // ---- Close out the page: no trailing blank space, signature bottom-right ----
         val closingLineY = y + 4f
@@ -175,7 +207,7 @@ object OperativeProtocolGenerator {
         }
         y = closingLineY + 14f
 
-        if (!anonymize && surgeon.includeSignatureInPdf && surgeon.signatureImagePath != null) {
+        if (!anonymize && options.includeSignature && surgeon.includeSignatureInPdf && surgeon.signatureImagePath != null) {
             val signatureFile = File(surgeon.signatureImagePath)
             if (signatureFile.exists()) {
                 val decoded = BitmapFactory.decodeFile(signatureFile.absolutePath)

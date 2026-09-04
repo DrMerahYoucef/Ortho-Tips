@@ -2,6 +2,7 @@ package com.example.utils
 
 import android.content.Context
 import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
 import com.example.data.local.entity.PatientEntity
 import com.example.data.local.entity.SurgeryEntity
@@ -9,6 +10,24 @@ import com.example.data.local.entity.TimelineEventEntity
 import com.example.data.local.model.calculateAge
 import java.io.File
 import java.io.FileOutputStream
+
+/** Which sections the surgeon chose to include when exporting a patient's chart to PDF. */
+data class PatientChartPdfOptions(
+    val includeContact: Boolean = true,
+    val includeInsurance: Boolean = true,
+    val includeMedicalHistory: Boolean = true,
+    val includeAllergies: Boolean = true,
+    val includeChronicDiseases: Boolean = true,
+    val includePreviousSurgeries: Boolean = true,
+    val includeMedications: Boolean = true,
+    val includeNotes: Boolean = true,
+    val includeOrthopedicInfo: Boolean = true,
+    val includeTimeline: Boolean = true,
+    val includeSurgeries: Boolean = true,
+    /** Encodes the patient's id — left off by default whenever [PatientChartPdfGenerator.generate]'s
+     *  own `anonymize` flag is on, since it would otherwise defeat the point of anonymizing. */
+    val includeQrCode: Boolean = true
+)
 
 /**
  * Renders the patient's full chart (demographics, medical & orthopedic info, timeline,
@@ -20,13 +39,15 @@ object PatientChartPdfGenerator {
     private const val PAGE_WIDTH = 595
     private const val PAGE_HEIGHT = 842
     private const val MARGIN = 48f
+    private const val QR_SIZE = 64f
 
     fun generate(
         context: Context,
         patient: PatientEntity,
         timelineEvents: List<TimelineEventEntity>,
         surgeries: List<SurgeryEntity>,
-        anonymize: Boolean
+        anonymize: Boolean,
+        options: PatientChartPdfOptions = PatientChartPdfOptions()
     ): File {
         val document = PdfDocument()
         var pageNumber = 1
@@ -81,6 +102,18 @@ object PatientChartPdfGenerator {
             drawWrapped(body, bodyPaint, 15f)
         }
 
+        // QR code — top-right of the first page, so the printed chart can be scanned back to
+        // this patient. Skipped whenever the chart itself is anonymized: encoding the
+        // patient's id would quietly undo the point of anonymizing.
+        if (options.includeQrCode && !anonymize) {
+            QrCodeGenerator.generate(QrPatientLink.encode(patient.id), sizePx = 240)?.let { qrBitmap ->
+                val qrRight = PAGE_WIDTH - MARGIN
+                val qrTop = MARGIN
+                canvas.drawBitmap(qrBitmap, null, RectF(qrRight - QR_SIZE, qrTop, qrRight, qrTop + QR_SIZE), null)
+                qrBitmap.recycle()
+            }
+        }
+
         // Title block
         val displayName = if (anonymize) patient.patientCode else "${patient.fullName} (${patient.patientCode})"
         canvas.drawText(displayName, MARGIN, y, titlePaint)
@@ -100,39 +133,44 @@ object PatientChartPdfGenerator {
         y += 20f
 
         if (!anonymize) {
-            drawSection("Contact", listOfNotNull(
-                patient.phone.ifBlank { null }?.let { "Phone: $it" },
-                patient.email.ifBlank { null }?.let { "Email: $it" },
-                patient.address.ifBlank { null }?.let { "Address: $it" },
-                listOf(patient.emergencyContactName, patient.emergencyContactPhone).filter { it.isNotBlank() }
-                    .joinToString(" — ").ifBlank { null }?.let { "Emergency contact: $it" }
-            ).joinToString("\n"))
-
-            drawSection("Insurance", listOfNotNull(
-                patient.insuranceProvider.ifBlank { null },
-                patient.insuranceNumber.ifBlank { null }
-            ).joinToString(" — "))
+            if (options.includeContact) {
+                drawSection("Contact", listOfNotNull(
+                    patient.phone.ifBlank { null }?.let { "Phone: $it" },
+                    patient.email.ifBlank { null }?.let { "Email: $it" },
+                    patient.address.ifBlank { null }?.let { "Address: $it" },
+                    listOf(patient.emergencyContactName, patient.emergencyContactPhone).filter { it.isNotBlank() }
+                        .joinToString(" — ").ifBlank { null }?.let { "Emergency contact: $it" }
+                ).joinToString("\n"))
+            }
+            if (options.includeInsurance) {
+                drawSection("Insurance", listOfNotNull(
+                    patient.insuranceProvider.ifBlank { null },
+                    patient.insuranceNumber.ifBlank { null }
+                ).joinToString(" — "))
+            }
         }
 
-        drawSection("Medical history", patient.medicalHistory)
-        drawSection("Allergies", patient.allergies)
-        drawSection("Chronic diseases", patient.chronicDiseases)
-        drawSection("Previous surgeries (history)", patient.previousSurgeries)
-        drawSection("Medications", patient.medications)
-        drawSection("Notes", patient.generalNotes)
+        if (options.includeMedicalHistory) drawSection("Medical history", patient.medicalHistory)
+        if (options.includeAllergies) drawSection("Allergies", patient.allergies)
+        if (options.includeChronicDiseases) drawSection("Chronic diseases", patient.chronicDiseases)
+        if (options.includePreviousSurgeries) drawSection("Previous surgeries (history)", patient.previousSurgeries)
+        if (options.includeMedications) drawSection("Medications", patient.medications)
+        if (options.includeNotes) drawSection("Notes", patient.generalNotes)
 
-        drawSection("Diagnosis", patient.diagnosis)
-        drawSection("Body region / side", listOfNotNull(
-            patient.bodyRegion.ifBlank { null },
-            patient.side.takeIf { it.isNotBlank() && it != "NOT_APPLICABLE" }
-        ).joinToString(" — "))
-        drawSection("Injury date", DateFormat.formatDate(patient.injuryDate).takeIf { it != "—" } ?: "")
-        drawSection("Trauma mechanism", patient.traumaMechanism)
-        drawSection("Fracture classification", patient.fractureClassification)
-        drawSection("Imaging findings", patient.imagingFindings)
-        drawSection("Treatment plan", patient.treatmentPlan)
+        if (options.includeOrthopedicInfo) {
+            drawSection("Diagnosis", patient.diagnosis)
+            drawSection("Body region / side", listOfNotNull(
+                patient.bodyRegion.ifBlank { null },
+                patient.side.takeIf { it.isNotBlank() && it != "NOT_APPLICABLE" }
+            ).joinToString(" — "))
+            drawSection("Injury date", DateFormat.formatDate(patient.injuryDate).takeIf { it != "—" } ?: "")
+            drawSection("Trauma mechanism", patient.traumaMechanism)
+            drawSection("Fracture classification", patient.fractureClassification)
+            drawSection("Imaging findings", patient.imagingFindings)
+            drawSection("Treatment plan", patient.treatmentPlan)
+        }
 
-        if (timelineEvents.isNotEmpty()) {
+        if (options.includeTimeline && timelineEvents.isNotEmpty()) {
             y += 6f
             newPageIfNeeded(20f)
             canvas.drawText("TIMELINE", MARGIN, y, sectionPaint)
@@ -148,7 +186,7 @@ object PatientChartPdfGenerator {
             }
         }
 
-        if (surgeries.isNotEmpty()) {
+        if (options.includeSurgeries && surgeries.isNotEmpty()) {
             y += 6f
             newPageIfNeeded(20f)
             canvas.drawText("SURGERIES", MARGIN, y, sectionPaint)
