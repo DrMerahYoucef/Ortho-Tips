@@ -66,6 +66,7 @@ fun MainScreen(
     onNavigateToAddPatient: () -> Unit,
     onNavigateToSurgeonProfile: () -> Unit,
     onNavigateToDataTransfer: () -> Unit,
+    onNavigateToQrScanner: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedItem by rememberSaveable { mutableStateOf(NavigationItem.HOME) }
@@ -154,6 +155,7 @@ fun MainScreen(
                     onNavigateToAddPatient = onNavigateToAddPatient,
                     onNavigateToSurgeonProfile = onNavigateToSurgeonProfile,
                     onNavigateToDataTransfer = onNavigateToDataTransfer,
+                    onNavigateToQrScanner = onNavigateToQrScanner,
                     onExportSelected = { ids -> dataTransferViewModel.exportPatients(mainScreenContext, ids) }
                 )
                 NavigationItem.SEARCH -> SearchScreen(
