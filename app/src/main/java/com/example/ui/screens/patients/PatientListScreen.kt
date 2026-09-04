@@ -3,7 +3,9 @@ package com.example.ui.screens.patients
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,6 +18,7 @@ import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ImportExport
 import androidx.compose.material.icons.filled.PersonSearch
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -49,6 +52,7 @@ fun PatientListScreen(
     onNavigateToAddPatient: () -> Unit,
     onNavigateToSurgeonProfile: () -> Unit,
     onNavigateToDataTransfer: () -> Unit,
+    onNavigateToQrScanner: () -> Unit,
     onExportSelected: (List<String>) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -126,13 +130,20 @@ fun PatientListScreen(
             }
 
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                OrthoSearchBar(
-                    query = uiState.searchQuery,
-                    onQueryChange = { viewModel.setSearchQuery(it) },
-                    onSearch = { viewModel.setSearchQuery(it) },
-                    onClear = { viewModel.setSearchQuery("") },
-                    placeholderText = "Search name, ID, diagnosis..."
-                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        OrthoSearchBar(
+                            query = uiState.searchQuery,
+                            onQueryChange = { viewModel.setSearchQuery(it) },
+                            onSearch = { viewModel.setSearchQuery(it) },
+                            onClear = { viewModel.setSearchQuery("") },
+                            placeholderText = "Search name, ID, diagnosis..."
+                        )
+                    }
+                    IconButton(onClick = onNavigateToQrScanner) {
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan patient QR code")
+                    }
+                }
             }
 
             when {

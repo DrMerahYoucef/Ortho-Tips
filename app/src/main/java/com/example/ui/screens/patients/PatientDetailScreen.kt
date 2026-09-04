@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -80,8 +82,10 @@ fun PatientDetailScreen(
     onNavigateToEditSurgery: (String) -> Unit,
     onNavigateToCapture: () -> Unit,
     onNavigateToAnnotate: (String) -> Unit,
-    onGenerateProtocol: (String, com.example.utils.ProtocolLanguage, Boolean) -> Unit,
-    onGenerateChartPdf: (Boolean) -> Unit,
+    onGenerateProtocol: (String, com.example.utils.ProtocolLanguage, Boolean, com.example.utils.SurgeryPdfOptions) -> Unit,
+    onGenerateChartPdf: (Boolean, com.example.utils.PatientChartPdfOptions) -> Unit,
+    savedSurgeryPdfOptions: com.example.utils.SurgeryPdfOptions = com.example.utils.SurgeryPdfOptions(),
+    savedChartPdfOptions: com.example.utils.PatientChartPdfOptions = com.example.utils.PatientChartPdfOptions(),
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -89,6 +93,7 @@ fun PatientDetailScreen(
     var menuExpanded by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var protocolSurgeryId by remember { mutableStateOf<String?>(null) }
+    var showChartOptions by remember { mutableStateOf(false) }
 
     if (uiState.wasDeleted && !uiState.isLoading) {
         onNavigateBack()
@@ -116,12 +121,8 @@ fun PatientDetailScreen(
                             onClick = { menuExpanded = false; onNavigateToEdit() }
                         )
                         DropdownMenuItem(
-                            text = { Text("Export PDF") },
-                            onClick = { menuExpanded = false; onGenerateChartPdf(false) }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Export anonymous PDF") },
-                            onClick = { menuExpanded = false; onGenerateChartPdf(true) }
+                            text = { Text("Export PDF...") },
+                            onClick = { menuExpanded = false; showChartOptions = true }
                         )
                         DropdownMenuItem(
                             text = { Text(if (detail?.patient?.isArchived == true) "Unarchive" else "Archive") },
@@ -210,10 +211,22 @@ fun PatientDetailScreen(
 
     protocolSurgeryId?.let { surgeryId ->
         ProtocolLanguageDialog(
+            initialOptions = savedSurgeryPdfOptions,
             onDismiss = { protocolSurgeryId = null },
-            onConfirm = { language, anonymize ->
-                onGenerateProtocol(surgeryId, language, anonymize)
+            onConfirm = { language, anonymize, options ->
+                onGenerateProtocol(surgeryId, language, anonymize, options)
                 protocolSurgeryId = null
+            }
+        )
+    }
+
+    if (showChartOptions) {
+        PatientChartOptionsDialog(
+            initialOptions = savedChartPdfOptions,
+            onDismiss = { showChartOptions = false },
+            onConfirm = { anonymize, options ->
+                onGenerateChartPdf(anonymize, options)
+                showChartOptions = false
             }
         )
     }
@@ -221,17 +234,35 @@ fun PatientDetailScreen(
 
 @Composable
 private fun ProtocolLanguageDialog(
+    initialOptions: com.example.utils.SurgeryPdfOptions,
     onDismiss: () -> Unit,
-    onConfirm: (com.example.utils.ProtocolLanguage, Boolean) -> Unit
+    onConfirm: (com.example.utils.ProtocolLanguage, Boolean, com.example.utils.SurgeryPdfOptions) -> Unit
 ) {
     var language by remember { mutableStateOf(com.example.utils.ProtocolLanguage.FRENCH) }
     var anonymize by remember { mutableStateOf(false) }
+    var includeHospital by remember { mutableStateOf(initialOptions.includeHospital) }
+    var includeSurgeon by remember { mutableStateOf(initialOptions.includeSurgeon) }
+    var includeAssistants by remember { mutableStateOf(initialOptions.includeAssistants) }
+    var includeAnesthesia by remember { mutableStateOf(initialOptions.includeAnesthesia) }
+    var includeDiagnosis by remember { mutableStateOf(initialOptions.includeDiagnosis) }
+    var includeProcedure by remember { mutableStateOf(initialOptions.includeProcedure) }
+    var includeOperativeSteps by remember { mutableStateOf(initialOptions.includeOperativeSteps) }
+    var includeMaterials by remember { mutableStateOf(initialOptions.includeMaterials) }
+    var includeComplications by remember { mutableStateOf(initialOptions.includeComplications) }
+    var includePostOp by remember { mutableStateOf(initialOptions.includePostOp) }
+    var includeSignature by remember { mutableStateOf(initialOptions.includeSignature) }
+    var includeQrCode by remember { mutableStateOf(initialOptions.includeQrCode) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Generate operative protocol") },
         text = {
-            Column {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(androidx.compose.foundation.rememberScrollState())
+            ) {
                 Text("Language", style = MaterialTheme.typography.labelMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
                     androidx.compose.material3.FilterChip(
@@ -252,15 +283,144 @@ private fun ProtocolLanguageDialog(
                     androidx.compose.material3.Checkbox(checked = anonymize, onCheckedChange = { anonymize = it })
                     Text("Anonymize patient name and surgeon")
                 }
+
+                androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                Text("Include in PDF", style = MaterialTheme.typography.labelMedium)
+                PdfOptionRow("Hospital / clinic", includeHospital) { includeHospital = it }
+                PdfOptionRow("Surgeon", includeSurgeon, enabled = !anonymize) { includeSurgeon = it }
+                PdfOptionRow("Assistants", includeAssistants) { includeAssistants = it }
+                PdfOptionRow("Anesthesia", includeAnesthesia) { includeAnesthesia = it }
+                PdfOptionRow("Diagnosis", includeDiagnosis) { includeDiagnosis = it }
+                PdfOptionRow("Procedure", includeProcedure) { includeProcedure = it }
+                PdfOptionRow("Operative steps", includeOperativeSteps) { includeOperativeSteps = it }
+                PdfOptionRow("Materials used", includeMaterials) { includeMaterials = it }
+                PdfOptionRow("Complications", includeComplications) { includeComplications = it }
+                PdfOptionRow("Postoperative instructions", includePostOp) { includePostOp = it }
+                PdfOptionRow("Signature", includeSignature) { includeSignature = it }
+                PdfOptionRow("QR code (patient lookup)", includeQrCode, enabled = !anonymize) { includeQrCode = it }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(language, anonymize) }) { Text("Generate") }
+            TextButton(onClick = {
+                onConfirm(
+                    language,
+                    anonymize,
+                    com.example.utils.SurgeryPdfOptions(
+                        includeHospital = includeHospital,
+                        includeSurgeon = includeSurgeon,
+                        includeAssistants = includeAssistants,
+                        includeAnesthesia = includeAnesthesia,
+                        includeDiagnosis = includeDiagnosis,
+                        includeProcedure = includeProcedure,
+                        includeOperativeSteps = includeOperativeSteps,
+                        includeMaterials = includeMaterials,
+                        includeComplications = includeComplications,
+                        includePostOp = includePostOp,
+                        includeSignature = includeSignature,
+                        includeQrCode = includeQrCode
+                    )
+                )
+            }) { Text("Generate") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
+}
+
+@Composable
+private fun PatientChartOptionsDialog(
+    initialOptions: com.example.utils.PatientChartPdfOptions,
+    onDismiss: () -> Unit,
+    onConfirm: (Boolean, com.example.utils.PatientChartPdfOptions) -> Unit
+) {
+    var anonymize by remember { mutableStateOf(false) }
+    var includeContact by remember { mutableStateOf(initialOptions.includeContact) }
+    var includeInsurance by remember { mutableStateOf(initialOptions.includeInsurance) }
+    var includeMedicalHistory by remember { mutableStateOf(initialOptions.includeMedicalHistory) }
+    var includeAllergies by remember { mutableStateOf(initialOptions.includeAllergies) }
+    var includeChronicDiseases by remember { mutableStateOf(initialOptions.includeChronicDiseases) }
+    var includePreviousSurgeries by remember { mutableStateOf(initialOptions.includePreviousSurgeries) }
+    var includeMedications by remember { mutableStateOf(initialOptions.includeMedications) }
+    var includeNotes by remember { mutableStateOf(initialOptions.includeNotes) }
+    var includeOrthopedicInfo by remember { mutableStateOf(initialOptions.includeOrthopedicInfo) }
+    var includeTimeline by remember { mutableStateOf(initialOptions.includeTimeline) }
+    var includeSurgeries by remember { mutableStateOf(initialOptions.includeSurgeries) }
+    var includeQrCode by remember { mutableStateOf(initialOptions.includeQrCode) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Export patient chart") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(androidx.compose.foundation.rememberScrollState())
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
+                ) {
+                    androidx.compose.material3.Checkbox(checked = anonymize, onCheckedChange = { anonymize = it })
+                    Text("Anonymize patient name, contact & insurance")
+                }
+
+                androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                Text("Include in PDF", style = MaterialTheme.typography.labelMedium)
+                PdfOptionRow("Contact info", includeContact, enabled = !anonymize) { includeContact = it }
+                PdfOptionRow("Insurance", includeInsurance, enabled = !anonymize) { includeInsurance = it }
+                PdfOptionRow("Medical history", includeMedicalHistory) { includeMedicalHistory = it }
+                PdfOptionRow("Allergies", includeAllergies) { includeAllergies = it }
+                PdfOptionRow("Chronic diseases", includeChronicDiseases) { includeChronicDiseases = it }
+                PdfOptionRow("Previous surgeries (history)", includePreviousSurgeries) { includePreviousSurgeries = it }
+                PdfOptionRow("Medications", includeMedications) { includeMedications = it }
+                PdfOptionRow("Notes", includeNotes) { includeNotes = it }
+                PdfOptionRow("Orthopedic information", includeOrthopedicInfo) { includeOrthopedicInfo = it }
+                PdfOptionRow("Timeline", includeTimeline) { includeTimeline = it }
+                PdfOptionRow("Surgeries", includeSurgeries) { includeSurgeries = it }
+                PdfOptionRow("QR code (patient lookup)", includeQrCode, enabled = !anonymize) { includeQrCode = it }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onConfirm(
+                    anonymize,
+                    com.example.utils.PatientChartPdfOptions(
+                        includeContact = includeContact,
+                        includeInsurance = includeInsurance,
+                        includeMedicalHistory = includeMedicalHistory,
+                        includeAllergies = includeAllergies,
+                        includeChronicDiseases = includeChronicDiseases,
+                        includePreviousSurgeries = includePreviousSurgeries,
+                        includeMedications = includeMedications,
+                        includeNotes = includeNotes,
+                        includeOrthopedicInfo = includeOrthopedicInfo,
+                        includeTimeline = includeTimeline,
+                        includeSurgeries = includeSurgeries,
+                        includeQrCode = includeQrCode
+                    )
+                )
+            }) { Text("Generate") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
+private fun PdfOptionRow(label: String, checked: Boolean, enabled: Boolean = true, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        androidx.compose.material3.Checkbox(checked = checked && enabled, onCheckedChange = onCheckedChange, enabled = enabled)
+        Text(
+            text = label,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+        )
+    }
 }
 
 @Composable
