@@ -28,7 +28,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
@@ -60,9 +59,9 @@ fun SplashScreen(
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF0F172A),
-                        Color(0xFF00363D),
-                        Color(0xFF001F24)
+                        Color(0xFF0B1A1D),
+                        Color(0xFF00404D),
+                        Color(0xFF002830)
                     )
                 )
             )
@@ -79,7 +78,7 @@ fun SplashScreen(
         ) {
             Surface(
                 shape = CircleShape,
-                color = Color(0x334DD8E6),
+                color = Color(0x3387D3E4),
                 modifier = Modifier.size(110.dp)
             ) {
                 Box(
@@ -99,7 +98,6 @@ fun SplashScreen(
             Text(
                 text = "Ortho Tips",
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold,
                 color = Color.White,
                 letterSpacing = 1.sp
             )
@@ -109,8 +107,7 @@ fun SplashScreen(
             Text(
                 text = "SURGICAL PEARLS & OPERATIVE COMPANION",
                 style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF4DD8E6),
+                color = Color(0xFF87D3E4),
                 letterSpacing = 1.5.sp
             )
         }
