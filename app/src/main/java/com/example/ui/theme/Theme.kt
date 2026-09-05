@@ -62,7 +62,7 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun OrthoTipsTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false, // Use our handcrafted medical surgical colors by default
+    dynamicColor: Boolean = false, // Use our handcrafted clinical colors by default
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
