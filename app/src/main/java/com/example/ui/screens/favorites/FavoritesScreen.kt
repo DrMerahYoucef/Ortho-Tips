@@ -3,7 +3,6 @@ package com.example.ui.screens.favorites
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -20,7 +19,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
@@ -45,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -85,7 +82,6 @@ fun FavoritesScreen(
                     Text(
                         text = "Saved & Clinical Notes",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         letterSpacing = (-0.3).sp
                     )
@@ -122,27 +118,18 @@ fun FavoritesScreen(
             TabRow(
                 selectedTabIndex = if (uiState.currentTab == SavedTab.BOOKMARKS) 0 else 1,
                 containerColor = MaterialTheme.colorScheme.background,
+                contentColor = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Tab(
                     selected = uiState.currentTab == SavedTab.BOOKMARKS,
                     onClick = { viewModel.selectTab(SavedTab.BOOKMARKS) },
-                    text = {
-                        Text(
-                            text = "Bookmarks (${uiState.bookmarks.size})",
-                            fontWeight = if (uiState.currentTab == SavedTab.BOOKMARKS) FontWeight.Bold else FontWeight.Medium
-                        )
-                    }
+                    text = { Text(text = "Bookmarks (${uiState.bookmarks.size})") }
                 )
                 Tab(
                     selected = uiState.currentTab == SavedTab.NOTES,
                     onClick = { viewModel.selectTab(SavedTab.NOTES) },
-                    text = {
-                        Text(
-                            text = "Clinical Notes (${uiState.notes.size})",
-                            fontWeight = if (uiState.currentTab == SavedTab.NOTES) FontWeight.Bold else FontWeight.Medium
-                        )
-                    }
+                    text = { Text(text = "Clinical Notes (${uiState.notes.size})") }
                 )
             }
 
@@ -214,22 +201,22 @@ private fun NoteListItem(
     modifier: Modifier = Modifier
 ) {
     val tagColor = when (note.colorTag) {
-        "amber" -> Color(0xFFE65100)
-        "blue" -> Color(0xFF1D4ED8)
-        "purple" -> Color(0xFF7C3AED)
-        "crimson" -> Color(0xFFDC2626)
-        else -> Color(0xFF006874)
+        "amber" -> Color(0xFFA6720A)
+        "blue" -> Color(0xFF2E6B9E)
+        "purple" -> Color(0xFF6A4C93)
+        "crimson" -> Color(0xFFBA1A1A)
+        else -> Color(0xFF00677D)
     }
 
     val dateFormatter = SimpleDateFormat("MMM dd, yyyy • HH:mm", Locale.getDefault())
     val formattedDate = dateFormatter.format(Date(note.updatedAt))
 
     Card(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier
             .fillMaxWidth()
@@ -254,7 +241,6 @@ private fun NoteListItem(
                     Text(
                         text = note.title,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -319,7 +305,6 @@ private fun NoteListItem(
                         Text(
                             text = "Linked Procedure",
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             fontSize = 10.sp
