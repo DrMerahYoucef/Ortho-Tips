@@ -36,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.components.EmptyStateView
@@ -65,7 +66,7 @@ fun PatientListScreen(
                     if (uiState.isSelectionMode) {
                         Text("${uiState.selectedIds.size} selected")
                     } else {
-                        Text("Patients", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                        Text("Patients", fontWeight = FontWeight.Bold)
                     }
                 },
                 navigationIcon = {
@@ -101,18 +102,21 @@ fun PatientListScreen(
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
         floatingActionButton = {
             if (!uiState.isSelectionMode) {
-                FloatingActionButton(onClick = onNavigateToAddPatient) {
+                FloatingActionButton(
+                    onClick = onNavigateToAddPatient,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
                     Icon(Icons.Default.Add, contentDescription = "Add patient")
                 }
             }
         },
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
