@@ -4,7 +4,6 @@ import android.graphics.BitmapFactory
 import android.graphics.PointF
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -14,10 +13,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.selection.TextSelectionColors
@@ -56,11 +53,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -69,7 +65,6 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -130,6 +125,10 @@ fun ImageAnnotationScreen(
         }
     }
 
+    // Only decoded while a crop/OCR-region corner is actually being dragged — used solely to
+    // draw the magnifier loupe below, from the real pixel data (not a scaled-down preview).
+    var quadSourceBitmap by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+
     var canvasSizePx by remember { mutableStateOf(Offset(1f, 1f)) }
     var pendingTextPosition by remember { mutableStateOf<NormalizedPoint?>(null) }
     var textInput by remember { mutableStateOf("") }
@@ -141,6 +140,17 @@ fun ImageAnnotationScreen(
     var quadPoints by remember { mutableStateOf<List<Offset>?>(null) }
     var activeHandleIndex by remember { mutableStateOf<Int?>(null) }
     var showQuadOcrDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(quadMode, uiState.filePath, uiState.fileRevision) {
+        quadSourceBitmap = if (quadMode != QuadMode.NONE) {
+            val path = uiState.filePath
+            if (path != null) {
+                withContext(Dispatchers.IO) {
+                    BitmapFactory.decodeFile(path)?.asImageBitmap()
+                }
+            } else null
+        } else null
+    }
 
     fun normalize(offset: Offset) = NormalizedPoint(
         x = (offset.x / canvasSizePx.x).coerceIn(0f, 1f),
@@ -155,12 +165,20 @@ fun ImageAnnotationScreen(
         return PointF(fracX * imgW, fracY * imgH)
     }
 
-    fun fullFrameCorners(): List<Offset> = listOf(
-        Offset(0f, 0f),
-        Offset(canvasSizePx.x, 0f),
-        Offset(canvasSizePx.x, canvasSizePx.y),
-        Offset(0f, canvasSizePx.y)
-    )
+    fun fullFrameCorners(): List<Offset> {
+        // A small inward inset so the initial handles land just shy of the screen's
+        // physical edge — pinned exactly at (0,0) etc. left no room for an imprecise
+        // finger to grab them without overshooting past the touchable area.
+        val insetPx = with(density) { 28.dp.toPx() }
+        val insetX = insetPx.coerceAtMost(canvasSizePx.x / 4f)
+        val insetY = insetPx.coerceAtMost(canvasSizePx.y / 4f)
+        return listOf(
+            Offset(insetX, insetY),
+            Offset(canvasSizePx.x - insetX, insetY),
+            Offset(canvasSizePx.x - insetX, canvasSizePx.y - insetY),
+            Offset(insetX, canvasSizePx.y - insetY)
+        )
+    }
 
     fun startQuadMode(mode: QuadMode) {
         if (quadMode == mode) {
@@ -305,7 +323,7 @@ fun ImageAnnotationScreen(
                         if (quadMode != QuadMode.NONE) {
                             detectDragGestures(
                                 onDragStart = { start ->
-                                    activeHandleIndex = quadPoints?.let { nearestHandleIndex(it, start, maxDistancePx = 72f) }
+                                    activeHandleIndex = quadPoints?.let { nearestHandleIndex(it, start, maxDistancePx = 96f) }
                                 },
                                 onDrag = { change, _ ->
                                     val idx = activeHandleIndex ?: return@detectDragGestures
@@ -472,8 +490,6 @@ fun ImageAnnotationScreen(
                             lineTo(points[3].x, points[3].y)
                             close()
                         }
-                        // Faint fill over the un-selected margin, matching the reference
-                        // scanner UI (dims everything outside the selected quad).
                         drawPath(path, color = Color(HANDLE_COLOR), style = Stroke(width = 4f))
                         points.forEach { p ->
                             drawCircle(color = Color.Black, radius = 26f, center = p, alpha = 0.25f)
@@ -481,53 +497,64 @@ fun ImageAnnotationScreen(
                             drawCircle(color = Color.White, radius = 20f, center = p, style = Stroke(width = 3f))
                         }
                     }
-                }
-            }
 
-            // Magnifier loupe: while dragging a corner, show a zoomed preview of the area
-            // under the finger, offset above it so the finger itself doesn't hide it —
-            // the same precision aid Google's own document scanner uses.
-            if (activeHandleIndex != null) {
-                val activePoint = quadPoints?.getOrNull(activeHandleIndex!!)
-                if (activePoint != null && canvasSizePx.x > 0f && canvasSizePx.y > 0f) {
-                    val loupeDiameterDp = 96.dp
-                    val zoom = 2.5f
-                    val loupeDiameterPx = with(density) { loupeDiameterDp.toPx() }
-                    val verticalOffsetPx = with(density) { 120.dp.toPx() }
+                    // Magnifier loupe: while dragging a corner, show a zoomed preview of the
+                    // area under the finger, offset above it so the finger doesn't hide it —
+                    // the same precision aid Google's own document scanner uses. Drawn in this
+                    // SAME Canvas (same coordinate frame as the quad points themselves) using
+                    // direct source/destination pixel rects — no separate positioned Box, no
+                    // translation math that could drift out of alignment with the real touch point.
+                    val bitmap = quadSourceBitmap
+                    val activePoint = activeHandleIndex?.let { idx -> quadPoints?.getOrNull(idx) }
+                    if (bitmap != null && activePoint != null && imgW > 0 && imgH > 0 && w > 0f && h > 0f) {
+                        val loupeDiameterPx = with(density) { 120.dp.toPx() }
+                        val zoom = 3f
+                        val verticalOffsetPx = with(density) { 90.dp.toPx() }
+                        val loupeRadius = loupeDiameterPx / 2f
 
-                    Box(
-                        modifier = Modifier
-                            .size(loupeDiameterDp)
-                            .offset {
-                                IntOffset(
-                                    (activePoint.x - loupeDiameterPx / 2f).roundToInt(),
-                                    (activePoint.y - loupeDiameterPx / 2f - verticalOffsetPx).roundToInt()
+                        // Where the loupe itself is centered on screen: above the finger.
+                        val loupeCenterX = activePoint.x
+                        val loupeCenterY = activePoint.y - verticalOffsetPx
+                        val loupeTopLeftX = loupeCenterX - loupeRadius
+                        val loupeTopLeftY = loupeCenterY - loupeRadius
+
+                        // Which square of the SOURCE bitmap that loupe should show, centered on
+                        // the actual touch point, converted from canvas pixels to bitmap pixels.
+                        val bitmapPointX = (activePoint.x / w) * imgW
+                        val bitmapPointY = (activePoint.y / h) * imgH
+                        val bitmapPxPerCanvasPx = imgW / w
+                        val srcSize = ((loupeDiameterPx / zoom) * bitmapPxPerCanvasPx)
+                            .roundToInt()
+                            .coerceIn(1, min(imgW, imgH))
+                        val srcX = (bitmapPointX - srcSize / 2f).roundToInt().coerceIn(0, imgW - srcSize)
+                        val srcY = (bitmapPointY - srcSize / 2f).roundToInt().coerceIn(0, imgH - srcSize)
+
+                        androidx.compose.ui.graphics.drawscope.clipPath(
+                            androidx.compose.ui.graphics.Path().apply {
+                                addOval(
+                                    androidx.compose.ui.geometry.Rect(
+                                        loupeTopLeftX, loupeTopLeftY,
+                                        loupeTopLeftX + loupeDiameterPx, loupeTopLeftY + loupeDiameterPx
+                                    )
                                 )
                             }
-                            .clip(CircleShape)
-                            .border(3.dp, Color.White, CircleShape)
-                            .background(Color.Black)
-                    ) {
-                        AsyncImage(
-                            model = uiState.filePath?.let { "file://$it?rev=${uiState.fileRevision}" },
-                            contentDescription = null,
-                            contentScale = ContentScale.FillBounds,
-                            modifier = Modifier
-                                .size(
-                                    width = with(density) { (canvasSizePx.x * zoom).toDp() },
-                                    height = with(density) { (canvasSizePx.y * zoom).toDp() }
-                                )
-                                .graphicsLayer {
-                                    translationX = -(activePoint.x * zoom - loupeDiameterPx / 2f)
-                                    translationY = -(activePoint.y * zoom - loupeDiameterPx / 2f)
-                                }
-                        )
-                        // Crosshair marking the exact point that will become the corner.
-                        Canvas(modifier = Modifier.size(loupeDiameterDp)) {
-                            val c = Offset(size.width / 2f, size.height / 2f)
-                            drawLine(Color(HANDLE_COLOR), Offset(c.x - 10f, c.y), Offset(c.x + 10f, c.y), strokeWidth = 2f)
-                            drawLine(Color(HANDLE_COLOR), Offset(c.x, c.y - 10f), Offset(c.x, c.y + 10f), strokeWidth = 2f)
+                        ) {
+                            drawRect(
+                                color = Color.Black,
+                                topLeft = Offset(loupeTopLeftX, loupeTopLeftY),
+                                size = androidx.compose.ui.geometry.Size(loupeDiameterPx, loupeDiameterPx)
+                            )
+                            drawImage(
+                                image = bitmap,
+                                srcOffset = androidx.compose.ui.unit.IntOffset(srcX, srcY),
+                                srcSize = androidx.compose.ui.unit.IntSize(srcSize, srcSize),
+                                dstOffset = androidx.compose.ui.unit.IntOffset(loupeTopLeftX.roundToInt(), loupeTopLeftY.roundToInt()),
+                                dstSize = androidx.compose.ui.unit.IntSize(loupeDiameterPx.roundToInt(), loupeDiameterPx.roundToInt())
+                            )
                         }
+                        drawCircle(color = Color.White, radius = loupeRadius, center = Offset(loupeCenterX, loupeCenterY), style = Stroke(width = 6f))
+                        drawLine(Color(HANDLE_COLOR), Offset(loupeCenterX - 10f, loupeCenterY), Offset(loupeCenterX + 10f, loupeCenterY), strokeWidth = 2f)
+                        drawLine(Color(HANDLE_COLOR), Offset(loupeCenterX, loupeCenterY - 10f), Offset(loupeCenterX, loupeCenterY + 10f), strokeWidth = 2f)
                     }
                 }
             }
