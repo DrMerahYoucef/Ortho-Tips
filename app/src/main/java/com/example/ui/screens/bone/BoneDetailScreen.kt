@@ -101,7 +101,6 @@ fun BoneDetailScreen(
                     Text(
                         text = detail?.bone?.name ?: "Procedure Technique",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
                         maxLines = 1
                     )
                 },
@@ -203,7 +202,6 @@ fun BoneDetailScreen(
                     .testTag("procedure_detail_scroll"),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                // Header Details
                 item {
                     Column(
                         modifier = Modifier
@@ -224,8 +222,7 @@ fun BoneDetailScreen(
 
                         Text(
                             text = detail.bone.name,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.ExtraBold,
+                            style = MaterialTheme.typography.headlineMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )
 
@@ -234,14 +231,13 @@ fun BoneDetailScreen(
                         Text(
                             text = detail.bone.subtitle,
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
+                            color = MaterialTheme.colorScheme.primary
                         )
 
                         if (detail.bone.classificationSummary.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
                             Surface(
-                                shape = RoundedCornerShape(16.dp),
+                                shape = RoundedCornerShape(14.dp),
                                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                             ) {
                                 Text(
@@ -255,7 +251,6 @@ fun BoneDetailScreen(
                     }
                 }
 
-                // Filter Chips Row
                 item {
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 16.dp),
@@ -269,22 +264,26 @@ fun BoneDetailScreen(
                                 label = {
                                     Text(
                                         text = filter.name.replace("_", " "),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = if (selectedFilter == filter) FontWeight.Bold else FontWeight.Medium
+                                        style = MaterialTheme.typography.labelMedium
                                     )
                                 },
                                 shape = RoundedCornerShape(50),
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                                     containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = selectedFilter == filter,
+                                    borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+                                    selectedBorderColor = MaterialTheme.colorScheme.primary
                                 )
                             )
                         }
                     }
                 }
 
-                // Search Bar
                 item {
                     OutlinedTextField(
                         value = searchQuery,
@@ -309,7 +308,7 @@ fun BoneDetailScreen(
                             }
                         },
                         singleLine = true,
-                        shape = RoundedCornerShape(50),
+                        shape = RoundedCornerShape(18.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -317,7 +316,6 @@ fun BoneDetailScreen(
                     )
                 }
 
-                // Figures / Diagrams
                 if (detail.images.isNotEmpty()) {
                     item {
                         FigureStrip(
@@ -328,7 +326,6 @@ fun BoneDetailScreen(
                     }
                 }
 
-                // Sections List
                 if (searchQuery.isNotBlank() && searchedSections.isEmpty()) {
                     item {
                         Text(
@@ -350,7 +347,6 @@ fun BoneDetailScreen(
                     )
                 }
 
-                // User Notes Section
                 if (detail.notes.isNotEmpty()) {
                     item {
                         Column(
@@ -358,26 +354,19 @@ fun BoneDetailScreen(
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 12.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Description,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "MY SURGICAL NOTES (${detail.notes.size})",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Description,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "MY SURGICAL NOTES (${detail.notes.size})",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             }
 
                             Spacer(modifier = Modifier.height(10.dp))
@@ -406,19 +395,19 @@ private fun CaseNoteCard(
     modifier: Modifier = Modifier
 ) {
     val tagColor = when (note.colorTag) {
-        "amber" -> Color(0xFFE65100)
-        "blue" -> Color(0xFF1D4ED8)
-        "purple" -> Color(0xFF7C3AED)
-        "crimson" -> Color(0xFFDC2626)
-        else -> Color(0xFF006874)
+        "amber" -> Color(0xFFA6720A)
+        "blue" -> Color(0xFF2E6B9E)
+        "purple" -> Color(0xFF6A4C93)
+        "crimson" -> Color(0xFFBA1A1A)
+        else -> Color(0xFF00677D)
     }
 
     Card(
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier
             .fillMaxWidth()
@@ -443,7 +432,6 @@ private fun CaseNoteCard(
                 Text(
                     text = note.title,
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 if (note.content.isNotBlank()) {
