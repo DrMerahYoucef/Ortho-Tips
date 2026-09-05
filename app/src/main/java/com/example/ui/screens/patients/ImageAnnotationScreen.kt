@@ -1,17 +1,26 @@
 package com.example.ui.screens.patients
 
+import android.graphics.BitmapFactory
 import android.graphics.PointF
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
@@ -39,22 +48,28 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -62,40 +77,16 @@ import com.example.utils.AnnotationShape
 import com.example.utils.NormalizedPoint
 import com.example.viewmodel.AnnotationTool
 import com.example.viewmodel.ImageAnnotationViewModel
-import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private val ANNOTATION_COLOR = 0xFFFF3B30
+private val HANDLE_COLOR = 0xFF4285F4 // matches the blue used by Google's own document scanner
 
 /** Which corner-drag mode is active — they share the same 4-point overlay UI. */
 private enum class QuadMode { NONE, CROP, OCR }
-
-/** Displayed bounds of the (letterboxed, `ContentScale.Fit`) image within the canvas Box. */
-private data class FitRect(val left: Float, val top: Float, val width: Float, val height: Float)
-
-private fun computeFitRect(canvasW: Float, canvasH: Float, imgW: Int, imgH: Int): FitRect {
-    if (imgW <= 0 || imgH <= 0 || canvasW <= 0 || canvasH <= 0) {
-        return FitRect(0f, 0f, canvasW, canvasH)
-    }
-    val scale = min(canvasW / imgW, canvasH / imgH)
-    val displayedW = imgW * scale
-    val displayedH = imgH * scale
-    return FitRect(left = (canvasW - displayedW) / 2f, top = (canvasH - displayedH) / 2f, width = displayedW, height = displayedH)
-}
-
-/** Canvas-space point → source-bitmap pixel space, accounting for the Fit letterbox/scale. */
-private fun canvasToBitmap(point: Offset, fit: FitRect, imgW: Int, imgH: Int): PointF {
-    val fracX = if (fit.width > 0f) ((point.x - fit.left) / fit.width).coerceIn(0f, 1f) else 0f
-    val fracY = if (fit.height > 0f) ((point.y - fit.top) / fit.height).coerceIn(0f, 1f) else 0f
-    return PointF(fracX * imgW, fracY * imgH)
-}
-
-private fun quadCorners(fit: FitRect): List<Offset> = listOf(
-    Offset(fit.left, fit.top),                          // top-left
-    Offset(fit.left + fit.width, fit.top),               // top-right
-    Offset(fit.left + fit.width, fit.top + fit.height),  // bottom-right
-    Offset(fit.left, fit.top + fit.height)                // bottom-left
-)
 
 private fun nearestHandleIndex(points: List<Offset>, touch: Offset, maxDistancePx: Float): Int? {
     var bestIndex: Int? = null
@@ -120,9 +111,26 @@ fun ImageAnnotationScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
+    val density = LocalDensity.current
+
+    // The image's real pixel dimensions, read directly from the file (not from whatever the
+    // display library decided to report) so the crop/OCR math never depends on async image-
+    // loading timing. The container below is then sized to this exact aspect ratio, so its
+    // measured bounds ARE the image's displayed bounds — no letterbox offset to account for,
+    // and so no separate "fit rectangle" calculation that could ever drift out of sync with
+    // what's on screen.
+    var imageSize by remember(uiState.filePath, uiState.fileRevision) { mutableStateOf<Pair<Int, Int>?>(null) }
+
+    LaunchedEffect(uiState.filePath, uiState.fileRevision) {
+        val path = uiState.filePath ?: return@LaunchedEffect
+        imageSize = withContext(Dispatchers.IO) {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(path, options)
+            if (options.outWidth > 0 && options.outHeight > 0) options.outWidth to options.outHeight else null
+        }
+    }
 
     var canvasSizePx by remember { mutableStateOf(Offset(1f, 1f)) }
-    var imageIntrinsicSize by remember(uiState.fileRevision) { mutableStateOf<Pair<Int, Int>?>(null) }
     var pendingTextPosition by remember { mutableStateOf<NormalizedPoint?>(null) }
     var textInput by remember { mutableStateOf("") }
     var dragStart by remember { mutableStateOf<Offset?>(null) }
@@ -139,29 +147,36 @@ fun ImageAnnotationScreen(
         y = (offset.y / canvasSizePx.y).coerceIn(0f, 1f)
     )
 
+    /** Canvas-space point → source-bitmap pixel space. Direct proportional scaling — the
+     *  container is aspect-locked to the image, so there is no letterbox to correct for. */
+    fun canvasToBitmap(point: Offset, imgW: Int, imgH: Int): PointF {
+        val fracX = if (canvasSizePx.x > 0f) (point.x / canvasSizePx.x).coerceIn(0f, 1f) else 0f
+        val fracY = if (canvasSizePx.y > 0f) (point.y / canvasSizePx.y).coerceIn(0f, 1f) else 0f
+        return PointF(fracX * imgW, fracY * imgH)
+    }
+
+    fun fullFrameCorners(): List<Offset> = listOf(
+        Offset(0f, 0f),
+        Offset(canvasSizePx.x, 0f),
+        Offset(canvasSizePx.x, canvasSizePx.y),
+        Offset(0f, canvasSizePx.y)
+    )
+
     fun startQuadMode(mode: QuadMode) {
         if (quadMode == mode) {
             quadMode = QuadMode.NONE
             quadPoints = null
             return
         }
-        val (imgW, imgH) = imageIntrinsicSize ?: (0 to 0)
         quadMode = mode
-        quadPoints = if (imgW > 0 && imgH > 0) {
-            quadCorners(computeFitRect(canvasSizePx.x, canvasSizePx.y, imgW, imgH))
-        } else {
-            // Image size not resolved yet (rare race right after opening) — fall back to
-            // the full canvas rather than blocking the tool.
-            quadCorners(FitRect(0f, 0f, canvasSizePx.x, canvasSizePx.y))
-        }
+        quadPoints = fullFrameCorners()
     }
 
     fun applyQuad() {
         val points = quadPoints
-        val (imgW, imgH) = imageIntrinsicSize ?: (0 to 0)
+        val (imgW, imgH) = imageSize ?: (0 to 0)
         if (points != null && imgW > 0 && imgH > 0) {
-            val fit = computeFitRect(canvasSizePx.x, canvasSizePx.y, imgW, imgH)
-            val bitmapCorners = points.map { canvasToBitmap(it, fit, imgW, imgH) }
+            val bitmapCorners = points.map { canvasToBitmap(it, imgW, imgH) }
             when (quadMode) {
                 QuadMode.CROP -> viewModel.cropQuad(context, bitmapCorners)
                 QuadMode.OCR -> {
@@ -266,15 +281,26 @@ fun ImageAnnotationScreen(
         },
         modifier = modifier
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues).background(Color.Black)) {
-            if (uiState.isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize().padding(paddingValues).background(Color.Black),
+            contentAlignment = Alignment.Center
+        ) {
+            val (imgW, imgH) = imageSize ?: (0 to 0)
+            if (uiState.isLoading || imgW <= 0 || imgH <= 0) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 return@Scaffold
             }
 
+            // Aspect-locked to the actual image: this box's measured size IS the image's
+            // displayed bounds, so every touch coordinate inside it maps directly (by simple
+            // proportion) to a pixel in the source photo — no separate letterbox math needed.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .aspectRatio(imgW.toFloat() / imgH.toFloat())
+                    .onGloballyPositioned { coordinates ->
+                        canvasSizePx = Offset(coordinates.size.width.toFloat(), coordinates.size.height.toFloat())
+                    }
                     .pointerInput(canvasSizePx, uiState.activeTool, quadMode) {
                         if (quadMode != QuadMode.NONE) {
                             detectDragGestures(
@@ -342,7 +368,7 @@ fun ImageAnnotationScreen(
                                                         id = java.util.UUID.randomUUID().toString(),
                                                         colorArgb = ANNOTATION_COLOR,
                                                         topLeft = normalize(Offset(min(start.x, end.x), min(start.y, end.y))),
-                                                        bottomRight = normalize(Offset(max(start.x, end.x), max(start.y, end.y)))
+                                                        bottomRight = normalize(Offset(kotlin.math.max(start.x, end.x), kotlin.math.max(start.y, end.y)))
                                                     )
                                                 )
                                             }
@@ -369,16 +395,8 @@ fun ImageAnnotationScreen(
                 AsyncImage(
                     model = uiState.filePath?.let { "file://$it?rev=${uiState.fileRevision}" },
                     contentDescription = "Patient image",
-                    contentScale = ContentScale.Fit,
-                    onSuccess = { state ->
-                        val drawable = state.result.drawable
-                        imageIntrinsicSize = drawable.intrinsicWidth to drawable.intrinsicHeight
-                    },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .onGloballyPositioned { coordinates ->
-                            canvasSizePx = Offset(coordinates.size.width.toFloat(), coordinates.size.height.toFloat())
-                        }
+                    contentScale = ContentScale.FillBounds, // safe: this box's aspect ratio already matches the image exactly
+                    modifier = Modifier.fillMaxSize()
                 )
 
                 Canvas(modifier = Modifier.fillMaxSize()) {
@@ -454,11 +472,61 @@ fun ImageAnnotationScreen(
                             lineTo(points[3].x, points[3].y)
                             close()
                         }
-                        drawPath(path, color = Color.White, style = Stroke(width = 3f))
+                        // Faint fill over the un-selected margin, matching the reference
+                        // scanner UI (dims everything outside the selected quad).
+                        drawPath(path, color = Color(HANDLE_COLOR), style = Stroke(width = 4f))
                         points.forEach { p ->
-                            drawCircle(color = Color.Black, radius = 16f, center = p, alpha = 0.35f)
-                            drawCircle(color = Color.White, radius = 14f, center = p, style = Stroke(width = 3f))
-                            drawCircle(color = Color(0xFF4285F4), radius = 8f, center = p)
+                            drawCircle(color = Color.Black, radius = 26f, center = p, alpha = 0.25f)
+                            drawCircle(color = Color(HANDLE_COLOR), radius = 20f, center = p)
+                            drawCircle(color = Color.White, radius = 20f, center = p, style = Stroke(width = 3f))
+                        }
+                    }
+                }
+            }
+
+            // Magnifier loupe: while dragging a corner, show a zoomed preview of the area
+            // under the finger, offset above it so the finger itself doesn't hide it —
+            // the same precision aid Google's own document scanner uses.
+            if (activeHandleIndex != null) {
+                val activePoint = quadPoints?.getOrNull(activeHandleIndex!!)
+                if (activePoint != null && canvasSizePx.x > 0f && canvasSizePx.y > 0f) {
+                    val loupeDiameterDp = 96.dp
+                    val zoom = 2.5f
+                    val loupeDiameterPx = with(density) { loupeDiameterDp.toPx() }
+                    val verticalOffsetPx = with(density) { 120.dp.toPx() }
+
+                    Box(
+                        modifier = Modifier
+                            .size(loupeDiameterDp)
+                            .offset {
+                                IntOffset(
+                                    (activePoint.x - loupeDiameterPx / 2f).roundToInt(),
+                                    (activePoint.y - loupeDiameterPx / 2f - verticalOffsetPx).roundToInt()
+                                )
+                            }
+                            .clip(CircleShape)
+                            .border(3.dp, Color.White, CircleShape)
+                            .background(Color.Black)
+                    ) {
+                        AsyncImage(
+                            model = uiState.filePath?.let { "file://$it?rev=${uiState.fileRevision}" },
+                            contentDescription = null,
+                            contentScale = ContentScale.FillBounds,
+                            modifier = Modifier
+                                .size(
+                                    width = with(density) { (canvasSizePx.x * zoom).toDp() },
+                                    height = with(density) { (canvasSizePx.y * zoom).toDp() }
+                                )
+                                .graphicsLayer {
+                                    translationX = -(activePoint.x * zoom - loupeDiameterPx / 2f)
+                                    translationY = -(activePoint.y * zoom - loupeDiameterPx / 2f)
+                                }
+                        )
+                        // Crosshair marking the exact point that will become the corner.
+                        Canvas(modifier = Modifier.size(loupeDiameterDp)) {
+                            val c = Offset(size.width / 2f, size.height / 2f)
+                            drawLine(Color(HANDLE_COLOR), Offset(c.x - 10f, c.y), Offset(c.x + 10f, c.y), strokeWidth = 2f)
+                            drawLine(Color(HANDLE_COLOR), Offset(c.x, c.y - 10f), Offset(c.x, c.y + 10f), strokeWidth = 2f)
                         }
                     }
                 }
@@ -504,11 +572,7 @@ fun ImageAnnotationScreen(
                     if (uiState.isRunningOcr) {
                         CircularProgressIndicator(modifier = Modifier.padding(bottom = 8.dp))
                     }
-                    Text(
-                        text = uiState.ocrText.ifBlank { "No text detected yet." },
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
+                    SelectableOcrText(uiState.ocrText.ifBlank { "No text detected yet." })
                 }
             },
             confirmButton = {
@@ -536,11 +600,7 @@ fun ImageAnnotationScreen(
                     if (uiState.isRunningQuadOcr) {
                         CircularProgressIndicator(modifier = Modifier.padding(bottom = 8.dp))
                     }
-                    Text(
-                        text = uiState.quadOcrText?.ifBlank { "No text detected in that selection." } ?: "Scanning…",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
+                    SelectableOcrText(uiState.quadOcrText?.ifBlank { "No text detected in that selection." } ?: "Scanning…")
                 }
             },
             confirmButton = {
@@ -559,6 +619,30 @@ fun ImageAnnotationScreen(
                 }
             }
         )
+    }
+}
+
+/**
+ * OCR result text: explicitly colored (never left to inherit an ambient color that can end
+ * up matching the dialog background) and wrapped in a [SelectionContainer] with an explicit,
+ * clearly-visible selection highlight — so the surgeon can manually select a portion of the
+ * scanned text without the "selection" being an invisible white-on-white smear.
+ */
+@Composable
+private fun SelectableOcrText(text: String) {
+    val customSelectionColors = TextSelectionColors(
+        handleColor = MaterialTheme.colorScheme.primary,
+        backgroundColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+    )
+    CompositionLocalProvider(LocalTextSelectionColors provides customSelectionColors) {
+        SelectionContainer {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
+        }
     }
 }
 
