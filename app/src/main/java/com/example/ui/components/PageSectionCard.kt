@@ -31,11 +31,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.entity.ImageEntity
@@ -71,11 +68,11 @@ fun PageSectionCard(
     }
 
     Card(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+        border = BorderStroke(1.dp, badgeColor.copy(alpha = 0.22f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier
             .fillMaxWidth()
@@ -84,7 +81,6 @@ fun PageSectionCard(
         Column(
             modifier = Modifier.padding(18.dp)
         ) {
-            // Header Row: Section Type Badge + Actions (Copy & Share)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -92,11 +88,11 @@ fun PageSectionCard(
             ) {
                 Surface(
                     shape = RoundedCornerShape(50),
-                    color = badgeColor.copy(alpha = 0.12f)
+                    color = badgeColor.copy(alpha = 0.14f)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                     ) {
                         Icon(
                             imageVector = typeIcon,
@@ -108,9 +104,7 @@ fun PageSectionCard(
                         Text(
                             text = typeLabel,
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = badgeColor,
-                            letterSpacing = 0.6.sp
+                            color = badgeColor
                         )
                     }
                 }
@@ -161,19 +155,16 @@ fun PageSectionCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Section Title
             Text(
                 text = section.title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Operative Content Body
             OperativeText(
                 content = section.content,
                 images = images,
@@ -181,13 +172,11 @@ fun PageSectionCard(
                 onFigureClick = onFigureClick
             )
 
-            // Pearls callout if present
             if (section.pearls.isNotBlank()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 PearlCard(pearlText = section.pearls)
             }
 
-            // Warning callout if present
             if (section.warnings.isNotBlank()) {
                 Spacer(modifier = Modifier.height(10.dp))
                 WarningBanner(warningText = section.warnings)

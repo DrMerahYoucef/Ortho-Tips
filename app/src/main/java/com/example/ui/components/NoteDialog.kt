@@ -10,9 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -31,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.local.entity.NoteEntity
 
@@ -47,11 +44,11 @@ fun NoteDialog(
     var selectedColor by remember { mutableStateOf(initialNote?.colorTag ?: "teal") }
 
     val colorOptions = listOf(
-        "teal" to Color(0xFF006874),
-        "amber" to Color(0xFFE65100),
-        "blue" to Color(0xFF1D4ED8),
-        "purple" to Color(0xFF7C3AED),
-        "crimson" to Color(0xFFDC2626)
+        "teal" to Color(0xFF00677D),
+        "amber" to Color(0xFFA6720A),
+        "blue" to Color(0xFF2E6B9E),
+        "purple" to Color(0xFF6A4C93),
+        "crimson" to Color(0xFFBA1A1A)
     )
 
     AlertDialog(
@@ -59,8 +56,7 @@ fun NoteDialog(
         title = {
             Text(
                 text = if (initialNote == null) "Add Surgical Note" else "Edit Note",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.titleMedium
             )
         },
         text = {
@@ -68,7 +64,7 @@ fun NoteDialog(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Note Title / Case Name") },
+                    label = { Text("Note title / case name") },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
@@ -93,12 +89,12 @@ fun NoteDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Note Tag Color:",
+                    text = "Note tag color",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -146,6 +142,7 @@ fun NoteDialog(
                     }
                 },
                 enabled = title.isNotBlank() || content.isNotBlank(),
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.testTag("save_note_button")
             ) {
                 Text("Save Note")

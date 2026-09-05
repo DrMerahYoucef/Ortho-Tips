@@ -30,13 +30,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,8 +47,6 @@ fun FigureStrip(
     onImageClick: (ImageEntity) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-
     if (images.isEmpty()) return
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -62,15 +58,13 @@ fun FigureStrip(
                 imageVector = Icons.Default.Image,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "SURGICAL DIAGRAMS & FIGURES (${images.size})",
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                letterSpacing = 0.5.sp
+                color = MaterialTheme.colorScheme.primary
             )
         }
 
@@ -107,12 +101,12 @@ fun FigureCard(
     }
 
     Card(
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = modifier
             .width(220.dp)
             .clickable(onClick = onClick)
@@ -123,7 +117,7 @@ fun FigureCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(130.dp)
-                    .background(Color(0xFF0F172A))
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.92f))
             ) {
                 if (!image.imagePath.isNullOrBlank()) {
                     AsyncImage(
@@ -153,10 +147,9 @@ fun FigureCard(
                     }
                 }
 
-                // Figure tag chip on top left
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = Color.Black.copy(alpha = 0.7f),
+                    color = Color.Black.copy(alpha = 0.65f),
                     modifier = Modifier
                         .padding(8.dp)
                         .align(Alignment.TopStart)
@@ -164,17 +157,15 @@ fun FigureCard(
                     Text(
                         text = image.figureNumber,
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
                         color = Color.White,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                         fontSize = 10.sp
                     )
                 }
 
-                // Zoom Icon on bottom right
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = Color.Black.copy(alpha = 0.6f),
+                    color = Color.Black.copy(alpha = 0.55f),
                     modifier = Modifier
                         .padding(8.dp)
                         .align(Alignment.BottomEnd)
@@ -196,7 +187,6 @@ fun FigureCard(
                 Text(
                     text = image.title,
                     style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
