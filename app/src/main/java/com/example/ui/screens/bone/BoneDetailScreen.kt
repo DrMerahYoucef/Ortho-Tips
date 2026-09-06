@@ -395,11 +395,11 @@ private fun CaseNoteCard(
     modifier: Modifier = Modifier
 ) {
     val tagColor = when (note.colorTag) {
-        "amber" -> Color(0xFFA6720A)
-        "blue" -> Color(0xFF2E6B9E)
-        "purple" -> Color(0xFF6A4C93)
-        "crimson" -> Color(0xFFBA1A1A)
-        else -> Color(0xFF00677D)
+        "amber" -> MaterialTheme.colorScheme.secondary
+        "blue" -> MaterialTheme.colorScheme.tertiary
+        "purple" -> MaterialTheme.colorScheme.primaryContainer
+        "crimson" -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.primary
     }
 
     Card(

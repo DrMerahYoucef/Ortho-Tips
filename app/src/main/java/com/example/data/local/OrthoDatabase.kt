@@ -46,7 +46,7 @@ import com.example.data.local.entity.TimelineEventEntity
         PatientDocumentEntity::class,
         FieldSuggestionEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class OrthoDatabase : RoomDatabase() {
@@ -234,18 +234,62 @@ abstract class OrthoDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Ensure table integrity between versions
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `field_suggestions` (
+                        `fieldKey` TEXT NOT NULL,
+                        `value` TEXT NOT NULL,
+                        `useCount` INTEGER NOT NULL,
+                        `lastUsedAt` INTEGER NOT NULL,
+                        PRIMARY KEY(`fieldKey`, `value`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_field_suggestions_fieldKey` ON `field_suggestions` (`fieldKey`)")
+            }
+        }
+
         fun getInstance(context: Context): OrthoDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
+                INSTANCE ?: buildDatabase(context).also { INSTANCE = it }
+            }
+        }
+
+        private fun buildDatabase(context: Context): OrthoDatabase {
+            val db = Room.databaseBuilder(
+                context.applicationContext,
+                OrthoDatabase::class.java,
+                "ortho_tips.db"
+            )
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .fallbackToDestructiveMigration(true)
+                .fallbackToDestructiveMigrationOnDowngrade(true)
+                .build()
+
+            return try {
+                // Eagerly verify SQLite connectivity and schema integrity
+                db.openHelper.writableDatabase
+                db
+            } catch (e: Throwable) {
+                // If any schema mismatch or database corruption exists on disk,
+                // safely wipe the invalid database and re-create it cleanly
+                try {
+                    db.close()
+                } catch (_: Throwable) {}
+                context.applicationContext.deleteDatabase("ortho_tips.db")
+                val cleanDb = Room.databaseBuilder(
                     context.applicationContext,
                     OrthoDatabase::class.java,
                     "ortho_tips.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
-                    .fallbackToDestructiveMigration() // safety net only for the pre-patient-module schema jump
+                    .fallbackToDestructiveMigration(true)
+                    .fallbackToDestructiveMigrationOnDowngrade(true)
                     .build()
-                INSTANCE = instance
-                instance
+                cleanDb.openHelper.writableDatabase
+                cleanDb
             }
         }
     }

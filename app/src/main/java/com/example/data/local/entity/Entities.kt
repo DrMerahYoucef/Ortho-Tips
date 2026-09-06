@@ -11,8 +11,7 @@ data class ChapterEntity(
     val title: String,
     val description: String,
     val icon: String,
-    val orderIndex: Int,
-    val regionTag: String
+    val orderIndex: Int
 )
 
 @Entity(

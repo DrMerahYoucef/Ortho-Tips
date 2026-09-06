@@ -266,7 +266,7 @@ fun ImageViewerScreen(
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(0xDD0F172A)
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.95f)
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -276,13 +276,13 @@ fun ImageViewerScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Surface(
                                 shape = RoundedCornerShape(4.dp),
-                                color = Color(0xFF006874)
+                                color = MaterialTheme.colorScheme.primary
                             ) {
                                 Text(
                                     text = currentImage.figureNumber,
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onPrimary,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
@@ -291,7 +291,7 @@ fun ImageViewerScreen(
                                 text = currentImage.title,
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
 
@@ -300,7 +300,7 @@ fun ImageViewerScreen(
                         Text(
                             text = currentImage.description,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFFCBD5E1),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             lineHeight = 18.sp
                         )
                     }

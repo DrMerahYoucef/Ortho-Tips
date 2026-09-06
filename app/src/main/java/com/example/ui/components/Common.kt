@@ -46,9 +46,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.ClinicalDanger
-import com.example.ui.theme.ClinicalPearl
-import com.example.ui.theme.ClinicalWarning
 
 @Composable
 fun RegionBadge(
@@ -169,7 +166,7 @@ fun WarningBanner(
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = ClinicalDanger.copy(alpha = 0.10f)
+            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier.fillMaxWidth()
@@ -178,11 +175,14 @@ fun WarningBanner(
             modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.Top
         ) {
-            Surface(shape = CircleShape, color = ClinicalDanger.copy(alpha = 0.16f)) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.error.copy(alpha = 0.16f)
+            ) {
                 Icon(
                     imageVector = Icons.Default.Warning,
                     contentDescription = "Danger Corridor Alert",
-                    tint = ClinicalDanger,
+                    tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier
                         .padding(6.dp)
                         .size(16.dp)
@@ -193,13 +193,13 @@ fun WarningBanner(
                 Text(
                     text = "DANGER ZONE / PITFALL",
                     style = MaterialTheme.typography.labelSmall,
-                    color = ClinicalDanger,
+                    color = MaterialTheme.colorScheme.error,
                 )
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(
                     text = warningText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
                     lineHeight = 18.sp
                 )
             }

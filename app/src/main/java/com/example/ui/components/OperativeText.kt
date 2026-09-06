@@ -157,7 +157,7 @@ private fun InlineFigureCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(180.dp)
-                    .background(androidx.compose.ui.graphics.Color(0xFF0F172A))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             ) {
                 val model: Any? = if (!image.imagePath.isNullOrBlank()) {
                     image.imagePath

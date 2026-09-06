@@ -37,13 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.entity.ImageEntity
 import com.example.data.local.entity.SectionEntity
-import com.example.ui.theme.ClinicalAnatomy
-import com.example.ui.theme.ClinicalApproach
-import com.example.ui.theme.ClinicalDanger
-import com.example.ui.theme.ClinicalFixation
-import com.example.ui.theme.ClinicalPearl
-import com.example.ui.theme.ClinicalRehab
-import com.example.ui.theme.ClinicalWarning
 import com.example.utils.MediaActions
 
 @Composable
@@ -57,13 +50,13 @@ fun PageSectionCard(
     val context = LocalContext.current
 
     val (badgeColor, typeIcon, typeLabel) = when (section.sectionType.uppercase()) {
-        "ANATOMY" -> Triple(ClinicalAnatomy, Icons.Default.Visibility, "ANATOMY & LANDMARKS")
-        "APPROACH" -> Triple(ClinicalApproach, Icons.Default.MedicalServices, "SURGICAL APPROACH")
-        "REDUCTION" -> Triple(ClinicalWarning, Icons.Default.PanTool, "REDUCTION MANEUVER")
-        "FIXATION" -> Triple(ClinicalFixation, Icons.Default.Healing, "FIXATION CONSTRUCT")
-        "PEARLS" -> Triple(ClinicalPearl, Icons.Default.Psychology, "SURGICAL PEARLS")
-        "COMPLICATIONS" -> Triple(ClinicalDanger, Icons.Default.Warning, "COMPLICATIONS & PITFALLS")
-        "REHAB" -> Triple(ClinicalRehab, Icons.Default.Speed, "REHABILITATION")
+        "ANATOMY" -> Triple(MaterialTheme.colorScheme.tertiary, Icons.Default.Visibility, "ANATOMY & LANDMARKS")
+        "APPROACH" -> Triple(MaterialTheme.colorScheme.primary, Icons.Default.MedicalServices, "SURGICAL APPROACH")
+        "REDUCTION" -> Triple(MaterialTheme.colorScheme.secondary, Icons.Default.PanTool, "REDUCTION MANEUVER")
+        "FIXATION" -> Triple(MaterialTheme.colorScheme.primary, Icons.Default.Healing, "FIXATION CONSTRUCT")
+        "PEARLS" -> Triple(MaterialTheme.colorScheme.tertiary, Icons.Default.Psychology, "SURGICAL PEARLS")
+        "COMPLICATIONS" -> Triple(MaterialTheme.colorScheme.error, Icons.Default.Warning, "COMPLICATIONS & PITFALLS")
+        "REHAB" -> Triple(MaterialTheme.colorScheme.secondary, Icons.Default.Speed, "REHABILITATION")
         else -> Triple(MaterialTheme.colorScheme.primary, Icons.Default.MedicalServices, section.sectionType)
     }
 

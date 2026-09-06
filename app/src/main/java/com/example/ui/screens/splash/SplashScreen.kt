@@ -59,9 +59,9 @@ fun SplashScreen(
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF0B1A1D),
-                        Color(0xFF00404D),
-                        Color(0xFF002830)
+                        MaterialTheme.colorScheme.surface,
+                        MaterialTheme.colorScheme.surfaceContainer,
+                        MaterialTheme.colorScheme.surfaceContainerHighest
                     )
                 )
             )
@@ -78,7 +78,7 @@ fun SplashScreen(
         ) {
             Surface(
                 shape = CircleShape,
-                color = Color(0x3387D3E4),
+                color = MaterialTheme.colorScheme.primaryContainer,
                 modifier = Modifier.size(110.dp)
             ) {
                 Box(
@@ -98,7 +98,7 @@ fun SplashScreen(
             Text(
                 text = "Ortho Tips",
                 style = MaterialTheme.typography.headlineMedium,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 letterSpacing = 1.sp
             )
 
@@ -107,7 +107,7 @@ fun SplashScreen(
             Text(
                 text = "SURGICAL PEARLS & OPERATIVE COMPANION",
                 style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF87D3E4),
+                color = MaterialTheme.colorScheme.primary,
                 letterSpacing = 1.5.sp
             )
         }

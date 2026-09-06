@@ -29,6 +29,12 @@ class AppViewModel(
         }
     }
 
+    fun setDynamicColor(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setDynamicColor(enabled)
+        }
+    }
+
     fun setOperativeMode(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setOperativeMode(enabled)

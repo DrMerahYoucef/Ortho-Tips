@@ -1,6 +1,7 @@
 package com.example.ui.screens.settings
 
 import android.app.Activity
+import android.os.Build
 import android.view.WindowManager
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -279,6 +280,32 @@ fun SettingsScreen(
 
             item {
                 SettingsSection(title = "CLINICAL DISPLAY & THEME") {
+                    val supportsDynamicColor = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                            Text(text = "Material You Dynamic Color", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                text = if (supportsDynamicColor) {
+                                    "App components adapt to Android system wallpaper and accent palette"
+                                } else {
+                                    "Requires Android 12+ (Using handcrafted clinical fallback)"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = settings.dynamicColor && supportsDynamicColor,
+                            onCheckedChange = { viewModel.setDynamicColor(it) },
+                            enabled = supportsDynamicColor,
+                            modifier = Modifier.testTag("dynamic_color_switch")
+                        )
+                    }
+
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically,

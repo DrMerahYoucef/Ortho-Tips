@@ -94,7 +94,10 @@ class MainActivity : ComponentActivity() {
             )
 
             CompositionLocalProvider(LocalDensity provides adjustedDensity) {
-                OrthoTipsTheme(darkTheme = isDarkTheme) {
+                OrthoTipsTheme(
+                    darkTheme = isDarkTheme,
+                    dynamicColor = settings.dynamicColor
+                ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background

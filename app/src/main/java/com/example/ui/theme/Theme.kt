@@ -15,7 +15,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
+// Fallback color scheme for devices below Android 12 (API < 31)
+private val FallbackDarkColorScheme = darkColorScheme(
     primary = OrthoPrimaryDark,
     onPrimary = OrthoOnPrimaryDark,
     primaryContainer = OrthoPrimaryContainerDark,
@@ -37,7 +38,8 @@ private val DarkColorScheme = darkColorScheme(
     outline = OrthoOutlineDark
 )
 
-private val LightColorScheme = lightColorScheme(
+// Fallback color scheme for devices below Android 12 (API < 31)
+private val FallbackLightColorScheme = lightColorScheme(
     primary = OrthoPrimaryLight,
     onPrimary = OrthoOnPrimaryLight,
     primaryContainer = OrthoPrimaryContainerLight,
@@ -62,16 +64,20 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun OrthoTipsTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false, // Use our handcrafted clinical colors by default
+    dynamicColor: Boolean = true, // Material You dynamic colors enabled by default
     content: @Composable () -> Unit
 ) {
+    val context = LocalContext.current
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            if (darkTheme) {
+                dynamicDarkColorScheme(context)
+            } else {
+                dynamicLightColorScheme(context)
+            }
         }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        darkTheme -> FallbackDarkColorScheme
+        else -> FallbackLightColorScheme
     }
 
     val view = LocalView.current
@@ -80,7 +86,10 @@ fun OrthoTipsTheme(
             val window = (view.context as? Activity)?.window
             if (window != null) {
                 window.statusBarColor = colorScheme.surface.toArgb()
-                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+                window.navigationBarColor = colorScheme.surface.toArgb()
+                val insetsController = WindowCompat.getInsetsController(window, view)
+                insetsController.isAppearanceLightStatusBars = !darkTheme
+                insetsController.isAppearanceLightNavigationBars = !darkTheme
             }
         }
     }

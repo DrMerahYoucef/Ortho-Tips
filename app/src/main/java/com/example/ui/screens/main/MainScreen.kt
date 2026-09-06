@@ -6,12 +6,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.PeopleOutline
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
@@ -51,7 +51,7 @@ enum class NavigationItem(
     val unselectedIcon: androidx.compose.ui.graphics.vector.ImageVector,
     val testTag: String
 ) {
-    HOME("Home", Icons.Filled.Home, Icons.Outlined.Home, "nav_home"),
+    STUDIES("Studies", Icons.Filled.MenuBook, Icons.Outlined.MenuBook, "nav_home"),
     PATIENTS("Patients", Icons.Filled.People, Icons.Outlined.PeopleOutline, "nav_patients"),
     SEARCH("Search", Icons.Filled.Search, Icons.Outlined.Search, "nav_search"),
     SAVED("Saved", Icons.Filled.Bookmark, Icons.Outlined.BookmarkBorder, "nav_saved"),
@@ -71,7 +71,7 @@ fun MainScreen(
     onNavigateToQrScanner: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selectedItem by rememberSaveable { mutableStateOf(NavigationItem.HOME) }
+    var selectedItem by rememberSaveable { mutableStateOf(NavigationItem.STUDIES) }
 
     val homeViewModel: HomeViewModel = viewModel(
         factory = HomeViewModel.provideFactory(appModule.orthoRepository)
@@ -151,7 +151,7 @@ fun MainScreen(
                 .padding(paddingValues)
         ) { currentTab ->
             when (currentTab) {
-                NavigationItem.HOME -> HomeScreen(
+                NavigationItem.STUDIES -> HomeScreen(
                     viewModel = homeViewModel,
                     onNavigateToChapter = onNavigateToChapter,
                     onNavigateToBoneDetail = onNavigateToBoneDetail,

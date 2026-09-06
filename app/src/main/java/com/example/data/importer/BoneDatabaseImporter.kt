@@ -150,8 +150,7 @@ class BoneDatabaseImporter(
                         title = sectionLabel,
                         description = "Imported clinical reference data",
                         icon = "medical_services",
-                        orderIndex = chaptersBySection.size + 1,
-                        regionTag = sectionLabel
+                        orderIndex = chaptersBySection.size + 1
                     )
                 }
 

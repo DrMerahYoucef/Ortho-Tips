@@ -20,6 +20,7 @@ enum class FontSizePreference {
 
 data class UserSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val dynamicColor: Boolean = true,
     val operativeMode: Boolean = false, // Keep screen awake & high visibility for operating room
     val highContrast: Boolean = false,
     val fontSize: FontSizePreference = FontSizePreference.STANDARD,
@@ -31,6 +32,7 @@ class SettingsRepository(private val context: Context) {
 
     private object PreferencesKeys {
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val OPERATIVE_MODE = booleanPreferencesKey("operative_mode")
         val HIGH_CONTRAST = booleanPreferencesKey("high_contrast")
         val FONT_SIZE = stringPreferencesKey("font_size")
@@ -55,6 +57,7 @@ class SettingsRepository(private val context: Context) {
 
         UserSettings(
             themeMode = themeMode,
+            dynamicColor = preferences[PreferencesKeys.DYNAMIC_COLOR] ?: true,
             operativeMode = preferences[PreferencesKeys.OPERATIVE_MODE] ?: false,
             highContrast = preferences[PreferencesKeys.HIGH_CONTRAST] ?: false,
             fontSize = fontSize,
@@ -66,6 +69,12 @@ class SettingsRepository(private val context: Context) {
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.THEME_MODE] = mode.name
+        }
+    }
+
+    suspend fun setDynamicColor(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.DYNAMIC_COLOR] = enabled
         }
     }
 

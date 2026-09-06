@@ -44,11 +44,11 @@ fun NoteDialog(
     var selectedColor by remember { mutableStateOf(initialNote?.colorTag ?: "teal") }
 
     val colorOptions = listOf(
-        "teal" to Color(0xFF00677D),
-        "amber" to Color(0xFFA6720A),
-        "blue" to Color(0xFF2E6B9E),
-        "purple" to Color(0xFF6A4C93),
-        "crimson" to Color(0xFFBA1A1A)
+        "teal" to MaterialTheme.colorScheme.primary,
+        "amber" to MaterialTheme.colorScheme.secondary,
+        "blue" to MaterialTheme.colorScheme.tertiary,
+        "purple" to MaterialTheme.colorScheme.primaryContainer,
+        "crimson" to MaterialTheme.colorScheme.error
     )
 
     AlertDialog(

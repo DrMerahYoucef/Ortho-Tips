@@ -21,13 +21,23 @@ data class PatientListUiState(
     val patients: List<PatientSummary> = emptyList(),
     val tab: PatientListTab = PatientListTab.ACTIVE,
     val searchQuery: String = "",
+    val regionFilter: String = "All",
     val selectedIds: Set<String> = emptySet(),
+    val activeCount: Int = 0,
+    val archivedCount: Int = 0,
     val isLoading: Boolean = true
 ) {
     val isSelectionMode: Boolean get() = selectedIds.isNotEmpty()
-    // Only ever true once loading has settled and there is genuinely no patient data —
-    // this app never falls back to sample/demo patients.
-    val isEmpty: Boolean get() = !isLoading && patients.isEmpty()
+
+    val filteredPatients: List<PatientSummary> get() {
+        if (regionFilter == "All") return patients
+        return patients.filter { patient ->
+            patient.bodyRegion.contains(regionFilter, ignoreCase = true) ||
+            patient.diagnosis.contains(regionFilter, ignoreCase = true)
+        }
+    }
+
+    val isEmpty: Boolean get() = !isLoading && filteredPatients.isEmpty()
 }
 
 class PatientListViewModel(
@@ -36,34 +46,39 @@ class PatientListViewModel(
 
     private val _tab = MutableStateFlow(PatientListTab.ACTIVE)
     private val _searchQuery = MutableStateFlow("")
+    private val _regionFilter = MutableStateFlow("All")
     private val _selectedIds = MutableStateFlow<Set<String>>(emptySet())
 
     val uiState: StateFlow<PatientListUiState> = combine(
-        _tab,
-        _searchQuery,
-        _selectedIds
-    ) { tab, query, selected -> Triple(tab, query, selected) }
-        .flatMapLatest { (tab, query, selected) ->
-            val source = when {
-                query.isNotBlank() -> repository.searchPatientSummaries(query)
-                tab == PatientListTab.ACTIVE -> repository.getActivePatientSummaries()
-                else -> repository.getArchivedPatientSummaries()
+        repository.getActivePatientSummaries(),
+        repository.getArchivedPatientSummaries()
+    ) { active, archived -> Pair(active, archived) }
+        .combine(_tab) { (active, archived), tab -> Triple(active, archived, tab) }
+        .combine(_searchQuery) { (active, archived, tab), query -> Tuple4(active, archived, tab, query) }
+        .combine(_regionFilter) { (active, archived, tab, query), region -> Tuple5(active, archived, tab, query, region) }
+        .combine(_selectedIds) { (active, archived, tab, query, region), selected ->
+            val baseList = if (tab == PatientListTab.ACTIVE) active else archived
+            val searchedList = if (query.isNotBlank()) {
+                baseList.filter { patient ->
+                    patient.fullName.contains(query, ignoreCase = true) ||
+                    patient.patientCode.contains(query, ignoreCase = true) ||
+                    patient.diagnosis.contains(query, ignoreCase = true) ||
+                    patient.bodyRegion.contains(query, ignoreCase = true)
+                }
+            } else {
+                baseList
             }
-            source.map { patients ->
-                PatientListUiState(
-                    patients = if (query.isNotBlank() && tab == PatientListTab.ARCHIVED) {
-                        patients.filter { it.isArchived }
-                    } else if (query.isNotBlank()) {
-                        patients.filter { !it.isArchived }
-                    } else {
-                        patients
-                    },
-                    tab = tab,
-                    searchQuery = query,
-                    selectedIds = selected,
-                    isLoading = false
-                )
-            }
+
+            PatientListUiState(
+                patients = searchedList,
+                tab = tab,
+                searchQuery = query,
+                regionFilter = region,
+                selectedIds = selected,
+                activeCount = active.size,
+                archivedCount = archived.size,
+                isLoading = false
+            )
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -77,6 +92,10 @@ class PatientListViewModel(
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
+    }
+
+    fun setRegionFilter(region: String) {
+        _regionFilter.value = region
     }
 
     fun toggleSelection(patientId: String) {
@@ -119,3 +138,6 @@ class PatientListViewModel(
             }
     }
 }
+
+private data class Tuple4<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
+private data class Tuple5<A, B, C, D, E>(val a: A, val b: B, val c: C, val d: D, val e: E)

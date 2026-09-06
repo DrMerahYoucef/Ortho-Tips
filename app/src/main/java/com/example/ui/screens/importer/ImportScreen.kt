@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.importer.ImportState
-import com.example.ui.theme.ClinicalPearl
 import com.example.viewmodel.ImportViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -221,9 +220,9 @@ fun ImportScreen(
                         Card(
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = ClinicalPearl.copy(alpha = 0.15f)
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                             ),
-                            border = BorderStroke(1.dp, ClinicalPearl.copy(alpha = 0.4f)),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
@@ -233,7 +232,7 @@ fun ImportScreen(
                                 Icon(
                                     imageVector = Icons.Default.CheckCircle,
                                     contentDescription = "Success",
-                                    tint = ClinicalPearl,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(28.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
@@ -242,7 +241,7 @@ fun ImportScreen(
                                         text = "Import Succeeded",
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Bold,
-                                        color = ClinicalPearl
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                     Text(
                                         text = state.details,
