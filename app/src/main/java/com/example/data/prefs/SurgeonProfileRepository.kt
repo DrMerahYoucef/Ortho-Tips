@@ -20,6 +20,8 @@ data class SurgeonProfile(
     val registrationNumber: String = "",
     /** Absolute path, under app-private storage, to the signature image. */
     val signatureImagePath: String? = null,
+    /** Absolute path, under app-private storage, to the clinic logo image. */
+    val logoImagePath: String? = null,
     /** Lets the surgeon keep a signature on file but leave it off a given PDF export. */
     val includeSignatureInPdf: Boolean = true
 ) {
@@ -42,6 +44,7 @@ class SurgeonProfileRepository(private val context: Context) {
         val EMAIL = stringPreferencesKey("surgeon_email")
         val REGISTRATION_NUMBER = stringPreferencesKey("surgeon_registration_number")
         val SIGNATURE_PATH = stringPreferencesKey("surgeon_signature_path")
+        val LOGO_PATH = stringPreferencesKey("surgeon_logo_path")
         val INCLUDE_SIGNATURE_IN_PDF = booleanPreferencesKey("surgeon_include_signature_in_pdf")
     }
 
@@ -55,6 +58,7 @@ class SurgeonProfileRepository(private val context: Context) {
             email = prefs[Keys.EMAIL] ?: "",
             registrationNumber = prefs[Keys.REGISTRATION_NUMBER] ?: "",
             signatureImagePath = prefs[Keys.SIGNATURE_PATH],
+            logoImagePath = prefs[Keys.LOGO_PATH],
             includeSignatureInPdf = prefs[Keys.INCLUDE_SIGNATURE_IN_PDF] ?: true
         )
     }
@@ -72,6 +76,11 @@ class SurgeonProfileRepository(private val context: Context) {
                 prefs[Keys.SIGNATURE_PATH] = profile.signatureImagePath
             } else {
                 prefs.remove(Keys.SIGNATURE_PATH)
+            }
+            if (profile.logoImagePath != null) {
+                prefs[Keys.LOGO_PATH] = profile.logoImagePath
+            } else {
+                prefs.remove(Keys.LOGO_PATH)
             }
             prefs[Keys.INCLUDE_SIGNATURE_IN_PDF] = profile.includeSignatureInPdf
         }

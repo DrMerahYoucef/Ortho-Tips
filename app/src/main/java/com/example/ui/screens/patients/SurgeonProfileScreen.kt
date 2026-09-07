@@ -77,6 +77,8 @@ fun SurgeonProfileScreen(
     var signatureRevision by remember { mutableStateOf(0L) }
     var signatureStatusMessage by remember { mutableStateOf<String?>(null) }
     var signatureStatusIsWarning by remember { mutableStateOf(false) }
+    var logoRevision by remember { mutableStateOf(0L) }
+    var logoStatusMessage by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -122,12 +124,38 @@ fun SurgeonProfileScreen(
         }
     }
 
+    fun processLogo(uri: Uri) {
+        logoStatusMessage = null
+        scope.launch(Dispatchers.IO) {
+            val result = runCatching {
+                File(PatientMediaStorage.rootDir(context), "surgeon_logo.png").also { destination ->
+                    destination.parentFile?.mkdirs()
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        destination.outputStream().use { output -> input.copyTo(output) }
+                    } ?: error("Unable to read that image.")
+                }
+            }
+            scope.launch {
+                result.onSuccess { file ->
+                    form = form.copy(logoImagePath = file.absolutePath)
+                    logoRevision = System.currentTimeMillis()
+                }.onFailure {
+                    logoStatusMessage = "Unable to load that logo."
+                }
+            }
+        }
+    }
+
     val galleryPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { processSignature(it) }
     }
 
     val scanLauncher = rememberDocumentScannerLauncher { scannedUris ->
         scannedUris.firstOrNull()?.let { processSignature(it) }
+    }
+
+    val logoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { processLogo(it) }
     }
 
     Scaffold(
@@ -161,6 +189,60 @@ fun SurgeonProfileScreen(
             item { ProfileField("Phone", form.phone) { form = form.copy(phone = it) } }
             item { ProfileField("Email", form.email) { form = form.copy(email = it) } }
             item { ProfileField("Registration number", form.registrationNumber) { form = form.copy(registrationNumber = it) } }
+
+            item {
+                Text(
+                    text = "CLINIC LOGO",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            item {
+                Text(
+                    text = "This logo will appear in the header of exported PDFs.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                        .padding(12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (form.logoImagePath != null) {
+                        AsyncImage(
+                            model = "file://${form.logoImagePath}?rev=$logoRevision",
+                            contentDescription = "Clinic logo",
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Text("No logo selected", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            logoStatusMessage?.let { message ->
+                item { Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+            }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(onClick = { logoPicker.launch("image/*") }, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text(" Select logo", modifier = Modifier.padding(start = 4.dp))
+                    }
+                    if (form.logoImagePath != null) {
+                        TextButton(onClick = { form = form.copy(logoImagePath = null); logoStatusMessage = null }) {
+                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Text(" Remove", modifier = Modifier.padding(start = 4.dp))
+                        }
+                    }
+                }
+            }
 
             item {
                 Text(

@@ -93,11 +93,12 @@ class OperativeProtocolViewModel(
                     _uiState.value = ProtocolGenerationUiState(error = "Patient not found")
                     return@launch
                 }
+                val surgeon = surgeonProfileRepository.profileFlow.first()
                 val timeline = patientRepository.getTimelineForPatient(patientId).first().all
                 val surgeries = patientRepository.getSurgeriesForPatient(patientId).first()
 
                 val file = withContext(Dispatchers.IO) {
-                    com.example.utils.PatientChartPdfGenerator.generate(context, patient, timeline, surgeries, anonymize, options)
+                    com.example.utils.PatientChartPdfGenerator.generate(context, patient, timeline, surgeries, surgeon, anonymize, options)
                 }
                 ShareHelper.sharePdf(context, file, chooserTitle = "Share patient chart")
                 _uiState.value = ProtocolGenerationUiState()

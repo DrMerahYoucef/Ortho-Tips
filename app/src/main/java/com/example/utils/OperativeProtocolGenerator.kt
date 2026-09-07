@@ -160,18 +160,31 @@ object OperativeProtocolGenerator {
             val centerX = SIDEBAR_WIDTH / 2f
             var sy = 46f
 
-            // Logo placeholder — a simple monogram circle standing in for a clinic crest.
-            val radius = 30f
-            canvas.drawCircle(centerX, sy + radius, radius, Paint().apply { color = COLOR_LOGO_FILL; isAntiAlias = true })
-            canvas.drawCircle(
-                centerX, sy + radius, radius,
-                Paint().apply { color = COLOR_LOGO_BORDER; style = Paint.Style.STROKE; strokeWidth = 1.4f; isAntiAlias = true }
-            )
-            val initials = surgeon.name.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
-                .take(2).mapNotNull { it.firstOrNull()?.uppercaseChar() }.joinToString("")
-                .ifBlank { "OT" }
-            canvas.drawText(initials, centerX, sy + radius + 7f, logoInitialsPaint)
-            sy += radius * 2 + 16f
+            val logoSize = 60f
+            val logoBitmap = surgeon.logoImagePath?.takeIf { File(it).exists() }?.let(BitmapFactory::decodeFile)
+            if (logoBitmap != null && logoBitmap.width > 0 && logoBitmap.height > 0) {
+                val scale = minOf(logoSize / logoBitmap.width, logoSize / logoBitmap.height)
+                val logoWidth = logoBitmap.width * scale
+                val logoHeight = logoBitmap.height * scale
+                canvas.drawBitmap(
+                    logoBitmap,
+                    null,
+                    RectF(centerX - logoWidth / 2f, sy, centerX + logoWidth / 2f, sy + logoHeight),
+                    null
+                )
+                logoBitmap.recycle()
+            } else {
+                val radius = 30f
+                canvas.drawCircle(centerX, sy + radius, radius, Paint().apply { color = COLOR_LOGO_FILL; isAntiAlias = true })
+                canvas.drawCircle(
+                    centerX, sy + radius, radius,
+                    Paint().apply { color = COLOR_LOGO_BORDER; style = Paint.Style.STROKE; strokeWidth = 1.4f; isAntiAlias = true }
+                )
+                val initials = surgeon.name.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+                    .take(2).mapNotNull { it.firstOrNull()?.uppercaseChar() }.joinToString("").ifBlank { "OT" }
+                canvas.drawText(initials, centerX, sy + radius + 7f, logoInitialsPaint)
+            }
+            sy += logoSize + 16f
 
             val doctorName = if (anonymize) strings.unnamedSurgeon else surgeon.name.ifBlank { strings.unnamedSurgeon }
             canvas.drawText(doctorName, centerX, sy, sidebarNamePaint)
