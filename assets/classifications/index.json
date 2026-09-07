@@ -1,0 +1,74 @@
+{
+  "chapters": [
+    {
+      "id": "epaule",
+      "title": "Épaule",
+      "file": "data/epaule.json",
+      "sectionCount": 4,
+      "classificationCount": 10
+    },
+    {
+      "id": "coude",
+      "title": "Coude",
+      "file": "data/coude.json",
+      "sectionCount": 3,
+      "classificationCount": 8
+    },
+    {
+      "id": "avant_bras",
+      "title": "Avant-bras (Radius proximal / distal, Olécrane)",
+      "file": "data/avant_bras.json",
+      "sectionCount": 4,
+      "classificationCount": 5
+    },
+    {
+      "id": "poignet_carpe",
+      "title": "Poignet — Carpe",
+      "file": "data/poignet_carpe.json",
+      "sectionCount": 4,
+      "classificationCount": 15
+    },
+    {
+      "id": "hanche",
+      "title": "Hanche",
+      "file": "data/hanche.json",
+      "sectionCount": 5,
+      "classificationCount": 18
+    },
+    {
+      "id": "hanche_pathologies",
+      "title": "Hanche — Pathologies non traumatiques (Coxarthrose, ONA, Ostéochondrite, Épiphysiolyse)",
+      "file": "data/hanche_pathologies.json",
+      "sectionCount": 4,
+      "classificationCount": 10
+    },
+    {
+      "id": "genou",
+      "title": "Genou",
+      "file": "data/genou.json",
+      "sectionCount": 6,
+      "classificationCount": 17
+    },
+    {
+      "id": "jambe_cheville_pied",
+      "title": "Jambe — Cheville — Pied",
+      "file": "data/jambe_cheville_pied.json",
+      "sectionCount": 7,
+      "classificationCount": 21
+    },
+    {
+      "id": "rachis",
+      "title": "Rachis",
+      "file": "data/rachis.json",
+      "sectionCount": 3,
+      "classificationCount": 10
+    },
+    {
+      "id": "tumeurs",
+      "title": "Tumeurs osseuses",
+      "file": "data/tumeurs.json",
+      "sectionCount": 1,
+      "classificationCount": 4
+    }
+  ]
+}
