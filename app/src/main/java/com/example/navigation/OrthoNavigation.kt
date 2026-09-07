@@ -10,6 +10,9 @@ object OrthoDestinations {
     const val IMAGE_VIEWER = "image/{imageId}"
     const val IMPORT = "import"
 
+    // Classifications module (static asset-backed reference)
+    const val CLASSIFICATION_CHAPTER_DETAIL = "classification_chapter/{chapterFile}"
+
     // Patient management module
     const val PATIENT_DETAIL = "patient/{patientId}"
     const val PATIENT_EDIT = "patient_edit?patientId={patientId}"
@@ -31,6 +34,11 @@ object OrthoDestinations {
 
     fun imageViewer(imageId: String): String {
         return "image/${Uri.encode(imageId)}"
+    }
+
+    /** [chapterFile] is the "file" field from a classification ChapterRef, e.g. "data/epaule.json". */
+    fun classificationChapterDetail(chapterFile: String): String {
+        return "classification_chapter/${Uri.encode(chapterFile)}"
     }
 
     fun patientDetail(patientId: String): String {

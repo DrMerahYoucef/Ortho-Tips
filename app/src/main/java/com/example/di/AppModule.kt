@@ -7,6 +7,7 @@ import com.example.data.local.OrthoDatabase
 import com.example.data.prefs.PdfOptionsRepository
 import com.example.data.prefs.SettingsRepository
 import com.example.data.prefs.SurgeonProfileRepository
+import com.example.data.repository.ClassificationRepository
 import com.example.data.repository.OrthoRepository
 import com.example.data.repository.PatientRepository
 import com.example.data.repository.SuggestionRepository
@@ -37,6 +38,11 @@ class AppModule(private val context: Context) {
 
     val boneDatabaseImporter: BoneDatabaseImporter by lazy {
         BoneDatabaseImporter(context, database)
+    }
+
+    // Static, asset-backed classification reference (read-only, see assets/classifications/)
+    val classificationRepository: ClassificationRepository by lazy {
+        ClassificationRepository(context)
     }
 
     // Patient management module

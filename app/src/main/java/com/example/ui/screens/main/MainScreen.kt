@@ -39,6 +39,7 @@ import com.example.ui.screens.home.HomeScreen
 import com.example.ui.screens.patients.PatientListScreen
 import com.example.ui.screens.search.SearchScreen
 import com.example.ui.screens.settings.SettingsScreen
+import com.example.viewmodel.ClassificationViewModel
 import com.example.viewmodel.HomeViewModel
 import com.example.viewmodel.PatientListViewModel
 import com.example.viewmodel.SavedViewModel
@@ -64,6 +65,7 @@ fun MainScreen(
     onNavigateToChapter: (String, String) -> Unit,
     onNavigateToBoneDetail: (String) -> Unit,
     onNavigateToImport: () -> Unit,
+    onNavigateToClassificationChapter: (String) -> Unit,
     onNavigateToPatientDetail: (String) -> Unit,
     onNavigateToAddPatient: () -> Unit,
     onNavigateToSurgeonProfile: () -> Unit,
@@ -75,6 +77,9 @@ fun MainScreen(
 
     val homeViewModel: HomeViewModel = viewModel(
         factory = HomeViewModel.provideFactory(appModule.orthoRepository)
+    )
+    val classificationViewModel: ClassificationViewModel = viewModel(
+        factory = ClassificationViewModel.provideFactory(appModule.classificationRepository)
     )
     val searchViewModel: SearchViewModel = viewModel(
         factory = SearchViewModel.provideFactory(appModule.orthoRepository)
@@ -153,10 +158,12 @@ fun MainScreen(
             when (currentTab) {
                 NavigationItem.STUDIES -> HomeScreen(
                     viewModel = homeViewModel,
+                    classificationViewModel = classificationViewModel,
                     onNavigateToChapter = onNavigateToChapter,
                     onNavigateToBoneDetail = onNavigateToBoneDetail,
                     onNavigateToSearch = { selectedItem = NavigationItem.SEARCH },
-                    onNavigateToImport = onNavigateToImport
+                    onNavigateToImport = onNavigateToImport,
+                    onNavigateToClassificationChapter = onNavigateToClassificationChapter
                 )
                 NavigationItem.PATIENTS -> PatientListScreen(
                     viewModel = patientListViewModel,

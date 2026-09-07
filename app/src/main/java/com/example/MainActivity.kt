@@ -30,6 +30,7 @@ import com.example.di.AppModule
 import com.example.navigation.OrthoDestinations
 import com.example.ui.screens.bone.BoneDetailScreen
 import com.example.ui.screens.bone.BoneListScreen
+import com.example.ui.screens.classifications.ClassificationChapterDetailRoute
 import com.example.ui.screens.importer.ImportScreen
 import com.example.ui.screens.main.MainScreen
 import com.example.ui.screens.patients.ImageAnnotationScreen
@@ -49,6 +50,7 @@ import com.example.utils.rememberDocumentScannerLauncher
 import com.example.data.local.entity.ImageCategory
 import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.BoneDetailViewModel
+import com.example.viewmodel.ClassificationViewModel
 import com.example.viewmodel.ImageAnnotationViewModel
 import com.example.viewmodel.ImportViewModel
 import com.example.viewmodel.MediaCaptureViewModel
@@ -140,6 +142,9 @@ fun OrthoAppNavHost(appModule: AppModule) {
                 onNavigateToImport = {
                     navController.navigate(OrthoDestinations.IMPORT)
                 },
+                onNavigateToClassificationChapter = { chapterFile ->
+                    navController.navigate(OrthoDestinations.classificationChapterDetail(chapterFile))
+                },
                 onNavigateToPatientDetail = { patientId ->
                     navController.navigate(OrthoDestinations.patientDetail(patientId))
                 },
@@ -228,6 +233,25 @@ fun OrthoAppNavHost(appModule: AppModule) {
             )
             ImportScreen(
                 viewModel = importViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = OrthoDestinations.CLASSIFICATION_CHAPTER_DETAIL,
+            arguments = listOf(
+                navArgument("chapterFile") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val chapterFile = backStackEntry.arguments?.getString("chapterFile")?.let { Uri.decode(it) } ?: ""
+            val classificationDetailViewModel: ClassificationViewModel = viewModel(
+                key = "classification_detail_$chapterFile",
+                factory = ClassificationViewModel.provideFactory(appModule.classificationRepository)
+            )
+            ClassificationChapterDetailRoute(
+                viewModel = classificationDetailViewModel,
+                repository = appModule.classificationRepository,
+                chapterFile = chapterFile,
                 onNavigateBack = { navController.popBackStack() }
             )
         }
