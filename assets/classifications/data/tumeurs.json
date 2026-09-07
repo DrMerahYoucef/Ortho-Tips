@@ -1,0 +1,158 @@
+{
+  "id": "tumeurs",
+  "title": "Tumeurs osseuses",
+  "sections": [
+    {
+      "id": "tumeur_a_cellules_geantes",
+      "title": "Tumeur à cellules géantes",
+      "classifications": [
+        {
+          "id": "classification_histologique_de_lichtenstein",
+          "title": "Classification histologique de LICHTENSTEIN",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Degré I",
+              "text": "Bénigne, histologiquement tranquille",
+              "bullets": [
+                "Abondance des cellules géantes que de cellules mononuclées",
+                "Mitose rare et normale",
+                "Pas d'anomalies nucléaires"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Degré II",
+              "text": "Bénigne, histologiquement active",
+              "bullets": [
+                "Cellules mononuclées abondantes",
+                "Discrètes anomalies nucléaires"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Degré III",
+              "text": "Aspect de malignité",
+              "bullets": [
+                "Anomalie cyto-nucléaire focale",
+                "Cytologie et architecture d'un sarcome"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classifications_radiologiques_de_campanacci",
+          "title": "Classifications radiologiques de CAMPANACCI",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Grade I",
+              "bullets": [
+                "Liséré de condensation",
+                "Corticale intacte ou peu érodée, non boursouflée"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Grade II",
+              "bullets": [
+                "Tumeur bien limitée mais sans liséré",
+                "Corticale visible même si déformée : boursouflée"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Grade III",
+              "bullets": [
+                "Limites floues",
+                "Parties molles envahies",
+                "Corticale rompue et disparue"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_merle_d_aubigne",
+          "title": "Classification de Merle D'Aubigné",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Forme calme",
+              "bullets": [
+                "Ostéolyse bien limitée par liséré de condensation",
+                "Corticale intacte",
+                "Peu de différentiel ; radios séparées de quelques semaines d'intervalle"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Forme agressive",
+              "bullets": [
+                "Aucune condensation",
+                "Corticale détruite",
+                "Nette évolution sur les clichés de quelques semaines d'intervalle"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Forme active",
+              "bullets": [
+                "Intermédiaire entre les deux",
+                "Ostéolyse sans condensation",
+                "Corticale respectée",
+                "Changement modéré sur les clichés de quelques semaines d'intervalle"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_d_enneking_meilleure_evaluation_pronostique_que_les_stades_histologiques",
+          "title": "Classification d'ENNEKING (meilleure évaluation pronostique que les stades histologiques)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Stade I",
+              "bullets": [
+                "Aspect latent, peu actif",
+                "Lésion de petit volume présentant une certaine sclérose péri tumorale",
+                "Corticale peut être amincie, mais reste continue",
+                "Le contour osseux n'est pas déformé",
+                "La lésion ne touche pas le cartilage articulaire",
+                "Peu symptomatique",
+                "La forme la moins fréquente +++, et peu récidivante 7%"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade II",
+              "bullets": [
+                "C'est la situation la plus fréquente",
+                "Tumeur apparaît active",
+                "Marges imprécises, et sans sclérose",
+                "Rupture corticale",
+                "Contours osseux déformés, refoulement du périoste",
+                "La tumeur jouxte le cartilage articulaire",
+                "Récidive 26%"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade III",
+              "bullets": [
+                "Très agressive radiologiquement",
+                "Lésion volumineuse",
+                "Envahit les parties molles",
+                "Les limites sont non seulement floues, mais des phénomènes perméatifs peuvent être notés, évoquant la possibilité d'une lésion maligne",
+                "Risque de récidive le plus élevé : 41%"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

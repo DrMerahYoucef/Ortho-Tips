@@ -1,0 +1,708 @@
+{
+  "id": "genou",
+  "title": "Genou",
+  "sections": [
+    {
+      "id": "fractures_diaphysaires_femur_tibia",
+      "title": "Fractures diaphysaires (fémur / tibia)",
+      "classifications": [
+        {
+          "id": "la_classification_de_l_ao",
+          "title": "La classification de l'AO",
+          "images": [
+            "images/diaphyse_ao.png"
+          ],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Groupe A",
+              "text": "Fractures simples",
+              "sub": [
+                {
+                  "label": "A I",
+                  "bullets": [
+                    "Fracture simple spiroïde"
+                  ]
+                },
+                {
+                  "label": "A II",
+                  "bullets": [
+                    "FR simple oblique > 30°"
+                  ]
+                },
+                {
+                  "label": "A III",
+                  "bullets": [
+                    "FR simple transversale < 30°"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Groupe B",
+              "text": "Fracture à coin",
+              "sub": [
+                {
+                  "label": "B I",
+                  "bullets": [
+                    "Fracture à coin de torsion intact"
+                  ]
+                },
+                {
+                  "label": "B II",
+                  "bullets": [
+                    "Fracture à coin de flexion intact"
+                  ]
+                },
+                {
+                  "label": "B III",
+                  "bullets": [
+                    "Fracture à coin fragmentaire"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Groupe C",
+              "text": "Fracture complexe",
+              "sub": [
+                {
+                  "label": "C I",
+                  "bullets": [
+                    "FR complexe communitive spiroïde"
+                  ]
+                },
+                {
+                  "label": "C II",
+                  "bullets": [
+                    "FR complexe bifocale"
+                  ]
+                },
+                {
+                  "label": "C III",
+                  "bullets": [
+                    "FR complexe communitive non spiroïde"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fracture_de_la_rotule",
+      "title": "Fracture de la rotule",
+      "classifications": [
+        {
+          "id": "rotule_anatomique",
+          "title": "Classification anatomique",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "I. FR respectant l'appareil extenseur",
+              "bullets": [
+                "FR parcellaire",
+                "FR verticale : avec un trait sagittal",
+                "FR ostéo chondrale",
+                "FR en étoile"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "II. FR interrompant l'appareil extenseur"
+            },
+            {
+              "type": "item",
+              "label": "Fr extra-articulaire",
+              "bullets": [
+                "FR de la base de la rotule",
+                "FR de la pointe de la rotule"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Fr articulaire",
+              "bullets": [
+                "FR transversales déplacée"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_moullay_et_ricard",
+          "title": "Classification de MOULLAY et RICARD",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Fracture transversale simple"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "FR complexe"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "FR communitive"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fracture_de_l_extremite_inferieure_du_femur",
+      "title": "Fracture de l'extrémité inférieure du fémur",
+      "classifications": [
+        {
+          "id": "classification_sofcot_1998_07_types_fr_supra_et_sus_inter_condyliennes",
+          "title": "Classification SOFCOT 1998 (07 types) — FR supra et sus inter condyliennes",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "FR supra condyliennes simples"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "FR supra condyliennes comminutives avec console de stabilité ext"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "FR supra condyliennes complexes (pas de console de stabilité, difficulté opératoire)"
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "FR sus et inter condyliennes simples"
+            },
+            {
+              "type": "item",
+              "label": "Type V",
+              "text": "FR sus inter condylienne à comminution métaphysaire"
+            },
+            {
+              "type": "item",
+              "label": "Type VI",
+              "text": "FR sus inter condylienne à comminution métaphyso-épiphysaire"
+            },
+            {
+              "type": "item",
+              "label": "Type VII",
+              "text": "Fracas métaphyso-épiphyso-diaphysaire"
+            }
+          ]
+        },
+        {
+          "id": "classification_cosacesco_trillat_fr_unicondyliennes",
+          "title": "Classification COSACESCO-TRILLAT (FR unicondyliennes)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "FR de HOFFA post dans un plan frontal"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "FR de TRILLAT ant dans un plan sagittal"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "FR intermédiaire entre type I et type II"
+            }
+          ]
+        },
+        {
+          "id": "classification_letenneur_fr_de_hoffa_dans_le_plan_frontal",
+          "title": "Classification LETENNEUR (FR de HOFFA dans le plan frontal)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "FR HOFFA à grand fragment"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "FR HOFFA à fragment moyen"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "FR HOFFA à fragment petit"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_nordin",
+          "title": "Classification de NORDIN",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "FR condylienne post",
+              "bullets": [
+                "Assimilable à une FR de HOFFA dont le trait frontal passe en arrière du plan vertical passant par le tubercule sus condylien",
+                "Le fragment détaché est libre de toute insertion capsulo ligamentaire",
+                "Le déplacement est très important, ascension et bascule qui peut atteindre 90°"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "FR condylienne intermédiaire",
+              "bullets": [
+                "Trait plus oblique s'étendant de la sinus condylo-trochléenne jusqu'à la région supra condylienne",
+                "Le fragment détaché demeure solidarisé partiellement par le LLI pour le condyle interne, et le LCA et tendon du muscle poplité pour le condyle externe"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "FR trochléo-condylienne ant",
+              "bullets": [
+                "Trait oblique, s'étend de l'échancrure inter condylienne à la région sus condyle ext",
+                "Le fragment détaché demeure solidarisé des formations capsulo-ligamentaires post et du LCA-LCP"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "FR trochléo-condylienne sagittale",
+              "bullets": [
+                "FR assimilable à la FR de TRELAT",
+                "Le trait post de l'échancrure inter condylienne s'étend vers la métaphyse et diaphyse"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_salter_harris_decollements_epiphysaires",
+          "title": "Classification SALTER-HARRIS (décollements épiphysaires)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "TEIF à travers la plaque conjugale"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "TEIF traverse la plaque conjugale + coin métaphysaire"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "TEIF traverse la plaque conjugale + coin épiphysaire"
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "TEIF traverse la plaque conjugale + coin métaphyso épiphysaire"
+            },
+            {
+              "type": "item",
+              "label": "Type V",
+              "text": "Écrasement de la plaque conjugale"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fractures_des_plateaux_tibiaux",
+      "title": "Fractures des plateaux tibiaux",
+      "classifications": [
+        {
+          "id": "la_classification_de_duparc_et_ficat",
+          "title": "La Classification de DUPARC ET FICAT",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "I. FR unitubérositaires"
+            },
+            {
+              "type": "item",
+              "label": "1. FR unitubérositaires ext",
+              "sub": [
+                {
+                  "label": "Type I",
+                  "bullets": [
+                    "FR mixtes séparation tassement"
+                  ]
+                },
+                {
+                  "label": "Type II",
+                  "bullets": [
+                    "FR séparation"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "2. FR unitubérositaires int",
+              "sub": [
+                {
+                  "label": "Type I",
+                  "bullets": [
+                    "FR tassement"
+                  ]
+                },
+                {
+                  "label": "Type II",
+                  "bullets": [
+                    "FR séparation"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "II. FR bi-tubérositaires",
+              "sub": [
+                {
+                  "label": "Type I",
+                  "bullets": [
+                    "FR bitubérosité simple sans enfoncement (tassement)"
+                  ]
+                },
+                {
+                  "label": "Type II",
+                  "bullets": [
+                    "FR bitubérositaires avec enfoncement"
+                  ]
+                },
+                {
+                  "label": "Type III",
+                  "bullets": [
+                    "FR bitubérositaire complexe"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "III. FR spino-tubérositaires"
+            },
+            {
+              "type": "item",
+              "label": "Spino tubérositaire interne",
+              "sub": [
+                {
+                  "label": "Type I",
+                  "bullets": [
+                    "Déplacement nul ou minime"
+                  ]
+                },
+                {
+                  "label": "Type II",
+                  "bullets": [
+                    "Subluxation en haut et en dehors du fragment diaphyso-épiphysaire"
+                  ]
+                },
+                {
+                  "label": "Type III",
+                  "bullets": [
+                    "Luxation en haut en dehors du fragment diaphyso-épiphysaire qui rompt le plan capsulo-ligamentaire"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Spino tubérositaire externe"
+            },
+            {
+              "type": "item",
+              "label": "IV. FR postérieures",
+              "sub": [
+                {
+                  "label": "Type I",
+                  "bullets": [
+                    "Postéro-frontal"
+                  ]
+                },
+                {
+                  "label": "Type II",
+                  "bullets": [
+                    "Postéro-interne"
+                  ]
+                },
+                {
+                  "label": "Type III",
+                  "bullets": [
+                    "Post + FR spino tubérositaire du côté opposé"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "instabilite_rotulienne",
+      "title": "Instabilité rotulienne",
+      "classifications": [
+        {
+          "id": "les_stades_de_croisement_de_la_dysplasie_trochleenne_radiologique",
+          "title": "Les stades de croisement de la dysplasie trochléenne (radiologique)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "table",
+              "headers": [
+                "Type",
+                "Description"
+              ],
+              "rows": [
+                [
+                  "Trochlée type I",
+                  "Le croisement se fait au même endroit sur les 2 condyles et tout au sommet de la trochlée — Forme la moins grave"
+                ],
+                [
+                  "Trochlée type II",
+                  "Le croisement se fait à une hauteur différente sur les 2 condyles — Pronostic favorable"
+                ],
+                [
+                  "Trochlée type III",
+                  "Le croisement se fait sur les 2 condyles au même niveau mais à 1 ou 2 cm plus bas du sommet de la trochlée — Signifie que la trochlée est plate — Forme la plus grave"
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_la_dysplasie_trochleenne_de_dejour",
+          "title": "Classification de la dysplasie trochléenne de DEJOUR",
+          "images": [
+            "images/genou_dejour_dessins.png",
+            "images/genou_dejour_radios.png"
+          ],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Stade A",
+              "text": "Signe du croisement et trochlée peu profonde"
+            },
+            {
+              "type": "item",
+              "label": "Stade B",
+              "text": "Signe du croisement, éperon sus-trochléen, trochlée plate"
+            },
+            {
+              "type": "item",
+              "label": "Stade C",
+              "text": "Signe du croisement, double contour, asymétrie des versants trochléens"
+            },
+            {
+              "type": "item",
+              "label": "Stade D",
+              "text": "Stades B + C, asymétrie des versants et raccordement en falaise"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_dysplasie_rotulienne_de_wiberg",
+          "title": "Classification de dysplasie rotulienne de WIBERG",
+          "images": [
+            "images/genou_wiberg.png"
+          ],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Facette interne concave et aussi large que l'externe"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Facette interne concave et aussi étroite que l'externe"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Facette interne convexe et petite"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gonarthrose",
+      "title": "Gonarthrose",
+      "classifications": [
+        {
+          "id": "classification_d_albach",
+          "title": "Classification d'ALBACH",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Stade 1",
+              "text": "Pincement articulaire (hauteur < 3 mm)"
+            },
+            {
+              "type": "item",
+              "label": "Stade 2",
+              "text": "Pincement complet"
+            },
+            {
+              "type": "item",
+              "label": "Stade 3",
+              "text": "Usure osseuse modérée (0-5 mm)"
+            },
+            {
+              "type": "item",
+              "label": "Stade 4",
+              "text": "Usure osseuse moyenne (5-10 mm)"
+            },
+            {
+              "type": "item",
+              "label": "Stade 5",
+              "text": "Usure osseuse majeure (> 10 mm) + subluxation du plateau tibial"
+            }
+          ]
+        },
+        {
+          "id": "classification_d_olschewski",
+          "title": "Classification d'OLSCHEWSKI",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Stade 0",
+              "text": "Pas d'instabilité"
+            },
+            {
+              "type": "item",
+              "label": "Stade I",
+              "bullets": [
+                "Pas d'instabilité en extension",
+                "Instabilité < 20° en flexion"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade II",
+              "bullets": [
+                "Petite instabilité en extension insuffisante à corriger la déviation frontale",
+                "Instabilité importante en flexion"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade III",
+              "bullets": [
+                "Instabilité en extension suffisante à corriger la déviation frontale",
+                "Instabilité antérieure et postérieure"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade IV",
+              "bullets": [
+                "Instabilité importante dans tous les plans"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "indications_des_osteotomies_segal",
+          "title": "Indications des ostéotomies (SEGAL)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Idéale",
+              "bullets": [
+                "Âge < 60 ans",
+                "Stade I et II d'ALBACH",
+                "Varus constitutionnel sans laxité frontale",
+                "Compartiment externe sain",
+                "Une fémoro-patellaire centrée peu ou pas symptomatique"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Poussée",
+              "bullets": [
+                "Stade III d'ALBACH",
+                "Compartiment externe sain",
+                "Laxité d'usure de la concavité",
+                "Âge > 60 ans",
+                "Arthrose fémoro-patellaire débutante"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "indications_des_puc_selon_rand",
+          "title": "Indications des PUC selon RAND",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Indications",
+              "bullets": [
+                "Âgé",
+                "Poids < 90 kg",
+                "Même en cas de flexion < 90° et flexum > 15°",
+                "Déformation angulaire < 20°",
+                "Sans subluxation",
+                "Avec éventuellement une cupule osseuse tibiale",
+                "Sans antécédents septiques",
+                "Désaxation > 20°",
+                "Laxité antéropostérieure",
+                "Laxité de convexité"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Contre-indications",
+              "bullets": [
+                "Arthrose FT globale",
+                "Rhumatisme inflammatoire",
+                "Atteinte franche de la FP"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "indications_des_ptg",
+          "title": "Indications des PTG",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "",
+              "bullets": [
+                "Stade évolutif avancé III, IV, V",
+                "Leurs indications découlent des limites des ostéotomies",
+                "Laxité importante",
+                "Âge avancé"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

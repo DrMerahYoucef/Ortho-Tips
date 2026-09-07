@@ -1,0 +1,628 @@
+{
+  "id": "hanche",
+  "title": "Hanche",
+  "sections": [
+    {
+      "id": "fracture_du_col_du_femur",
+      "title": "Fracture du col du fémur",
+      "classifications": [
+        {
+          "id": "classification_de_garden_basee_sur_le_deplacement_des_travees_de_la_tete",
+          "title": "Classification de GARDEN (basée sur le déplacement des travées de la tête)",
+          "images": [
+            "images/col_femur_garden_type1.png",
+            "images/col_femur_garden_type2.png",
+            "images/col_femur_garden_type3.png",
+            "images/col_femur_garden_type4.png"
+          ],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "FR incomplet en COXA VALGA",
+              "bullets": [
+                "Travées céphaliques verticalisées avec un angle > 160°",
+                "Elle est engrenée pouvant se désengrener",
+                "Bon pronostic, risque de PSD et nécrose de la tête minime"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "FR complète sans déplacement",
+              "bullets": [
+                "Travées brisées mais non déplacées",
+                "Bon pronostic"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "FR complète en COXA VARA",
+              "bullets": [
+                "Les travées céphaliques brisées sont déplacées en COXA VARA (horizontalisées)",
+                "Le fragment distal est en rotation externe",
+                "Les fragments restent solidaires par une charnière postéro inf qui est la synoviale",
+                "La synoviale déchirée en avant seulement"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "FR complète avec déplacement total",
+              "bullets": [
+                "Les 02 fragments sont désolidarisés",
+                "Les travées brisées, avec direction presque normale mais les travées céphaliques sont décalées en dedans par rapport aux travées cervicales",
+                "Synoviale complètement déchirée",
+                "Risque de nécrose de la tête majeur"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_delbet_basee_sur_le_siege_du_trait_de_fracture",
+          "title": "Classification de DELBET (basée sur le siège du trait de fracture)",
+          "images": [
+            "images/col_femur_delbet_rx.png"
+          ],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "FR sous capitale",
+              "text": "À la jonction cervico-céphalique (risque majeur d'ONTF)"
+            },
+            {
+              "type": "item",
+              "label": "FR trans cervicale",
+              "text": "À la partie moyenne du col"
+            },
+            {
+              "type": "item",
+              "label": "FR basi cervicale",
+              "text": "À la jonction cervico-trochantérienne (risque d'ONTF moins important)"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_pauwels_classification_biomecanique",
+          "title": "Classification de PAUWELS (classification biomécanique)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Angle inf à 30°",
+              "bullets": [
+                "Trait proche de l'horizontale, force de compression max (favorable à la consolidation)"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Angle entre 30° et 50°",
+              "bullets": [
+                "Force de compression égale à la force de cisaillement"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Angle > 50°",
+              "bullets": [
+                "Force de cisaillement dominante et défavorable à la consolidation, risque max de PSD"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_lamare_interet_pronostic_pour_les_types_iii_et_iv_de_garden",
+          "title": "Classification de LAMARE (intérêt pronostic pour les types III et IV de GARDEN)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Moyen déplacement, la position est au-dessous de ce point"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Grand déplacement, la position est au-dessus de ce point"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_souir_selon_la_verticalite_du_trait",
+          "title": "Classification de SOUIR (selon la verticalité du trait)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "FR à bec céphalique",
+              "text": "Instable (glissement cisaillement)"
+            },
+            {
+              "type": "item",
+              "label": "FR à bec cervical",
+              "text": "Stable"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_ricard_et_mole",
+          "title": "Classification de RICARD et MOLE",
+          "images": [
+            "images/hanche_ricard_mole.png"
+          ],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "FR à cône céphalique",
+              "text": "S'intrique dans le col après réduction"
+            },
+            {
+              "type": "item",
+              "label": "FR à bec céphalique"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_cooper",
+          "title": "Classification de COOPER",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "FR intra capsulaire",
+              "text": "Sur le col"
+            },
+            {
+              "type": "item",
+              "label": "FR extra capsulaire",
+              "text": "Jonction col-massif trochantérien"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fractures_du_massif_trochanterien",
+      "title": "Fractures du massif trochantérien",
+      "classifications": [
+        {
+          "id": "classification_de_bambard_ramadier_lavarde_et_decoulx",
+          "title": "Classification de BAMBARD-RAMADIER ; LAVARDE et DECOULX",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "FR cervico-trochantérienne"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "FR pertrochantérienne",
+              "sub": [
+                {
+                  "label": "A",
+                  "bullets": [
+                    "Simple"
+                  ]
+                },
+                {
+                  "label": "B",
+                  "bullets": [
+                    "Complexe"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "FR inter-trochantérienne"
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "FR sous-trochantérienne"
+            },
+            {
+              "type": "item",
+              "label": "Type V",
+              "text": "FR trochantéro-diaphysaire"
+            }
+          ]
+        },
+        {
+          "id": "classification_d_ender_siege_de_la_fracture_et_deplacement",
+          "title": "Classification d'ENDER (siège de la fracture et déplacement)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Pertrochantérienne simple"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Pertrochantérienne en rotation externe"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Pertrochantérienne en coxa valga"
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "Pertrochantérienne en rotation interne avec pénétration (bec distal pointu)"
+            },
+            {
+              "type": "item",
+              "label": "Type V",
+              "text": "Pertrochantérienne en RI avec pénétration (bec distal arrondi)"
+            },
+            {
+              "type": "item",
+              "label": "Type VI",
+              "text": "Inter trochantérienne"
+            },
+            {
+              "type": "item",
+              "label": "Type VII",
+              "text": "Sous trochantérienne"
+            },
+            {
+              "type": "item",
+              "label": "Type VIII",
+              "text": "Diaphyso-trochantérienne"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_l_ao_simplifie_les_fractures_trochanteriennes",
+          "title": "Classification de l'AO (simplifie les fractures trochantériennes)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "A1 simple",
+              "sub": [
+                {
+                  "label": "1",
+                  "bullets": [
+                    "Cervico-trochantérienne"
+                  ]
+                },
+                {
+                  "label": "2",
+                  "bullets": [
+                    "Pertrochantérienne non déplacée"
+                  ]
+                },
+                {
+                  "label": "3",
+                  "bullets": [
+                    "Trochantéro-diaphysaire"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "A2 plurifragmentaire",
+              "sub": [
+                {
+                  "label": "1",
+                  "bullets": [
+                    "À 01 fragment intermédiaire (petit trochanter)"
+                  ]
+                },
+                {
+                  "label": "2",
+                  "bullets": [
+                    "À 02 fragments intermédiaires (grand et petit trochanter)"
+                  ]
+                },
+                {
+                  "label": "3",
+                  "bullets": [
+                    "À plus de 02 fragments intermédiaires"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "A3 inter trochantérienne",
+              "sub": [
+                {
+                  "label": "1",
+                  "bullets": [
+                    "À trait oblique simple"
+                  ]
+                },
+                {
+                  "label": "2",
+                  "bullets": [
+                    "À trait transversal simple"
+                  ]
+                },
+                {
+                  "label": "3",
+                  "bullets": [
+                    "À coin médial"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_d_evans_jensen_fractures_inter_trochanteriennes_nombre_de_fragments_et_stabilite",
+          "title": "Classification d'EVANS-JENSEN (fractures inter-trochantériennes, nombre de fragments et stabilité)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Stable à 02 fragments"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Instable à 03 fragments"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Très instable à plus de 04 fragments"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "luxation_traumatique_de_la_hanche",
+      "title": "Luxation traumatique de la hanche",
+      "classifications": [
+        {
+          "id": "classification_de_bigelow",
+          "title": "Classification de BIGELOW",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "1. Luxations régulières",
+              "text": "Caractérisées par l'intégrité du ligament de Bertin, on décrit 02 variétés"
+            },
+            {
+              "type": "item",
+              "label": "Luxation postérieure 75%",
+              "bullets": [
+                "Lux postéro-sup (haute), iliaque : la tête fémorale en arrière au-dessus du cotyle (extension)",
+                "Lux postéro-inf (basse), ischiatique : la tête en arrière, et au-dessous du cotyle (flexion)"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Luxation antérieure 25%",
+              "bullets": [
+                "Lux antéro-inf (obturatrice) : la tête fémorale en avant et au-dessous du cotyle",
+                "Lux antéro-sup (pubienne) : la tête en avant et au-dessus du cotyle"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "2. Luxations irrégulières",
+              "text": "Le ligament de Bertin est rompu, ce qui autorise des déplacements importants"
+            },
+            {
+              "type": "item",
+              "label": "Sus cotyloïdienne",
+              "bullets": [
+                "Antérieure oblique",
+                "Postérieure haute",
+                "Sus pubienne"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Sous cotyloïdienne",
+              "bullets": [
+                "Périnéale",
+                "Sous ischiatique"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_levin_stabilite_et_caractere_pur_ou_associe_de_la_luxation",
+          "title": "Classification de LEVIN (stabilité et caractère pur ou associé de la luxation)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Luxation pure sans instabilité, réduction concentrique"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Luxation irréductible sans fracture de la tête ou de l'acétabulum"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Hanche instable après réduction ou incarcération intra articulaire"
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "Luxation associée à une fracture de l'acétabulum"
+            },
+            {
+              "type": "item",
+              "label": "Type V",
+              "text": "Luxation associée à une fracture de la tête ou du col"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fracture_de_la_tete_femorale",
+      "title": "Fracture de la tête fémorale",
+      "classifications": [
+        {
+          "id": "classification_de_pipkin_04_types_tous_associes_a_une_luxation_de_hanche",
+          "title": "Classification de PIPKIN (04 types, tous associés à une luxation de hanche)",
+          "images": [
+            "images/hanche_pipkin.png"
+          ],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Fracture parcellaire de la tête fémorale, sous la zone fovéale"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Fracture de la tête fémorale avec un fragment volumineux emportant la zone fovéale"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Type I ou II associés à une fracture du col du fémur"
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "Type I ou II associés à une fracture du rebord cotyloïdien"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_yoon",
+          "title": "Classification de YOON",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Petit fragment sous foveal < 1/3 de la tête"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Gros fragment sous foveal > 1/3 de la tête"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Large fragment supra foveal"
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "FR comminutive de la tête"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fractures_du_cotyle",
+      "title": "Fractures du cotyle",
+      "classifications": [
+        {
+          "id": "classification_anatomo_radiologique_de_judet_letournel",
+          "title": "Classification anatomo-radiologique de JUDET-LETOURNEL",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "A. Fractures simples ou élémentaires",
+              "bullets": [
+                "Fracture de la paroi postérieure",
+                "Fractures de la colonne postérieure",
+                "Fractures de la paroi antérieure",
+                "Fractures de la colonne antérieure du cotyle",
+                "Fractures transversales pures"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "B. Fractures complexes",
+              "bullets": [
+                "FR en « T » ou en « Y »",
+                "FR de la colonne postérieure + FR de la paroi postérieure",
+                "FR transversales et paroi postérieure « PP »",
+                "FR colonne ant + FR hémi transversales postérieures",
+                "FR des 02 colonnes — FR bicolumnaires de JUDET-LETOURNEL"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_fonctionnelle_de_mazas",
+          "title": "Classification fonctionnelle de MAZAS",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Zones portantes non atteintes",
+              "bullets": [
+                "FR transversales basses",
+                "FR paroi ant",
+                "FR 2 colonnes"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Zones portantes atteintes",
+              "bullets": [
+                "FR paroi post sauf petit fragment",
+                "FR colonne post",
+                "FR transversale haute",
+                "FR ant qui comporte une partie du toit",
+                "Certaines FR des 02 colonnes"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_duquennoy_lille_notion_de_congruence",
+          "title": "Classification de DUQUENNOY « Lille » (notion de congruence)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Congruence Tête-Toit (TT)",
+              "bullets": [
+                "Parfaite : TT3",
+                "Bonne : TT2",
+                "Passable : TT1",
+                "Mauvaise : TT0"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Congruence Tête-Cotyle (TC)",
+              "bullets": [
+                "Parfaite : TC3",
+                "Bonne : TC2",
+                "Passable : TC1",
+                "Mauvaise : TC0"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

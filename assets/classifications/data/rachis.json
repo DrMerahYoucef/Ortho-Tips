@@ -1,0 +1,589 @@
+{
+  "id": "rachis",
+  "title": "Rachis",
+  "sections": [
+    {
+      "id": "spondylolisthesis",
+      "title": "Spondylolisthésis",
+      "classifications": [
+        {
+          "id": "classification_de_meyrding_glissement",
+          "title": "Classification de MEYRDING (glissement)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Stade I",
+              "text": "Glissement dans le 1er 1/4 du plateau vertébral sous-jacent (0-33%)"
+            },
+            {
+              "type": "item",
+              "label": "Stade II",
+              "text": "Glissement dans le 2ème 1/4 (34-66%)"
+            },
+            {
+              "type": "item",
+              "label": "Stade III",
+              "text": "Glissement dans le 3ème 1/4 (67-99%)"
+            },
+            {
+              "type": "item",
+              "label": "Stade IV",
+              "text": "Glissement dans le 4ème 1/4"
+            },
+            {
+              "type": "item",
+              "label": "Stade V",
+              "text": "Spondyloptose"
+            }
+          ]
+        },
+        {
+          "id": "roy_camille_et_saillant_lesion_stable_3_groupes",
+          "title": "ROY-CAMILLE et SAILLANT (lésion stable, 3 groupes)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "SPL < 1/3",
+              "bullets": [
+                "Disque L5-S1 intact",
+                "Pas ou peu de dysplasie",
+                "Plateau supérieur de S1 horizontal"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Déplacement entre 30 et 40%",
+              "bullets": [
+                "Disque pincé",
+                "Dysplasie nette de L5",
+                "Plateau supérieur de S1 en « S » italique"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Glissement > 40%",
+              "bullets": [
+                "Disque détruit",
+                "Dysplasie de L5",
+                "Plateau supérieur de S1 en dôme"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_wiltse_et_newman",
+          "title": "Classification de Wiltse et Newman",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type 1",
+              "text": "Dit congénital ou dysplasique, caractérisé par une dysplasie de l'arc postérieur avec des articulaires fuyantes",
+              "sub": [
+                {
+                  "label": "Type A",
+                  "bullets": [
+                    "Trop coronales"
+                  ]
+                },
+                {
+                  "label": "Type B",
+                  "bullets": [
+                    "Trop sagittales"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type 2",
+              "text": "Dit « isthmique pur »",
+              "sub": [
+                {
+                  "label": "Type A",
+                  "bullets": [
+                    "Avec lyse acquise"
+                  ]
+                },
+                {
+                  "label": "Type B",
+                  "bullets": [
+                    "Avec allongement par consolidation d'une lyse"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type 3",
+              "text": "Dégénératif"
+            },
+            {
+              "type": "item",
+              "label": "Type 4",
+              "text": "Macrotraumatique"
+            },
+            {
+              "type": "item",
+              "label": "Type 5",
+              "text": "Pathologique (par tumeur notamment)"
+            },
+            {
+              "type": "item",
+              "label": "Type 6",
+              "text": "Iatrogène et surtout postchirurgical"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_marchetti_plus_recente_oppose_deux_grands_types",
+          "title": "Classification de Marchetti (plus récente — oppose deux grands types)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type 1",
+              "text": "SPL « développemental » ou de croissance, avec anomalies congénitales de l'arc postérieur qui est dysplasique",
+              "sub": [
+                {
+                  "label": "Sous-groupe A",
+                  "bullets": [
+                    "Avec une lyse se surajoutant à l'anomalie congénitale"
+                  ]
+                },
+                {
+                  "label": "Sous-groupe B",
+                  "bullets": [
+                    "Avec allongement isthmique pur"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type 2",
+              "text": "SPL acquis, avec quatre sous-groupes",
+              "sub": [
+                {
+                  "label": "A",
+                  "bullets": [
+                    "Dit traumatique",
+                    "A1 : macrotraumatisme",
+                    "A2 : microtraumatismes répétés conduisant à une fracture de fatigue"
+                  ]
+                },
+                {
+                  "label": "B",
+                  "bullets": [
+                    "Iatrogène"
+                  ]
+                },
+                {
+                  "label": "C",
+                  "bullets": [
+                    "Pathologique (tumeur, ostéoporose)"
+                  ]
+                },
+                {
+                  "label": "D",
+                  "bullets": [
+                    "Dégénératif"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "",
+              "bullets": [
+                "En fait, entre la lyse isthmique pure microtraumatique et l'allongement pur congénital, on peut décrire toutes les formes anatomiques intermédiaires"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "traumatisme_du_rachis_dorso_lombaire",
+      "title": "Traumatisme du rachis dorso-lombaire",
+      "classifications": [
+        {
+          "id": "classification_de_roy_camille_instabilite_et_risque_de_deplacement_secondaire",
+          "title": "Classification de ROY-CAMILLE (instabilité et risque de déplacement secondaire)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "A. En fonction de l'instabilité et du risque de déplacement secondaire des fragments"
+            },
+            {
+              "type": "item",
+              "label": "Lésions stables qui ne se déplacent pas",
+              "bullets": [
+                "FR tassement du corps vertébral",
+                "Sont caractérisées par une lésion osseuse simple ou ligamentaire pure",
+                "Luxation accrochée des articulaires"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Lésions instables qui risquent de se déplacer de façon progressive et régulière",
+              "bullets": [
+                "a. FR à trait horizontal : SEAT-BELT ou Fr de SCHANTZ ; FR de Chance — lésion à trait simple, atteinte osseuse et ligamentaire, lésion globale du SMR",
+                "b. FR à trait simple frontal",
+                "c. Fr à trait simple sagittal",
+                "d. FR en TEAR-DROP",
+                "e. Entorse grave"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Lésions instables qui peuvent se déplacer n'importe quand, de façon soudaine et incontrôlable",
+              "bullets": [
+                "Lésion à trait multiple et complexe, atteinte osseuse et ligamentaire touchant le SMR",
+                "Fr en croix et Fr comminutive (ex : BURST-Fr) — luxation avec déplacement initial important"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "B. En fonction des mécanismes de fracture",
+              "bullets": [
+                "Lésion en compression pure",
+                "Lésion par compression-distraction",
+                "Lésion par distraction pure",
+                "Lésion par translation"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_denis",
+          "title": "Classification De DENIS",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Lésions rachidiennes mineures",
+              "bullets": [
+                "Fracture des apophyses articulaires",
+                "Fractures des transverses",
+                "Fractures des épineuses"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Lésions rachidiennes majeures (04 catégories)"
+            },
+            {
+              "type": "item",
+              "label": "TYPE I",
+              "text": "FR compression-flexion selon le tassement",
+              "bullets": [
+                "< 30% : atteinte colonne ant, colonne moy normale, lésion stable +++",
+                "> 50% : atteinte du segment mobile rachidien, instabilité mixte"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "TYPE II",
+              "text": "FR comminutive ou BURST-FR",
+              "sub": [
+                {
+                  "label": "II A",
+                  "bullets": [
+                    "Fr des deux plateaux vertébraux"
+                  ]
+                },
+                {
+                  "label": "II B",
+                  "bullets": [
+                    "Fr du plateau supérieur"
+                  ]
+                },
+                {
+                  "label": "II C",
+                  "bullets": [
+                    "FR du plateau inférieur ; rare, compression axiale-flexion"
+                  ]
+                },
+                {
+                  "label": "II D",
+                  "bullets": [
+                    "BURST-ROTATION"
+                  ]
+                },
+                {
+                  "label": "II E",
+                  "bullets": [
+                    "BURST LATÉRAL-FLEXION"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "TYPE III",
+              "text": "FR flexion-distraction ou SEAT-BELT FR",
+              "sub": [
+                {
+                  "label": "Type A",
+                  "bullets": [
+                    "Lésion osseuse sur un niveau"
+                  ]
+                },
+                {
+                  "label": "Type B",
+                  "bullets": [
+                    "Lésion ligamentaire sur un niveau"
+                  ]
+                },
+                {
+                  "label": "Type C",
+                  "bullets": [
+                    "Lésion osseuse sur deux niveaux"
+                  ]
+                },
+                {
+                  "label": "Type D",
+                  "bullets": [
+                    "Lésion ligamentaire sur deux niveaux"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "TYPE IV",
+              "text": "FR dislocation",
+              "sub": [
+                {
+                  "label": "Type A",
+                  "bullets": [
+                    "Flexion-rotation"
+                  ]
+                },
+                {
+                  "label": "Type B",
+                  "bullets": [
+                    "Cisaillement : 1. FR cisaillement postéro-ant ; 2. FR cisaillement antéro-post"
+                  ]
+                },
+                {
+                  "label": "Type C",
+                  "bullets": [
+                    "FR-dislocation de type flexion-distraction"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_magerl",
+          "title": "Classification de MAGERL",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "TYPE A",
+              "text": "Lésion par compression pure — tassement atteignant la colonne ant ++",
+              "sub": [
+                {
+                  "label": "A1",
+                  "bullets": [
+                    "FR-tassement du corps vertébral, cunéiforme"
+                  ]
+                },
+                {
+                  "label": "A2",
+                  "bullets": [
+                    "FR-séparation du corps vertébral, sagittale, frontale, en DIABOLO"
+                  ]
+                },
+                {
+                  "label": "A3",
+                  "bullets": [
+                    "FR-écartement : comminutive, BURST-FR, rupture du mur post",
+                    "A3-1 : fracture éclatement incomplète, 1 seul plateau touché par un trait vertical",
+                    "A3-2 : fracture éclatement incomplète, avec refend sagittal",
+                    "A3-3 : fracture éclatement complète réalisant une comminution globale du CV"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "TYPE B",
+              "text": "Lésion par distraction, hyperflexion ou hyperextension ; atteinte du mur ant et post +++",
+              "sub": [
+                {
+                  "label": "B1",
+                  "bullets": [
+                    "Distraction post à prédominance de l'atteinte ligamentaire +++"
+                  ]
+                },
+                {
+                  "label": "B2",
+                  "bullets": [
+                    "Distraction post à prédominance de l'atteinte osseuse +++"
+                  ]
+                },
+                {
+                  "label": "B3",
+                  "bullets": [
+                    "Distraction ant"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "TYPE C",
+              "text": "Lésion par rotation, torsion axiale, atteinte des éléments central et post +++",
+              "sub": [
+                {
+                  "label": "C1",
+                  "bullets": [
+                    "Lésion type A + rotation : compression-R"
+                  ]
+                },
+                {
+                  "label": "C2",
+                  "bullets": [
+                    "Lésion type B + rotation : distraction-R"
+                  ]
+                },
+                {
+                  "label": "C3",
+                  "bullets": [
+                    "Cisaillement rotation"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "traumatisme_du_rachis_cervical_inferieur",
+      "title": "Traumatisme du rachis cervical inférieur",
+      "classifications": [
+        {
+          "id": "classification_d_argenson",
+          "title": "Classification D'ARGENSON",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "A. Lésions en flexion",
+              "bullets": [
+                "Entorse bénigne",
+                "Entorse grave",
+                "Luxation-FR biarticulaires"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "B. Lésions en compression",
+              "bullets": [
+                "Tassement corporéal antérieur",
+                "Tear-drop fractures (FR-luxation post)",
+                "FR comminutives ou « Brust-Fr »"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "C. Lésions en rotation",
+              "bullets": [
+                "Luxation uniarticulaire",
+                "Fracture des facettes articulaires",
+                "Fracture-séparation des massifs articulaires « FSMA »"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "D. Lésions en extension",
+              "bullets": [
+                "Entorse bénigne",
+                "Entorse grave",
+                "Luxation-FR biarticulaire"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "le_testing_musculaire",
+          "title": "Le testing musculaire",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "0",
+              "text": "Pas de contraction musculaire"
+            },
+            {
+              "type": "item",
+              "label": "1",
+              "text": "Contraction sans mouvement"
+            },
+            {
+              "type": "item",
+              "label": "2",
+              "text": "Mouvement en supprimant la pesanteur"
+            },
+            {
+              "type": "item",
+              "label": "3",
+              "text": "Mouvement contre pesanteur"
+            },
+            {
+              "type": "item",
+              "label": "4",
+              "text": "Mouvement contre résistance"
+            },
+            {
+              "type": "item",
+              "label": "5",
+              "text": "Mouvement normal"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_frankel",
+          "title": "Classification de FRANKEL",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "A",
+              "text": "Déficit moteur et sensitif complet « paraplégie aréflexique flasque »"
+            },
+            {
+              "type": "item",
+              "label": "B",
+              "text": "Déficit moteur complet, sensitif incomplet"
+            },
+            {
+              "type": "item",
+              "label": "C",
+              "text": "Motricité faible, force musculaire 1-2, sensibilité préservée"
+            },
+            {
+              "type": "item",
+              "label": "D",
+              "text": "Motricité utile, FM > 3 et sensibilité normale"
+            },
+            {
+              "type": "item",
+              "label": "E",
+              "text": "Pas de déficit, examen neurologique normal"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

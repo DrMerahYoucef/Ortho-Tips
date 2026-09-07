@@ -1,0 +1,820 @@
+{
+  "id": "jambe_cheville_pied",
+  "title": "Jambe — Cheville — Pied",
+  "sections": [
+    {
+      "id": "fracture_ouverte_de_jambe",
+      "title": "Fracture ouverte de jambe",
+      "classifications": [
+        {
+          "id": "classification_de_cauchoix_et_duparc",
+          "title": "Classification de CAUCHOIX ET DUPARC",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "",
+              "bullets": [
+                "Plaie ponctiforme ou linéaire franche"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type I",
+              "bullets": [
+                "Sans décollement ni contusion",
+                "Saigne bien, parée par excision économique",
+                "Suturable sans tension",
+                "Pronostic comparable à celui d'une FR fermée"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "bullets": [
+                "Plaie large à bord contus",
+                "Tissu graisseux sous cutané dévitalisé",
+                "Suturable sous tension",
+                "Exposant au risque de nécrose secondaire (picot)"
+              ],
+              "sub": [
+                {
+                  "label": "II a",
+                  "bullets": [
+                    "Plaie délimitant des lambeaux de vitalité douteuse"
+                  ]
+                },
+                {
+                  "label": "II b",
+                  "bullets": [
+                    "Plaie avec décollement sous aponévrotique pré tibial, avec zone de peau contuse et nécrotique"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "bullets": [
+                "Perte de substance cutanée pré tibiale en regard ou à proximité du foyer de FR",
+                "Le sont d'emblée ou après excision chirurgicale"
+              ],
+              "sub": [
+                {
+                  "label": "III a",
+                  "bullets": [
+                    "Perte de substance limitée pouvant espérer une réparation dirigée"
+                  ]
+                },
+                {
+                  "label": "III b",
+                  "bullets": [
+                    "Perte de substance étendue sans espoir de cicatrisation dirigée, risque infectieux augmenté"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "",
+              "bullets": [
+                "Cette classification ne tient pas compte des lésions osseuses et des lésions vasculaires"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_mechelany_02_types_plaies_par_projectiles_de_guerre",
+          "title": "Classification de MÉCHELANY (02 types, plaies par projectiles de guerre)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "Destruction cutanée ne dépassant pas au niveau du foyer la ½ de la circonférence du membre"
+            },
+            {
+              "type": "item",
+              "label": "Type V",
+              "text": "Destruction cutanée excédant la ½ de la circonférence du membre"
+            }
+          ]
+        },
+        {
+          "id": "classification_gustillo_et_anderson_usa_1984",
+          "title": "Classification GUSTILLO et ANDERSON (USA 1984)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Plaie quasi punctiforme de moins de 1 cm"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Plaie > 1 cm sans lésion étendue des parties molles"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Lésions graves non fermables",
+              "sub": [
+                {
+                  "label": "III a",
+                  "bullets": [
+                    "Couverture du foyer de FR possible ; traumatisme à haute énergie (fracas à comminution étendue)"
+                  ]
+                },
+                {
+                  "label": "III b",
+                  "bullets": [
+                    "Large perte de substance cutanée + abrasion périostée exposant le foyer à une contamination massive"
+                  ]
+                },
+                {
+                  "label": "III c",
+                  "bullets": [
+                    "Lésion vasculaire"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_duparc_pour_les_lesions_osseuses",
+          "title": "Classification de DUPARC pour les lésions osseuses",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "bullets": [
+                "FR simple sans perte de substance osseuse ni comminution",
+                "Le potentiel de guérison est identique à celui des FR fermées"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "bullets": [
+                "Perte de substance minime en rapport avec la comminution des extrémités osseuses",
+                "Risque important de retard de consolidation"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "bullets": [
+                "La perte de substance osseuse est importante, l'apport osseux secondaire est indispensable"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fractures_du_pilon_tibial",
+      "title": "Fractures du pilon tibial",
+      "classifications": [
+        {
+          "id": "classification_sofcot_91",
+          "title": "Classification SOFCOT 91",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "I. FR incomplètes"
+            },
+            {
+              "type": "item",
+              "label": "A. FR marginale ant",
+              "bullets": [
+                "Simple",
+                "Complexe"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "B. FR marginale post",
+              "bullets": [
+                "FR postéro-ext",
+                "FR postéro-int",
+                "FR frontale"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "C. FR sagittales",
+              "bullets": [
+                "Internes pures : cunéenne interne",
+                "Externes pures : cunéenne externe"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "D. FR diaphysaire à trait articulaire"
+            },
+            {
+              "type": "item",
+              "label": "II. FR complètes",
+              "bullets": [
+                "FR à déplacement ant",
+                "FR à déplacement post",
+                "FR sans déplacement"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_ao",
+          "title": "Classification AO",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "I. Fractures extra articulaires"
+            },
+            {
+              "type": "item",
+              "label": "II. Fractures articulaires à trait simple réalisant une séparation sans comminution épiphysaire",
+              "sub": [
+                {
+                  "label": "B1",
+                  "bullets": [
+                    "Partielle simple, mais métaphysaire possible"
+                  ]
+                },
+                {
+                  "label": "B2",
+                  "bullets": [
+                    "Partielle complexe"
+                  ]
+                },
+                {
+                  "label": "B3",
+                  "bullets": [
+                    "Complète"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "III. Fracture articulaire en compression, enfoncement avec comminution épiphysaire",
+              "sub": [
+                {
+                  "label": "C1",
+                  "bullets": [
+                    "Partielle simple"
+                  ]
+                },
+                {
+                  "label": "C2",
+                  "bullets": [
+                    "Partielle complexe"
+                  ]
+                },
+                {
+                  "label": "C3",
+                  "bullets": [
+                    "Totale complexe"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_gay_evrard_fr_marginales_ant_post_bi_marginales_supra_malleolaire_sagittales",
+          "title": "Classification De GAY & EVRARD (FR marginales ant, post, bi-marginales, supra malléolaire, sagittales)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "",
+              "bullets": [
+                "Classification anatomique, comportant 17 variétés de FR groupées en 05 catégories principales",
+                "1. FR marginales ant",
+                "2. FR marginales post",
+                "3. FR bi-marginales",
+                "4. FR supra malléolaire à refend articulaire",
+                "5. FR sagittales"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_vives_04_criteres_descriptifs",
+          "title": "Classification De VIVES (04 critères descriptifs)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Étendue de la surface fracturée",
+              "bullets": [
+                "FR incomplètes",
+                "FR complètes"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Congruence articulaire",
+              "bullets": [
+                "FR simple",
+                "FR complexes"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Comminution métaphysaire"
+            },
+            {
+              "type": "item",
+              "label": "Déplacement",
+              "bullets": [
+                "Ascension axiale",
+                "Déplacement rotatoire",
+                "Excentration ou bascule"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "",
+              "bullets": [
+                "Dans les FR incomplètes : le déplacement est toujours excentrique avec un pic de fréquence post ou post-int",
+                "Dans les FR complètes : le déplacement peut être centré"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fractures_du_calcaneum",
+      "title": "Fractures du calcanéum",
+      "classifications": [
+        {
+          "id": "calcaneum_parcellaires",
+          "title": "I. FR parcellaires extra-thalamiques",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "A. FR tubérosité postérieure — 03 types selon BOHLER",
+              "sub": [
+                {
+                  "label": "Type I BOHLER",
+                  "bullets": [
+                    "FR de l'angle postéro-supérieur"
+                  ]
+                },
+                {
+                  "label": "Type II BOHLER",
+                  "bullets": [
+                    "FR du tubercule postéro-interne"
+                  ]
+                },
+                {
+                  "label": "Type III BOHLER",
+                  "bullets": [
+                    "FR de la tubérosité postérieure"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "B. FR du bec de la grande apophyse"
+            },
+            {
+              "type": "item",
+              "label": "C. FR sustentaculum tali",
+              "text": "FR thalamique dont le trait est sagittal très interne +++"
+            }
+          ]
+        },
+        {
+          "id": "ii_fr_thalamiques_et_peri_thalamiques_classification_de_duparc",
+          "title": "II. FR thalamiques et péri-thalamiques — Classification de DUPARC",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "FR séparation à 2 fragments principaux"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "FR séparation à 02 fragments + luxation du fragment postéro-externe"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "FR séparation-enfoncement à 03 fragments",
+              "bullets": [
+                "Postéro-ext",
+                "Antéro-interne",
+                "Cortico-thalamique : par l'enfoncement du thalamus ; l'enfoncement peut être total ou partiel, vertical ou horizontal ou mixte"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "FR séparation-enfoncement à 4 fragments",
+              "bullets": [
+                "L'enfoncement peut être total ou partiel, vertical ou horizontal ou mixte, avec rupture de la corticale plantaire"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type V",
+              "text": "Écrasement total en « tampon de buvard » ou comminutif"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_kempf_et_touzard",
+          "title": "Classification de Kempf et Touzard",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type 1",
+              "text": "Fracture séparation à 2 fragments ant-int et surtout postéro-externe par trait d'obliquité variable"
+            },
+            {
+              "type": "item",
+              "label": "Type 2",
+              "text": "Fracture luxation : le fragment postéro-externe bascule en varus et se luxe en dehors"
+            },
+            {
+              "type": "item",
+              "label": "Type 3",
+              "text": "Fracture séparation-enfoncement à 3 fragments (enfoncement vertical ou horizontal)"
+            },
+            {
+              "type": "item",
+              "label": "Type 4",
+              "text": "Fracture séparation à 4 fragments (enfoncement vertical ou horizontal)"
+            },
+            {
+              "type": "item",
+              "label": "",
+              "bullets": [
+                "Au-delà de 4 fragments, la fracture constitue un écrasement calcanéen non systématisable"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_sanders_coupes_scannographiques_transversales",
+          "title": "Classification de Sanders (coupes scannographiques transversales)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Fracture non déplacée"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Fracture à deux fragments"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Fracture à trois fragments"
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "Fracture comminutive"
+            }
+          ]
+        },
+        {
+          "id": "classification_d_utheza_fractures_thalamiques_avec_enfoncement",
+          "title": "Classification d'UTHEZA (fractures thalamiques avec enfoncement)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "",
+              "bullets": [
+                "Le trait de séparation de Palmer est toujours sagittal, trait fondamental"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Fracture verticale",
+              "bullets": [
+                "Le trait fondamental est plutôt médial",
+                "Le fragment cortico-thalamique prédominant est le siège d'un enfoncement vertical",
+                "Ce type de fracture se produirait lorsque le pied est en pronation au moment de la chute"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Fractures horizontales",
+              "bullets": [
+                "Le trait fondamental est plutôt latéral",
+                "Le fragment antéro-médial prédominant est le siège d'un enfoncement horizontal",
+                "Ce type de fracture se produirait lorsque le pied est en supination au moment de la chute"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Fractures mixtes",
+              "bullets": [
+                "Le trait fondamental est médio-thalamique",
+                "Le fragment antéro-médial est enfoncé horizontalement (abaissement)",
+                "Le fragment cortico-thalamique est enfoncé verticalement (pivotement)",
+                "Ce type de fracture se produirait lorsque le pied est en position indifférente lors de la chute"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fractures_de_l_astragale",
+      "title": "Fractures de l'astragale",
+      "classifications": [
+        {
+          "id": "astragale_coltart",
+          "title": "Classification de COLTART",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "I. Fractures parcellaires"
+            },
+            {
+              "type": "item",
+              "label": "1. FR ostéo-chondrales du dôme de l'astragale"
+            },
+            {
+              "type": "item",
+              "label": "2. FR de la tête"
+            },
+            {
+              "type": "item",
+              "label": "3. FR des processus postérieurs « FR du corps »",
+              "sub": [
+                {
+                  "label": "a",
+                  "bullets": [
+                    "Fr du tubercule postéro-ext (SHERERD-CLOQUET)"
+                  ]
+                },
+                {
+                  "label": "b",
+                  "bullets": [
+                    "FR du processus postéro-médial (rare)"
+                  ]
+                },
+                {
+                  "label": "c",
+                  "bullets": [
+                    "FR bituberculaire post (STIEDA)"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "4. FR de la joue médiale"
+            },
+            {
+              "type": "item",
+              "label": "5. FR du processus latéral"
+            },
+            {
+              "type": "item",
+              "label": "II. Les FR totales"
+            },
+            {
+              "type": "item",
+              "label": "A. Fracture séparation",
+              "bullets": [
+                "FR séparation transversale",
+                "FR séparation sagittale"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "B. Fractures comminutives"
+            },
+            {
+              "type": "item",
+              "label": "C. Fractures complexes de l'arrière-pied"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_berndt_harty_fr_osteo_chondrales_du_dome_de_l_astragale",
+          "title": "Classification de BERNDT & HARTY (FR ostéo-chondrales du dôme de l'astragale)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Simple compression"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Fragment soulevé par une de ses deux extrémités, peu déplacé"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Fragment soulevé et déplacé"
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "Le fragment est retourné de 180° ou est libre dans l'articulation"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_hawkins_fr_separation_transversale",
+          "title": "Classification de HAWKINS (FR séparation transversale)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "FR peu ou pas déplacée"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "FR séparation + luxation sous-talienne post"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Énucléation du fragment post"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fractures_bimalleolaires",
+      "title": "Fractures bimalléolaires",
+      "classifications": [
+        {
+          "id": "classifications_de_duparc_alnot",
+          "title": "Classifications de DUPARC-ALNOT",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "FR sous tuberculaire par adduction — 5%"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "FR sus tuberculaire par abduction — 15%"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "FR par rotation ext sus-tuberculaire — 20%"
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "FR par rotation externe inter tuberculaire — 60%"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pied_bot_varus_equin",
+      "title": "Pied bot varus équin",
+      "classifications": [
+        {
+          "id": "pbve_harrold",
+          "title": "Classification de HARROLD — pied creux essentiel (types anapath)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "I. Pied creux direct",
+              "bullets": [
+                "Pied creux antérieur",
+                "Pied creux postérieur",
+                "Pied creux direct mixte"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "II. Pied creux antéro-interne (pied creux varus)"
+            },
+            {
+              "type": "item",
+              "label": "III. Pied creux valgus"
+            }
+          ]
+        },
+        {
+          "id": "empreintes_plantaires_podoscopie",
+          "title": "Empreintes plantaires « Podoscopie »",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "1er degré",
+              "text": "Diminution de l'isthme intermédiaire entre les appuis antérieur et postérieur, devenu < 1/3 de la longueur du pied"
+            },
+            {
+              "type": "item",
+              "label": "2ème degré",
+              "text": "Hiatus de l'isthme avec conservation de ses prolongements antérieur et postérieur, d'importance variable"
+            },
+            {
+              "type": "item",
+              "label": "3ème degré",
+              "text": "Disparition de l'empreinte isthmique avec ou sans perte de l'appui pulpaire des orteils liée aux griffes"
+            }
+          ]
+        },
+        {
+          "id": "les_types_selon_la_reductibilite",
+          "title": "Les types selon la réductibilité",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "PC totalement réductible"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "PC partiellement réductible"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "PC important irréductible"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hallux_valgus",
+      "title": "Hallux Valgus",
+      "classifications": [
+        {
+          "id": "classification_par_severite_vp_mv_rotation_go",
+          "title": "Classification par sévérité (VP / MV / rotation GO)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Hallux valgus mineur",
+              "text": "VP : 15-25°, MV : 9-15°, rotation GO < 10°"
+            },
+            {
+              "type": "item",
+              "label": "Hallux valgus moyen",
+              "text": "VP : 25-35°, MV : 15-20°, rotation GO : 10-15°"
+            },
+            {
+              "type": "item",
+              "label": "Hallux valgus majeur — Groupe I",
+              "text": "VP : 40-90°, MV : 20-45°, rotation GO : 15-45° — Equin et varus se corrigent totalement"
+            },
+            {
+              "type": "item",
+              "label": "Groupe II",
+              "text": "Equin et varus persistent entre 0-20°"
+            },
+            {
+              "type": "item",
+              "label": "Groupe III",
+              "text": "Equin et varus restent > 20° (on peut rajouter un groupe pour un équin ou un varus résiduel de 20-40°)"
+            },
+            {
+              "type": "item",
+              "label": "Groupe IV",
+              "text": "Formes graves, déficit > 40°"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

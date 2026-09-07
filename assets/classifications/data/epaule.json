@@ -1,0 +1,344 @@
+{
+  "id": "epaule",
+  "title": "Épaule",
+  "sections": [
+    {
+      "id": "luxation_traumatique_de_l_epaule",
+      "title": "Luxation traumatique de l'épaule",
+      "classifications": [
+        {
+          "id": "luxation_epaule_anatomique",
+          "title": "Classification anatomique",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "1. Luxation antéro-interne",
+              "bullets": [
+                "A. Luxation antéro-interne extra-coracoïdienne",
+                "B. Luxation antéro-interne sous coracoïdienne",
+                "C. Luxation antéro-interne intra-coracoïdienne",
+                "D. Luxation antéro-interne sous claviculaire"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "2. Luxations postérieures",
+              "bullets": [
+                "A. Luxation sous acromiale",
+                "B. Luxation sous épineuse de NÉTALON"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "3. Luxations inférieures",
+              "bullets": [
+                "A. Luxations sous glénoïdiennes",
+                "B. Luxation ERECTA",
+                "C. Luxation sous tricipitale"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "4. Luxations supérieures"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fracture_luxation_de_l_epaule",
+      "title": "Fracture-luxation de l'épaule",
+      "classifications": [
+        {
+          "id": "la_classification_de_duparc_lagier",
+          "title": "La classification de DUPARC LAGIER",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Les fractures luxations sous-tubérositaires"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Luxation avec FR métaphyso-diaphysaire"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Luxation avec fracture verticale"
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "Luxation avec énucléation"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fracture_de_l_extremite_superieure_de_l_humerus",
+      "title": "Fracture de l'extrémité supérieure de l'humérus",
+      "classifications": [
+        {
+          "id": "classification_de_neer",
+          "title": "Classification de NEER",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "1.",
+              "text": "FR à 02 fragments"
+            },
+            {
+              "type": "item",
+              "label": "2.",
+              "text": "FR à 03 fragments"
+            },
+            {
+              "type": "item",
+              "label": "3.",
+              "text": "FR à 04 fragments"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_duparc_et_olivier",
+          "title": "Classification de DUPARC et OLIVIER",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "1. FR parcellaires isolées des tubérosités",
+              "bullets": [
+                "FR du trochiter"
+              ],
+              "sub": [
+                {
+                  "label": "Type I",
+                  "bullets": [
+                    "FR intéressant l'insertion du sus épineux"
+                  ]
+                },
+                {
+                  "label": "Type II",
+                  "bullets": [
+                    "FR intéressant l'insertion du sus et sous épineux"
+                  ]
+                },
+                {
+                  "label": "Type III",
+                  "bullets": [
+                    "FR totale du trochiter non déplacée"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "",
+              "bullets": [
+                "FR du trochin"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "2. Fractures extra-articulaires sous tubérositaires",
+              "bullets": [
+                "FR engrainées",
+                "FR non engrainées"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "3.",
+              "text": "FR articulaires céphalo-tubérositaires"
+            },
+            {
+              "type": "item",
+              "label": "4.",
+              "text": "FR-luxation de l'épaule"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pathologie_de_la_coiffe_des_rotateurs",
+      "title": "Pathologie de la coiffe des rotateurs",
+      "classifications": [
+        {
+          "id": "neer_coiffe",
+          "title": "Classification de NEER (stades)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Stade I",
+              "bullets": [
+                "Tendinite aigue < 25 ans",
+                "Tendinopathies hémorragiques avec œdème",
+                "Lésions réversibles"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade II",
+              "text": "Tendinopathie chronique (25-40 ans)",
+              "bullets": [
+                "Evolution fibreuse de la bourse qui s'épaissit et devient fibreuse",
+                "Lésions irréversibles"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade III",
+              "text": "Rupture de la CR > 40 ans",
+              "bullets": [
+                "Les ruptures partielles peuvent être supérieures en regard de la bourse sous acromiale, inférieure sur la face antérieure ou même intra tendineuse"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_goutallier_arthroscanner",
+          "title": "Classification de GOUTALLIER (Arthroscanner)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Stade « 0 »",
+              "text": "Pas de graisse"
+            },
+            {
+              "type": "item",
+              "label": "Stade « 1 »",
+              "text": "Quelques dépôts de graisse"
+            },
+            {
+              "type": "item",
+              "label": "Stade « 2 »",
+              "text": "Moins de graisse que de muscle"
+            },
+            {
+              "type": "item",
+              "label": "Stade « 3 »",
+              "text": "Autant de graisse que de muscle"
+            },
+            {
+              "type": "item",
+              "label": "Stade « 4 »",
+              "text": "Plus de graisse que de muscle"
+            }
+          ]
+        },
+        {
+          "id": "classification_arthroscopique_d_esch",
+          "title": "Classification arthroscopique d'ESCH",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Grade « 0 »",
+              "text": "Pas de rupture"
+            },
+            {
+              "type": "item",
+              "label": "Grade « 1 »",
+              "text": "Éraillure tendineuse sans rupture"
+            },
+            {
+              "type": "item",
+              "label": "Grade « 2 »",
+              "text": "Rupture partielle"
+            },
+            {
+              "type": "item",
+              "label": "Grade « 3 »",
+              "text": "Rupture complète < 1cm"
+            },
+            {
+              "type": "item",
+              "label": "Grade « 4 »",
+              "text": "Rupture complète > 1cm"
+            }
+          ]
+        },
+        {
+          "id": "classification_d_apoil_rx_standard",
+          "title": "Classification d'APOIL (Rx standard)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "I",
+              "text": "Rupture du cintre omo huméral"
+            },
+            {
+              "type": "item",
+              "label": "II",
+              "text": "Arthrose acromio trochitérienne et gléno humérale avec usure du pôle supérieur de la glène"
+            },
+            {
+              "type": "item",
+              "label": "III",
+              "text": "Stade II + fermeture ostéophytique des défilés sus et sous épineux"
+            }
+          ]
+        },
+        {
+          "id": "bernageau_arthrographie",
+          "title": "BERNAGEAU (Arthrographie)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Stade 1",
+              "text": "Le fragment proximal dépasse en dehors le pôle supérieur de la tête humérale"
+            },
+            {
+              "type": "item",
+              "label": "Stade 2",
+              "text": "Le moignon tendineux est situé en regard du pôle supérieur de la tête humérale"
+            },
+            {
+              "type": "item",
+              "label": "Stade 3",
+              "text": "Le moignon tendineux est situé en regard de l'interligne gléno huméral"
+            }
+          ]
+        },
+        {
+          "id": "classification_proposee_par_zlatkin_irm",
+          "title": "Classification proposée par ZLATKIN (IRM)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Grade 0",
+              "text": "Tendon présentant un hyposignal normal et une morphologie normale"
+            },
+            {
+              "type": "item",
+              "label": "Grade 1",
+              "text": "Hyposignal diffus intratendineux"
+            },
+            {
+              "type": "item",
+              "label": "Grade 2",
+              "text": "Tendon avec hyposignal et modification morphologique ; subdivisé en grade 2A et grade 2B en fonction de la sévérité des modifications morphologiques"
+            },
+            {
+              "type": "item",
+              "label": "Grade 3",
+              "text": "Tendon présentant un rehaussement du signal en T2 au sein d'un defect tendineux ; cet hypersignal doit être identique à celui du liquide éventuellement présent dans l'articulation"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

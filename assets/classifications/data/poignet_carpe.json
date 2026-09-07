@@ -1,0 +1,638 @@
+{
+  "id": "poignet_carpe",
+  "title": "Poignet — Carpe",
+  "sections": [
+    {
+      "id": "fracture_du_scaphoide_carpien",
+      "title": "Fracture du scaphoïde carpien",
+      "classifications": [
+        {
+          "id": "selon_russe_direction_du_trait",
+          "title": "Selon RUSSE (direction du trait)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "a.",
+              "text": "Trait oblique horizontal : compression"
+            },
+            {
+              "type": "item",
+              "label": "b.",
+              "text": "Trait transversal"
+            },
+            {
+              "type": "item",
+              "label": "c.",
+              "text": "Trait oblique vertical : cisaillement"
+            }
+          ]
+        },
+        {
+          "id": "selon_trojan_siege_du_trait",
+          "title": "Selon TROJAN (siège du trait)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Trait proximal",
+              "text": "10%"
+            },
+            {
+              "type": "item",
+              "label": "Trait col",
+              "text": "70% +++ : moyenne"
+            },
+            {
+              "type": "item",
+              "label": "Trait distal",
+              "text": "20%"
+            }
+          ]
+        },
+        {
+          "id": "selon_schernberg_interet_diagnostic_et_therapeutique",
+          "title": "Selon SCHERNBERG (intérêt diagnostic et thérapeutique)",
+          "images": [
+            "images/scaphoid_schernberg.png"
+          ],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "I.",
+              "text": "Fracture polaire supérieure"
+            },
+            {
+              "type": "item",
+              "label": "II.",
+              "text": "Fracture corporéale haute"
+            },
+            {
+              "type": "item",
+              "label": "III.",
+              "text": "Fracture corporéale basse"
+            },
+            {
+              "type": "item",
+              "label": "IV.",
+              "text": "Fracture trans-tubérositaire"
+            },
+            {
+              "type": "item",
+              "label": "V.",
+              "text": "Fracture du pied"
+            },
+            {
+              "type": "item",
+              "label": "VI.",
+              "text": "Fracture du tubercule distal",
+              "bullets": [
+                "a. Petit fragment",
+                "b. Fragment intermédiaire",
+                "c. Gros fragment distal"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_herbert",
+          "title": "Classification de Herbert",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Groupe A",
+              "text": "Correspond aux fractures stables",
+              "sub": [
+                {
+                  "label": "A1",
+                  "bullets": [
+                    "Fractures partielles du pôle distal"
+                  ]
+                },
+                {
+                  "label": "A2",
+                  "bullets": [
+                    "Fractures incomplètes du corps"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Groupe B",
+              "text": "Correspond aux fractures récentes instables",
+              "sub": [
+                {
+                  "label": "B1",
+                  "bullets": [
+                    "Verticales obliques"
+                  ]
+                },
+                {
+                  "label": "B2",
+                  "bullets": [
+                    "Fractures complètes du corps"
+                  ]
+                },
+                {
+                  "label": "B3",
+                  "bullets": [
+                    "Fractures du pôle proximal"
+                  ]
+                },
+                {
+                  "label": "B4",
+                  "bullets": [
+                    "Fractures très déplacées associées aux luxations périlunaires"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Groupe C",
+              "text": "Correspond aux retards de consolidation"
+            },
+            {
+              "type": "item",
+              "label": "Groupe D",
+              "text": "Constitué des pseudarthroses",
+              "sub": [
+                {
+                  "label": "D1",
+                  "bullets": [
+                    "Pseudarthrose fibreuse"
+                  ]
+                },
+                {
+                  "label": "D2",
+                  "bullets": [
+                    "Pseudarthrose"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "luxation_fractures_luxations_du_carpe",
+      "title": "Luxation & fractures-luxations du carpe",
+      "classifications": [
+        {
+          "id": "la_classification_de_mayfield",
+          "title": "La Classification de MAYFIELD",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Stade I",
+              "text": "Disjonction Scapho-lunaire"
+            },
+            {
+              "type": "item",
+              "label": "Stade II",
+              "text": "Luxation capito-lunaire"
+            },
+            {
+              "type": "item",
+              "label": "Stade III",
+              "text": "Disjonction Pyramido-lunaire"
+            },
+            {
+              "type": "item",
+              "label": "Stade IV",
+              "text": "Luxation rétro lunarienne du carpe"
+            },
+            {
+              "type": "item",
+              "label": "Stade V",
+              "text": "Luxation Ant du SL"
+            }
+          ]
+        },
+        {
+          "id": "les_lignes_de_dislocation_de_wagner",
+          "title": "Les Lignes de dislocation de WAGNER",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Lux rétro-lunaire pure"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Luxation trans scapho-rétrolunaire du carpe"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Luxation trans radio-rétrolunaire"
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "Luxation rétro-scapho-lunaire"
+            },
+            {
+              "type": "item",
+              "label": "Type V",
+              "text": "Luxation trans-scapho-capito-lunaire (Syndrome de FENTON)"
+            },
+            {
+              "type": "item",
+              "label": "Type VI",
+              "text": "Luxation trans pyramido lunaire"
+            }
+          ]
+        },
+        {
+          "id": "la_classification_de_witvoet_et_alieu",
+          "title": "La Classification de WITVOET et ALIEU",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "bullets": [
+                "Les 2 freins sont intacts",
+                "Le semi lunaire conserve ses rapports normaux avec le radius",
+                "Le risque de nécrose est nul"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "bullets": [
+                "Le frein post est rompu",
+                "Le semi lunaire, sa surface articulaire inf bascule en avant (VISI)",
+                "La vascularisation est compromise"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "bullets": [
+                "Les 2 freins sont rompus",
+                "Le SL est complètement libre énucléé",
+                "Le SL est voué inéluctablement à la nécrose"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pseudarthrose_du_scaphoide_carpien",
+      "title": "Pseudarthrose du scaphoïde carpien",
+      "classifications": [
+        {
+          "id": "classification_de_tradjan",
+          "title": "Classification de TRADJAN",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Lyse osseuse"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Résorption kystique"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Ostéosclérose irréversible"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_verdan",
+          "title": "Classification de VERDAN",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "bullets": [
+                "PSD serrée",
+                "Stable +++",
+                "Pas d'arthrose (longtemps supportée)"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "bullets": [
+                "Résorption osseuse des 2 fragments",
+                "PSD lâche, visualisation du reste du trait",
+                "Stabilité précaire +++",
+                "Évolution ± rapide vers conflit stylo-scaphoïdien"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "bullets": [
+                "Large perte de substance : néo articulation",
+                "Instabilité complète +++",
+                "Évolution rapide vers l'arthrose généralisée"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "bullets": [
+                "Nécrose"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_d_alnot",
+          "title": "Classification d'ALNOT",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "bullets": [
+                "PSD linéaire stable serrée",
+                "Pas de modification de la forme du scaphoïde",
+                "Pas d'instabilité du carpe"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type II A",
+              "bullets": [
+                "PSD stable serrée",
+                "Géodes et résorption osseuse",
+                "Peu de modification de la forme du scaphoïde",
+                "Pas d'instabilité ni désaxation",
+                "Styloïde effilée"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type II B",
+              "bullets": [
+                "PSD ± mobile ± lâche",
+                "Géode et résorption osseuse",
+                "Modification de la forme du scaphoïde",
+                "Instabilité et adaptation osseuse ou ligamentaire",
+                "Arthrose scapho-styloïdienne débutante"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type III (PSD déplacée + instabilité de désaxation réductible ou ± fixe)",
+              "sub": [
+                {
+                  "label": "III A",
+                  "bullets": [
+                    "+ arthrose scapho-radiale +++"
+                  ]
+                },
+                {
+                  "label": "III B",
+                  "bullets": [
+                    "Arthrose globale radio-carpienne +++ et intra carpienne +++"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type IV (nécrose du fragment proximal)",
+              "sub": [
+                {
+                  "label": "IV A",
+                  "bullets": [
+                    "+ Désaxation"
+                  ]
+                },
+                {
+                  "label": "IV B",
+                  "bullets": [
+                    "+ arthrose radio scaphoïdienne + radio carpienne + inter carpienne"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "watson_slac_snac",
+          "title": "Correspondance entre SLAC et SNAC selon la classification de WATSON et d'ALNOT",
+          "images": [],
+          "blocks": [
+            {
+              "type": "table",
+              "headers": [
+                "Watson",
+                "SLAC",
+                "SNAC"
+              ],
+              "rows": [
+                [
+                  "IIB",
+                  "I",
+                  "Arthrose radioscaphoïdienne de siège proximal sur le scaphoïde / Arthrose styloscaphoïdienne entre la styloïde et le fragment distal du scaphoïde"
+                ],
+                [
+                  "IIIA",
+                  "II",
+                  "Arthrose radioscaphoïdienne globale / Arthrose styloscaphoïdienne et scaphocapitale"
+                ],
+                [
+                  "IIIB",
+                  "III",
+                  "+ Arthrose capitolunaire / + Arthrose capitolunaire"
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "maladie_de_kienbock",
+      "title": "Maladie de Kienböck",
+      "classifications": [
+        {
+          "id": "classification_de_decoulx",
+          "title": "Classification de DECOULX",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Stade I",
+              "bullets": [
+                "Densification homogène du SL",
+                "Pas de diminution de la hauteur"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade II",
+              "bullets": [
+                "Condensation inhomogène",
+                "Aspect géodique et pommelé sans déformation de l'os"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade III",
+              "bullets": [
+                "SL écrasé et diminué de hauteur"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade IV",
+              "bullets": [
+                "Lésions d'arthrose radio carpienne"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_stahl",
+          "title": "Classification de STAHL",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Stade I",
+              "text": "Notion de traumatisme initial",
+              "bullets": [
+                "Fracture horizontale initiale"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade II",
+              "bullets": [
+                "Résorption péri-fracturaire"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade III",
+              "bullets": [
+                "Zones de densification avec aspect pommelé"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade IV",
+              "bullets": [
+                "Stade III de DECOULX"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade V",
+              "bullets": [
+                "Stade IV de DECOULX"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_lichtmann",
+          "title": "Classification de LICHTMANN",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Stade I",
+              "text": "Intérêt pronostic et thérapeutique, introduit la symptomatologie",
+              "bullets": [
+                "Radio normale ou fracture-compression ou fracture linéaire (stade I de STAHL)"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade II",
+              "bullets": [
+                "SL : petite perte de hauteur dans sa partie radiale annonçant le 1er pas de collapsus (changement de densité du semi-lunaire avec traits de fracture possibles, plus tard, diminution de hauteur du carpe du côté radial)"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade III",
+              "bullets": [
+                "Collapsus total du SL avec ascension du GO",
+                "SL allongé de profil",
+                "Désorganisation spatiale du carpe (migration proximale du GO)",
+                "Il existe une dissociation scapho-lunaire avec déviation pyramidale dans le sens cubital"
+              ],
+              "sub": [
+                {
+                  "label": "III a",
+                  "bullets": [
+                    "Pas de bascule du scaphoïde"
+                  ]
+                },
+                {
+                  "label": "III b",
+                  "bullets": [
+                    "Scaphoïde basculé"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade IV",
+              "bullets": [
+                "Arthrose généralisée et dégénérescence du carpe"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_swanson_detaille_le_groupe_iii_de_lichtmann",
+          "title": "Classification de SWANSON (détaille le groupe III de LICHTMANN)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "III 1",
+              "bullets": [
+                "Â radio-scaphoïdien 40°-60°",
+                "Diminution hauteur du carpe de 5%"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "III 2",
+              "bullets": [
+                "Â radio-scaphoïdien augmenté mais < 70°",
+                "Hauteur du carpe diminuée de 5 à 10%"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "III 3",
+              "bullets": [
+                "Â radio-scaphoïdien > 70°",
+                "Hauteur diminuée de plus de 10%",
+                "Translation cubitale importante",
+                "Géodes sur les autres os du carpe"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

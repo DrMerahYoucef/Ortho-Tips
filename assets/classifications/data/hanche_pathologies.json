@@ -1,0 +1,436 @@
+{
+  "id": "hanche_pathologies",
+  "title": "Hanche — Pathologies non traumatiques (Coxarthrose, ONA, Ostéochondrite, Épiphysiolyse)",
+  "sections": [
+    {
+      "id": "coxarthrose",
+      "title": "Coxarthrose",
+      "classifications": [
+        {
+          "id": "postel_merle_daubigne",
+          "title": "Cotation fonctionnelle de POSTEL MERLE D'AUBIGNÉ",
+          "images": [],
+          "blocks": [
+            {
+              "type": "table",
+              "headers": [
+                "Score",
+                "Marche",
+                "Mobilité",
+                "Douleur"
+              ],
+              "rows": [
+                [
+                  "6",
+                  "Stabilité parfaite, marche normale et illimitée",
+                  "≥ 90°",
+                  "Aucune"
+                ],
+                [
+                  "5",
+                  "Stabilité imparfaite ; légère boiterie à la fatigue, canne parfois pour les longues distances",
+                  "75° à 85°",
+                  "Rare et légère n'empêchant pas une activité normale"
+                ],
+                [
+                  "4",
+                  "Légère instabilité, boiterie nette, souvent une canne pour sortir",
+                  "55° à 70°",
+                  "Compatible avec une activité physique réduite, permettant une demi-heure ou plus de marche"
+                ],
+                [
+                  "3",
+                  "Instabilité, forte boiterie, une canne en permanence",
+                  "35° à 50°",
+                  "Arrêtant la marche au bout de vingt minutes"
+                ],
+                [
+                  "2",
+                  "Forte instabilité, deux cannes, une canne béquille parfois",
+                  "≤ 30°",
+                  "Arrêtant la marche au bout de dix minutes"
+                ],
+                [
+                  "1",
+                  "Appui monopode impossible, deux cannes béquilles",
+                  "Flexion réduite ou attitude vicieuse importante",
+                  "Très vive à la mobilisation et à l'appui, ne permettant que quelques pas"
+                ],
+                [
+                  "0",
+                  "Station debout impossible, appui impossible, grabataire",
+                  "Idem",
+                  "Très vive et permanente, ne permettant pas la marche, confinant le malade au lit et insomnie"
+                ]
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Interprétation",
+              "bullets": [
+                "Excellente = 18",
+                "Très bonne = 17",
+                "Bonne = 15-16",
+                "Passable = 12-15",
+                "Médiocre < 12",
+                "Mauvaise < 9"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_demourgues_evolution_rx_clinique_de_l_arthrose_sur_dysplasie_de_hanche",
+          "title": "Classification de DEMOURGUES (évolution Rx-clinique de l'arthrose sur dysplasie de hanche)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Stade 0",
+              "text": "Dysplasie indiscutable de découverte fortuite sans signes radiologiques ou cliniques d'arthrose"
+            },
+            {
+              "type": "item",
+              "label": "Stade 1",
+              "text": "Dysplasie sans signes radiologiques d'arthrose, mais syndrome douloureux patent et persistant"
+            },
+            {
+              "type": "item",
+              "label": "Stade 2",
+              "text": "Dysplasie avec signes d'hyperpression, pas de pincement articulaire +++"
+            },
+            {
+              "type": "item",
+              "label": "Stade 3",
+              "text": "Pincement articulaire apparent < 50% lorsqu'il est global, > 50% s'il est ponctuel ou segmentaire"
+            },
+            {
+              "type": "item",
+              "label": "Stade 4",
+              "text": "Pincement global > 50%, déformation arthrosique de la tête"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "osteonecrose_aseptique_de_la_tete_femorale",
+      "title": "Ostéonécrose aseptique de la tête fémorale",
+      "classifications": [
+        {
+          "id": "classification_d_arlet_et_ficat",
+          "title": "Classification D'ARLET et FICAT",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Stade I",
+              "text": "Stade pré-radiologique, hanche douloureuse",
+              "bullets": [
+                "Seule l'EFO, la scintigraphie ou l'IRM affirment le diagnostic"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade II",
+              "text": "Altération de structure de la TF",
+              "bullets": [
+                "Remaniements de la trame osseuse",
+                "Densification localisée ou diffuse",
+                "Aspect géodique ou scléro-géodique",
+                "Pas de modification des contours de la TF",
+                "Sillon d'élimination",
+                "Image en coquille d'œuf"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade III",
+              "text": "Altération des contours et de structure",
+              "bullets": [
+                "Rupture de la continuité de la coque épiphysaire avec sillon d'élimination",
+                "Décrochage, voire simple méplat de la ½ externe de la tête",
+                "Affaissement et effondrement"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade IV",
+              "text": "Anomalie de structure et de contour et arthrose",
+              "bullets": [
+                "Atteinte du cartilage articulaire avec pincement de l'interligne",
+                "Ostéophytose céphalique et cotyloïdienne"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_l_association_research_circulation_osseous_arco",
+          "title": "Classification de l'Association Research Circulation Osseous (ARCO)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Stade 0",
+              "text": "Résultat de biopsie compatible avec une ostéonécrose, tous les autres examens complémentaires étant normaux"
+            },
+            {
+              "type": "item",
+              "label": "Stade I",
+              "text": "Scintigraphie positive ou aspect en IRM d'ostéonécrose, ou les deux examens positifs",
+              "sub": [
+                {
+                  "label": "Ia",
+                  "bullets": [
+                    "Atteinte < 15% de la tête fémorale"
+                  ]
+                },
+                {
+                  "label": "Ib",
+                  "bullets": [
+                    "Atteinte 15 à 30% de la tête fémorale"
+                  ]
+                },
+                {
+                  "label": "Ic",
+                  "bullets": [
+                    "Atteinte > 30% de la tête fémorale"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade II",
+              "text": "Présence d'anomalies radiologiques (condensation ou aspect kystique, mais absence de perte de sphéricité de la tête fémorale sur les radiographies et/ou le scanner). Pas de modification sur le cotyle. Diagnostic d'ostéonécrose confirmé par l'IRM",
+              "sub": [
+                {
+                  "label": "IIa",
+                  "bullets": [
+                    "Atteinte < 15% de la tête fémorale"
+                  ]
+                },
+                {
+                  "label": "IIb",
+                  "bullets": [
+                    "Nécrose 15 à 30% de la tête fémorale"
+                  ]
+                },
+                {
+                  "label": "IIc",
+                  "bullets": [
+                    "Atteinte > 30% de la tête fémorale"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade III",
+              "text": "Perte de la sphéricité",
+              "sub": [
+                {
+                  "label": "IIIa",
+                  "bullets": [
+                    "Dissection sous-chondrale < 15% de la circonférence de la TF ou enfoncement < 2mm"
+                  ]
+                },
+                {
+                  "label": "IIIb",
+                  "bullets": [
+                    "Dissection sous-chondrale 15 à 30% de la circonférence de la TF ou enfoncement entre 2-4mm"
+                  ]
+                },
+                {
+                  "label": "IIIc",
+                  "bullets": [
+                    "Dissection sous-chondrale > 30% de la circonférence de la TF ou enfoncement de plus de 4mm"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Stade IV",
+              "text": "Arthrose avec pincement de l'interligne articulaire"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "osteochondrite_primitive_de_hanche_maladie_de_legg_perthes_calve",
+      "title": "Ostéochondrite primitive de hanche (Maladie de LEGG-PERTHES-CALVÉ)",
+      "classifications": [
+        {
+          "id": "classification_de_mose_sphericite_de_la_tf_a_l_aide_de_cercles_concentriques_separes_de_2_mm",
+          "title": "Classification de MOSE (sphéricité de la TF à l'aide de cercles concentriques séparés de 2 mm)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "TF normale",
+              "text": "Quand elle s'inscrit dans le même cercle"
+            },
+            {
+              "type": "item",
+              "label": "TF régulière",
+              "text": "Quand elle s'inscrit au-delà du cercle"
+            },
+            {
+              "type": "item",
+              "label": "TF irrégulière",
+              "text": "Quand elle s'inscrit entre 02 cercles"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_stulberg",
+          "title": "Classification de STULBERG",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "",
+              "bullets": [
+                "Basée sur la sphéricité de la TF et la congruence tête-cotyle"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_catterall",
+          "title": "Classification de CATTERALL",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Groupe I",
+              "text": "Lésion minime localisée à la partie ant de la TF",
+              "bullets": [
+                "Pas de séquestre osseux"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Groupe II",
+              "bullets": [
+                "L'atteinte s'étend sur + de ½ TF",
+                "Face : séquestre d'allure ovalaire",
+                "Profil : le séquestre est séparé de la zone saine post par une image claire dessinant un V"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Groupe III",
+              "bullets": [
+                "Atteinte de la majeure partie de l'épiphyse",
+                "Face : aspect de tête dans la tête",
+                "Profil : seule une partie post de la TF est respectée"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Groupe IV",
+              "bullets": [
+                "Atteinte totale du noyau épiphysaire",
+                "Face : le collapsus entraîne une image linéaire dense"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_salter_thompson_etendue_de_la_fracture_sous_chondrale",
+          "title": "Classification de SALTER & THOMPSON (étendue de la fracture sous-chondrale)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Groupe A",
+              "text": "Fr sous chondrale < ½ TF"
+            },
+            {
+              "type": "item",
+              "label": "Groupe B",
+              "text": "Fr sous chondrale > ½ TF"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_herring_pilier_lateral",
+          "title": "Classification de HERRING (pilier latéral)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Groupe A",
+              "text": "Pilier latéral respecté, pas de diminution de hauteur"
+            },
+            {
+              "type": "item",
+              "label": "Groupe B",
+              "text": "Pilier latéral atteint, diminution de hauteur < 50%"
+            },
+            {
+              "type": "item",
+              "label": "Groupe C",
+              "text": "Pilier latéral atteint, diminution de hauteur > 50%"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "epiphysiolyse_femorale_superieure",
+      "title": "Épiphysiolyse fémorale supérieure",
+      "classifications": [
+        {
+          "id": "la_classification_de_judet_importance_du_deplacement",
+          "title": "La classification de JUDET (importance du déplacement)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Groupe 1",
+              "text": "Hanche normale"
+            },
+            {
+              "type": "item",
+              "label": "Groupe 2",
+              "text": "TF coxa-magna mais reste sphérique"
+            },
+            {
+              "type": "item",
+              "label": "Groupe 3",
+              "text": "TF irrégulière mais congruente"
+            },
+            {
+              "type": "item",
+              "label": "Groupe 4",
+              "text": "TF aplatie mais congruente"
+            },
+            {
+              "type": "item",
+              "label": "Groupe 5",
+              "text": "TF irrégulière et incongruente"
+            },
+            {
+              "type": "item",
+              "label": "Stade I",
+              "text": "Déplacement modéré : glissement < 1/3, bascule 0-30°"
+            },
+            {
+              "type": "item",
+              "label": "Stade II",
+              "text": "Déplacement moyen : glissement 1/3-1/2, bascule 30°-60°"
+            },
+            {
+              "type": "item",
+              "label": "Stade III",
+              "text": "Déplacement sévère : glissement > 1/2, bascule 60°-90°"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

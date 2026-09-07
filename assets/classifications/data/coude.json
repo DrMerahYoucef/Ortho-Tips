@@ -1,0 +1,344 @@
+{
+  "id": "coude",
+  "title": "Coude",
+  "sections": [
+    {
+      "id": "fracture_de_la_palette_humerale",
+      "title": "Fracture de la palette humérale",
+      "classifications": [
+        {
+          "id": "la_classification_de_sofcot_1979",
+          "title": "La Classification de SOFCOT 1979",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "I. Fracture extra-articulaire",
+              "bullets": [
+                "A. Fracture supra condylienne",
+                "B. Fracture parcellaires : 1. FR épicondyle  2. FR épitrochlée"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "2. Fractures articulaires",
+              "bullets": [
+                "A. Fracture sus et intra-condylienne",
+                "B. Fracture du condyle externe",
+                "C. Fractures du condyle interne",
+                "D. Fracture purement articulaire : Fracture diacondylienne de KOCHER, Fracture de HAHN STEINTHAL, Fracture du CAPITELLUM"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "classification_de_marion_fayesse_fr_epitrochlee",
+          "title": "Classification de MARION-FAYESSE (FR épitrochlée)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Sans déplacement"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Déplacement vers le bas"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Incarcération intra-articulaire (des fragments)"
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "Fracture de l'épitrochlée + luxation postéro-externe du coude"
+            }
+          ]
+        },
+        {
+          "id": "la_classification_de_risebourgh_radin_fr_sus_et_intra_condylienne",
+          "title": "La Classification de RISEBOURGH-RADIN (FR sus et intra-condylienne)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "FR sans déplacement"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Fracture séparation sans décalage"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Fracture séparation + rotation du fragment dans le plan frontal"
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "Comminution sévère"
+            }
+          ]
+        },
+        {
+          "id": "la_classification_de_marion_lagrange_fr_condyle_externe",
+          "title": "La Classification de MARION-LAGRANGE (FR condyle externe)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Déplacement minime ou nul"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Déplacement en arrière, translation externe légère bascule"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Déplacement plus important, bascule peut atteindre 90°-180°"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_muller_et_allgower_ao",
+          "title": "Classification de Müller et Allgöwer (AO)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "",
+              "bullets": [
+                "Les fractures extra-articulaires"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type A1",
+              "text": "Fracture de l'épicondyle médial"
+            },
+            {
+              "type": "item",
+              "label": "Type A2",
+              "text": "Fracture supracondylienne simple"
+            },
+            {
+              "type": "item",
+              "label": "Type A3",
+              "text": "Fracture supracondylienne comminutive"
+            },
+            {
+              "type": "item",
+              "label": "",
+              "bullets": [
+                "Les fractures unicondyliennes"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type B1",
+              "text": "Fracture du condyle médial (incluant la trochlée)"
+            },
+            {
+              "type": "item",
+              "label": "Type B2",
+              "text": "Fracture du condyle latéral (incluant le capitulum)"
+            },
+            {
+              "type": "item",
+              "label": "Type B3",
+              "text": "Fracture tangentielle « frontale » (incluant la trochlée et le capitulum)"
+            },
+            {
+              "type": "item",
+              "label": "",
+              "bullets": [
+                "Les fractures sus et intercondyliennes"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type C1",
+              "text": "Fracture en Y ou T, déplacée ou non (sus et intercondylienne simple)"
+            },
+            {
+              "type": "item",
+              "label": "Type C2",
+              "text": "Fracture comminutive supracondylienne"
+            },
+            {
+              "type": "item",
+              "label": "Type C3",
+              "text": "Fracture comminutive articulaire"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "les_luxations_post_traumatiques_du_coude",
+      "title": "Les luxations post-traumatiques du coude",
+      "classifications": [
+        {
+          "id": "luxations_coude_anatomique",
+          "title": "Classification anatomique",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "1. Luxation conjointe des 02 os de l'avant-bras"
+            },
+            {
+              "type": "item",
+              "label": "A. Luxation postérieure",
+              "bullets": [
+                "Luxation postérieure pure",
+                "Luxation postéro externe",
+                "Luxation postéro-interne"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "B. Luxation antérieure",
+              "bullets": [
+                "a. Luxation antérieure pure"
+              ],
+              "sub": [
+                {
+                  "label": "b. Luxation trans olécranienne de BIGA-THOMINE",
+                  "bullets": [
+                    "Type I : FR de la base de l'olécrane",
+                    "Type II : FR communitive"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "C. Luxation latérale",
+              "bullets": [
+                "Luxations en dehors",
+                "Luxations en dedans"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "2. Luxation divergente"
+            },
+            {
+              "type": "item",
+              "label": "3. Luxation isolée de l'un des 02 os de l'avant-bras",
+              "bullets": [
+                "A. Luxation de la tête radiale",
+                "B. Luxation du crochet cubital"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fracture_de_monteggia",
+      "title": "Fracture de Monteggia",
+      "classifications": [
+        {
+          "id": "la_classification_de_bado_siege_de_la_luxation_de_la_tete_radiale",
+          "title": "La Classification de BADO (siège de la luxation de la tête radiale)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Luxation antérieure"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Luxation postérieure ou postéro latérale"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Luxation latérale ou antéro-latérale"
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "Type I + FR de la diaphyse radiale"
+            }
+          ]
+        },
+        {
+          "id": "la_classification_de_trillat_siege_de_la_fracture_cubitale",
+          "title": "La Classification de TRILLAT (siège de la fracture cubitale)",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "",
+              "bullets": [
+                "Chez l'adulte"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Groupe I",
+              "bullets": [
+                "FR du cubitus à trait diaphysaire quel que soit le type",
+                "Luxation de la tête radiale ant, post ou externe",
+                "Ici les lésions siègent au niveau de l'avant-bras"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Groupe II",
+              "bullets": [
+                "FR du cubitus à trait métaphyso-épiphysaire quel que soit le type",
+                "Luxation de la tête radiale ant, post ou externe",
+                "Ici les lésions siègent au niveau du coude"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Groupe III",
+              "bullets": [
+                "FR du cubitus type I ou II",
+                "Luxation de la tête radiale ant, post ou externe",
+                "Associée : FR humérus, diaphyse radiale ou poignet"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "",
+              "bullets": [
+                "Chez l'enfant : FR diaphysaire du cubitus"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type I",
+              "bullets": [
+                "Luxation antérieure de la tête radiale, réalisant la FR de MONTEGGIA typique"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "bullets": [
+                "FR métaphysaire haute le plus souvent en bois vert",
+                "Luxation externe de la tête radiale"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

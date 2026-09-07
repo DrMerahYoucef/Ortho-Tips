@@ -1,0 +1,261 @@
+{
+  "id": "avant_bras",
+  "title": "Avant-bras (Radius proximal / distal, Olécrane)",
+  "sections": [
+    {
+      "id": "fracture_de_l_extremite_superieure_du_radius",
+      "title": "Fracture de l'extrémité supérieure du radius",
+      "classifications": [
+        {
+          "id": "duparc_radius_superieur",
+          "title": "Classification du DUPARC",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "FR non déplacé"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "FR séparation déplacée",
+              "sub": [
+                {
+                  "label": "II a",
+                  "bullets": [
+                    "À deux fragments"
+                  ]
+                },
+                {
+                  "label": "II b",
+                  "bullets": [
+                    "À plusieurs fragments"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "FR tassement sous capitale déplacée",
+              "sub": [
+                {
+                  "label": "III a",
+                  "bullets": [
+                    "Engrainée"
+                  ]
+                },
+                {
+                  "label": "III b",
+                  "bullets": [
+                    "Non engrainée avec énucléation"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "FR séparation-tassement déplacée à 03 ou plusieurs fragments",
+              "sub": [
+                {
+                  "label": "IV a",
+                  "bullets": [
+                    "Engrainée"
+                  ]
+                },
+                {
+                  "label": "IV b",
+                  "bullets": [
+                    "Non engrainée"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type V",
+              "text": "Éclatement de la tête radiale (FR communitive)"
+            }
+          ]
+        },
+        {
+          "id": "classification_de_masson",
+          "title": "Classification de MASSON",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "FR non déplacée de la cupule",
+              "sub": [
+                {
+                  "label": "I a",
+                  "bullets": [
+                    "Fragment FR < 1/3"
+                  ]
+                },
+                {
+                  "label": "I b",
+                  "bullets": [
+                    "Fragment fracture > 1/3"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "FR déplacée, détachant un fragment articulaire antérieur ou externe pouvant être incarcéré dans l'articulation"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Fracture communitive, éclatement de la tête radiale"
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "Association de l'une de ces fractures I, II, III avec une lésion du coude ou fracture du col radial (enfant) ++"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fracture_de_l_olecrane",
+      "title": "Fracture de l'olécrane",
+      "classifications": [
+        {
+          "id": "classification_de_merle_d_aubigne",
+          "title": "Classification de MERLE D'AUBIGNÉ",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "Type I",
+              "text": "Fracture du sommet ou bec olécranien"
+            },
+            {
+              "type": "item",
+              "label": "Type II",
+              "text": "Fracture de la partie moyenne de l'olécrane"
+            },
+            {
+              "type": "item",
+              "label": "Type III",
+              "text": "Fracture de la base de l'olécrane"
+            },
+            {
+              "type": "item",
+              "label": "Type IV",
+              "text": "Fracture à plusieurs fragments et communitive de l'olécrane",
+              "sub": [
+                {
+                  "label": "IV a",
+                  "bullets": [
+                    "Les fractures à double traits superposés"
+                  ]
+                },
+                {
+                  "label": "IV b",
+                  "bullets": [
+                    "Les fractures communitives"
+                  ]
+                },
+                {
+                  "label": "IV c",
+                  "bullets": [
+                    "Les fractures olécrano-coracoïdiennes"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fracture_de_l_apophyse_coronoide",
+      "title": "Fracture de l'apophyse coronoïde",
+      "classifications": [
+        {
+          "id": "apophyse_coronoide_anatomique",
+          "title": "Classification anatomique",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "1. Bec de l'apophyse",
+              "bullets": [
+                "+ fréquente",
+                "Souvent associée à une luxation post du coude",
+                "Peut être isolée",
+                "Déplacée peut s'incarcérer dans l'articulation"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "2. Base de l'apophyse",
+              "bullets": [
+                "Détermine une instabilité du coude",
+                "Détachant une partie ou la totalité de l'apophyse"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fracture_de_l_extremite_inferieure_du_radius",
+      "title": "Fracture de l'extrémité inférieure du radius",
+      "classifications": [
+        {
+          "id": "la_classification_de_castaing",
+          "title": "La classification de CASTAING",
+          "images": [],
+          "blocks": [
+            {
+              "type": "item",
+              "label": "1. Les fractures par compression-extension"
+            },
+            {
+              "type": "item",
+              "label": "A. Fractures sus articulaires",
+              "bullets": [
+                "C'est la classique Fr Pouteau-Colles"
+              ]
+            },
+            {
+              "type": "item",
+              "label": "B. Fractures articulaires",
+              "bullets": [
+                "Fracture à 3ème fragment postéro interne ; ou fracture potentielle de CASTAING",
+                "Fracture en T sagittale - fracture en T frontal - fracture en croix"
+              ],
+              "sub": [
+                {
+                  "label": "Autres",
+                  "bullets": [
+                    "FR à composante externe - FR à composante interne",
+                    "FR marginale postéro externe : Fr de RHEA-BARTON",
+                    "FR de la styloïde radiale : cunéenne externe"
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "item",
+              "label": "2. Les fractures par compression-flexion",
+              "bullets": [
+                "FR sus articulaire ou FR de GOYRAND-SMITH",
+                "FR articulaire ou FR marginales antérieures"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
