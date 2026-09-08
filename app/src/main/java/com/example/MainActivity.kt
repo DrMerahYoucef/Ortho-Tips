@@ -6,7 +6,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -29,6 +31,7 @@ import com.example.data.prefs.ThemeMode
 import com.example.di.AppModule
 import com.example.navigation.OrthoDestinations
 import com.example.ui.screens.bone.BoneDetailScreen
+import com.example.ui.screens.activation.ActivationScreen
 import com.example.ui.screens.bone.BoneListScreen
 import com.example.ui.screens.classifications.ClassificationChapterDetailRoute
 import com.example.ui.screens.importer.ImportScreen
@@ -76,6 +79,7 @@ class MainActivity : ComponentActivity() {
                 factory = AppViewModel.provideFactory(appModule.settingsRepository)
             )
             val settings by appViewModel.settings.collectAsStateWithLifecycle()
+            val isActivated by appModule.activationRepository.isActivated.collectAsStateWithLifecycle(initialValue = null)
 
             val isDarkTheme = when (settings.themeMode) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
@@ -104,7 +108,19 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        OrthoAppNavHost(appModule = appModule)
+                        when (isActivated) {
+                            true -> OrthoAppNavHost(appModule = appModule)
+                            false -> ActivationScreen(
+                                activationRepository = appModule.activationRepository,
+                                onActivated = { }
+                            )
+                            null -> Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = androidx.compose.ui.Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
                     }
                 }
             }

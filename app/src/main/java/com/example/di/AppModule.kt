@@ -5,6 +5,7 @@ import com.example.data.backup.BackupManager
 import com.example.data.importer.BoneDatabaseImporter
 import com.example.data.local.OrthoDatabase
 import com.example.data.prefs.PdfOptionsRepository
+import com.example.data.prefs.ActivationRepository
 import com.example.data.prefs.SettingsRepository
 import com.example.data.prefs.SurgeonProfileRepository
 import com.example.data.repository.ClassificationRepository
@@ -15,6 +16,10 @@ import com.example.utils.PatientMediaStorage
 import java.io.File
 
 class AppModule(private val context: Context) {
+
+    val activationRepository: ActivationRepository by lazy {
+        ActivationRepository(context)
+    }
 
     val database: OrthoDatabase by lazy {
         OrthoDatabase.getInstance(context)
