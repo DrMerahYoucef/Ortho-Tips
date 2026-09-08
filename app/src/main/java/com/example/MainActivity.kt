@@ -313,6 +313,7 @@ fun OrthoAppNavHost(appModule: AppModule) {
             )
             PatientEditScreen(
                 viewModel = editViewModel,
+                classificationRepository = appModule.classificationRepository,
                 onNavigateBack = { navController.popBackStack() },
                 onSaved = { savedId ->
                     navController.popBackStack()
@@ -378,6 +379,7 @@ fun OrthoAppNavHost(appModule: AppModule) {
             )
             SurgeryEditScreen(
                 viewModel = editViewModel,
+                classificationRepository = appModule.classificationRepository,
                 onNavigateBack = { navController.popBackStack() },
                 onSaved = { navController.popBackStack() }
             )

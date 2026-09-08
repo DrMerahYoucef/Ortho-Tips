@@ -1,0 +1,287 @@
+package com.example.ui.components
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MedicalInformation
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Dialog
+import androidx.compose.material3.DialogProperties
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.example.data.local.model.ChapterRef
+import com.example.data.local.model.ClassificationBlock
+import com.example.data.local.model.ClassificationChapter
+import com.example.data.local.model.ClassificationEntry
+import com.example.data.repository.ClassificationRepository
+
+private data class ClassificationChoice(
+    val label: String,
+    val detail: String? = null
+)
+
+@Composable
+fun ClassificationPickerButton(
+    repository: ClassificationRepository,
+    onClassificationSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showPicker by remember { mutableStateOf(false) }
+
+    OutlinedButton(
+        onClick = { showPicker = true },
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Icon(Icons.Default.Add, contentDescription = null)
+        Text("Add classification", modifier = Modifier.padding(start = 8.dp))
+    }
+
+    if (showPicker) {
+        ClassificationPickerDialog(
+            repository = repository,
+            onDismiss = { showPicker = false },
+            onClassificationSelected = {
+                onClassificationSelected(it)
+                showPicker = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun ClassificationPickerDialog(
+    repository: ClassificationRepository,
+    onDismiss: () -> Unit,
+    onClassificationSelected: (String) -> Unit
+) {
+    var chapters by remember { mutableStateOf<List<ChapterRef>>(emptyList()) }
+    var selectedChapter by remember { mutableStateOf<ClassificationChapter?>(null) }
+    var selectedChapterRef by remember { mutableStateOf<ChapterRef?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        try {
+            chapters = repository.getIndex().chapters
+        } catch (error: Exception) {
+            errorMessage = error.message ?: "Unable to load classifications."
+        } finally {
+            isLoading = false
+        }
+    }
+
+    LaunchedEffect(selectedChapterRef) {
+        val chapterRef = selectedChapterRef ?: return@LaunchedEffect
+        isLoading = true
+        errorMessage = null
+        try {
+            selectedChapter = repository.getChapter(chapterRef.file)
+        } catch (error: Exception) {
+            selectedChapter = null
+            errorMessage = error.message ?: "Unable to load this chapter."
+        } finally {
+            isLoading = false
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            selectedChapter?.title ?: "Choose a classification",
+                            maxLines = 2
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(
+                            onClick = {
+                                if (selectedChapterRef != null) {
+                                    selectedChapterRef = null
+                                    selectedChapter = null
+                                } else onDismiss()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = if (selectedChapter == null) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = if (selectedChapter == null) "Close" else "Back"
+                            )
+                        }
+                    }
+                )
+            }
+        ) { paddingValues ->
+            when {
+                isLoading -> Box(
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) { CircularProgressIndicator() }
+
+                errorMessage != null -> Text(
+                    text = errorMessage ?: "Unable to load classifications.",
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(paddingValues).padding(24.dp)
+                )
+
+                selectedChapter == null -> ChapterChoices(
+                    chapters = chapters,
+                    paddingValues = paddingValues,
+                    onChapterSelected = { chapter ->
+                        selectedChapterRef = chapter
+                    }
+                )
+
+                else -> ClassificationChoices(
+                    chapter = selectedChapter!!,
+                    paddingValues = paddingValues,
+                    onChoiceSelected = onClassificationSelected
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChapterChoices(
+    chapters: List<ChapterRef>,
+    paddingValues: PaddingValues,
+    onChapterSelected: (ChapterRef) -> Unit
+) {
+    LazyColumn(
+        contentPadding = paddingValues,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
+    ) {
+        items(chapters, key = { it.id }) { chapter ->
+            Card(
+                modifier = Modifier.fillMaxWidth().clickable { onChapterSelected(chapter) },
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.MedicalInformation, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+                        Text(chapter.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(
+                            "${chapter.classificationCount} classifications",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClassificationChoices(
+    chapter: ClassificationChapter,
+    paddingValues: PaddingValues,
+    onChoiceSelected: (String) -> Unit
+) {
+    val choices = chapter.sections.flatMap { section ->
+        section.classifications.flatMap { entry ->
+            choicesForEntry(entry).map { choice ->
+                val classificationName = classificationName(entry.title)
+                val phrase = "Classé ${choice.label} selon la classification de $classificationName"
+                Triple(section.title, entry.title, phrase)
+            }
+        }
+    }
+
+    LazyColumn(
+        contentPadding = paddingValues,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
+    ) {
+        choices.forEach { (sectionTitle, entryTitle, phrase) ->
+            item {
+                Text(
+                    sectionTitle,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+                )
+                Text(entryTitle, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().clickable { onChoiceSelected(phrase) },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Text(phrase, modifier = Modifier.padding(14.dp), style = MaterialTheme.typography.bodyMedium)
+                }
+                HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
+            }
+        }
+    }
+}
+
+private fun choicesForEntry(entry: ClassificationEntry): List<ClassificationChoice> {
+    val choices = buildList {
+        entry.blocks.forEach { block ->
+            when (block.type) {
+                "item" -> {
+                    block.label?.takeIf { it.isNotBlank() }?.let { add(ClassificationChoice(it, block.text)) }
+                    block.sub.forEach { add(ClassificationChoice(it.label)) }
+                }
+                "table" -> block.rows.forEach { row ->
+                    row.firstOrNull()?.takeIf { it.isNotBlank() }?.let { add(ClassificationChoice(it)) }
+                }
+            }
+        }
+    }
+    return choices.distinctBy { it.label }.ifEmpty { listOf(ClassificationChoice(entry.title)) }
+}
+
+private fun classificationName(title: String): String {
+    val normalized = title
+        .replace(Regex("(?i)^la classification de "), "")
+        .replace(Regex("(?i)^classification de "), "")
+        .replace(Regex("(?i)^les classifications radiologiques de "), "")
+        .replace(Regex("(?i)^cotation fonctionnelle de "), "")
+        .substringBefore("(")
+        .trim()
+    return normalized.ifBlank { title }
+}

@@ -38,8 +38,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.repository.ClassificationRepository
 import com.example.data.repository.SuggestionField
 import com.example.ui.components.BulletProtocolField
+import com.example.ui.components.ClassificationPickerButton
 import com.example.ui.components.SmartSuggestionField
 import com.example.ui.components.SuggestionsToggleCard
 import com.example.utils.DateFormat
@@ -49,6 +51,7 @@ import com.example.viewmodel.SurgeryEditViewModel
 @Composable
 fun SurgeryEditScreen(
     viewModel: SurgeryEditViewModel,
+    classificationRepository: ClassificationRepository,
     onNavigateBack: () -> Unit,
     onSaved: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -159,14 +162,24 @@ fun SurgeryEditScreen(
                 )
             }
             item {
-                SmartSuggestionField(
-                    value = uiState.form.diagnosis,
-                    onValueChange = { v -> viewModel.update { it.copy(diagnosis = v) } },
-                    label = "Diagnosis",
-                    suggestions = suggestions[SuggestionField.SURGERY_DIAGNOSIS].orEmpty(),
-                    suggestionsEnabled = suggestionsEnabled,
-                    singleLine = false
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SmartSuggestionField(
+                        value = uiState.form.diagnosis,
+                        onValueChange = { v -> viewModel.update { it.copy(diagnosis = v) } },
+                        label = "Diagnosis",
+                        suggestions = suggestions[SuggestionField.SURGERY_DIAGNOSIS].orEmpty(),
+                        suggestionsEnabled = suggestionsEnabled,
+                        singleLine = false
+                    )
+                    ClassificationPickerButton(
+                        repository = classificationRepository,
+                        onClassificationSelected = { phrase ->
+                            viewModel.update {
+                                it.copy(diagnosis = appendClassification(it.diagnosis, phrase))
+                            }
+                        }
+                    )
+                }
             }
             item {
                 BulletProtocolField(
@@ -233,3 +246,6 @@ fun SurgeryEditScreen(
         }
     }
 }
+
+private fun appendClassification(existing: String, classification: String): String =
+    if (existing.isBlank()) classification else "${existing.trimEnd()}\n$classification"

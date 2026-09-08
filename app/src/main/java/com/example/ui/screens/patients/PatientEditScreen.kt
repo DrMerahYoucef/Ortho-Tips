@@ -45,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.local.entity.BodySide
 import com.example.data.repository.SuggestionField
+import com.example.data.repository.ClassificationRepository
+import com.example.ui.components.ClassificationPickerButton
 import com.example.ui.components.SmartSuggestionField
 import com.example.ui.components.SuggestionsToggleCard
 import com.example.utils.DateFormat
@@ -55,6 +57,7 @@ import com.example.viewmodel.PatientFormState
 @Composable
 fun PatientEditScreen(
     viewModel: PatientEditViewModel,
+    classificationRepository: ClassificationRepository,
     onNavigateBack: () -> Unit,
     onSaved: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -200,14 +203,24 @@ fun PatientEditScreen(
 
             item { FormSectionLabel("Orthopedic information") }
             item {
-                SmartSuggestionField(
-                    value = uiState.form.diagnosis,
-                    onValueChange = { v -> viewModel.update { it.copy(diagnosis = v) } },
-                    label = "Diagnosis",
-                    suggestions = suggestions[SuggestionField.DIAGNOSIS].orEmpty(),
-                    suggestionsEnabled = suggestionsEnabled,
-                    singleLine = false
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SmartSuggestionField(
+                        value = uiState.form.diagnosis,
+                        onValueChange = { v -> viewModel.update { it.copy(diagnosis = v) } },
+                        label = "Diagnosis",
+                        suggestions = suggestions[SuggestionField.DIAGNOSIS].orEmpty(),
+                        suggestionsEnabled = suggestionsEnabled,
+                        singleLine = false
+                    )
+                    ClassificationPickerButton(
+                        repository = classificationRepository,
+                        onClassificationSelected = { phrase ->
+                            viewModel.update {
+                                it.copy(diagnosis = appendClassification(it.diagnosis, phrase))
+                            }
+                        }
+                    )
+                }
             }
             item {
                 SmartSuggestionField(
@@ -242,13 +255,23 @@ fun PatientEditScreen(
                 )
             }
             item {
-                SmartSuggestionField(
-                    value = uiState.form.fractureClassification,
-                    onValueChange = { v -> viewModel.update { it.copy(fractureClassification = v) } },
-                    label = "Fracture classification",
-                    suggestions = suggestions[SuggestionField.FRACTURE_CLASSIFICATION].orEmpty(),
-                    suggestionsEnabled = suggestionsEnabled
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SmartSuggestionField(
+                        value = uiState.form.fractureClassification,
+                        onValueChange = { v -> viewModel.update { it.copy(fractureClassification = v) } },
+                        label = "Fracture classification",
+                        suggestions = suggestions[SuggestionField.FRACTURE_CLASSIFICATION].orEmpty(),
+                        suggestionsEnabled = suggestionsEnabled
+                    )
+                    ClassificationPickerButton(
+                        repository = classificationRepository,
+                        onClassificationSelected = { phrase ->
+                            viewModel.update {
+                                it.copy(fractureClassification = appendClassification(it.fractureClassification, phrase))
+                            }
+                        }
+                    )
+                }
             }
             item {
                 SmartSuggestionField(
@@ -283,6 +306,9 @@ fun PatientEditScreen(
         }
     }
 }
+
+private fun appendClassification(existing: String, classification: String): String =
+    if (existing.isBlank()) classification else "${existing.trimEnd()}\n$classification"
 
 @Composable
 private fun FormSectionLabel(text: String) {
