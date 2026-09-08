@@ -20,12 +20,14 @@ import androidx.compose.material.icons.filled.MedicalInformation
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -90,6 +92,7 @@ private fun ClassificationPickerDialog(
     var chapters by remember { mutableStateOf<List<ChapterRef>>(emptyList()) }
     var selectedChapter by remember { mutableStateOf<ClassificationChapter?>(null) }
     var selectedChapterRef by remember { mutableStateOf<ChapterRef?>(null) }
+    var selectedPhrase by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -137,6 +140,7 @@ private fun ClassificationPickerDialog(
                                 if (selectedChapterRef != null) {
                                     selectedChapterRef = null
                                     selectedChapter = null
+                                    selectedPhrase = null
                                 } else onDismiss()
                             }
                         ) {
@@ -172,7 +176,11 @@ private fun ClassificationPickerDialog(
                 else -> ClassificationChoices(
                     chapter = selectedChapter!!,
                     paddingValues = paddingValues,
-                    onChoiceSelected = onClassificationSelected
+                    selectedPhrase = selectedPhrase,
+                    onChoiceSelected = { selectedPhrase = it },
+                    onConfirm = {
+                        selectedPhrase?.let(onClassificationSelected)
+                    }
                 )
             }
         }
@@ -219,56 +227,86 @@ private fun ChapterChoices(
 private fun ClassificationChoices(
     chapter: ClassificationChapter,
     paddingValues: PaddingValues,
-    onChoiceSelected: (String) -> Unit
+    selectedPhrase: String?,
+    onChoiceSelected: (String) -> Unit,
+    onConfirm: () -> Unit
 ) {
-    LazyColumn(
-        contentPadding = paddingValues,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
     ) {
-        chapter.sections.forEach { section ->
-            item {
-                Text(
-                    section.title,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
-                )
-            }
+        LazyColumn(
+            contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+        ) {
+            chapter.sections.forEach { section ->
+                item {
+                    Text(
+                        section.title,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+                    )
+                }
 
-            items(section.classifications, key = { it.id }) { entry ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Column(modifier = Modifier.padding(18.dp)) {
-                        Text(
-                            text = entry.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
-                        )
-                        choicesForEntry(entry).forEach { choice ->
-                            val classificationName = classificationName(entry.title)
-                            val phrase = "${choice.label} selon la classification de $classificationName"
+                items(section.classifications, key = { it.id }) { entry ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(18.dp)) {
                             Text(
-                                text = phrase,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onChoiceSelected(phrase) }
-                                    .padding(vertical = 10.dp)
+                                text = entry.title,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
                             )
+                            HorizontalDivider(
+                                modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                            )
+                            choicesForEntry(entry).forEach { choice ->
+                                val classificationName = classificationName(entry.title)
+                                val phrase = "${choice.label} selon la classification de $classificationName"
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onChoiceSelected(phrase) }
+                                        .padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = selectedPhrase == phrase,
+                                        onClick = { onChoiceSelected(phrase) }
+                                    )
+                                    Text(
+                                        text = phrase,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(start = 8.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
+        }
+
+        Button(
+            onClick = onConfirm,
+            enabled = selectedPhrase != null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            Text("Confirm selection")
         }
     }
 }
