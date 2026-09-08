@@ -502,7 +502,7 @@ private fun EmptyDatabaseState(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Import Database (JSON)",
+                    text = "Import Database",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimary
