@@ -63,6 +63,7 @@ import com.example.data.local.model.ClassificationBlock
 import com.example.data.local.model.ClassificationChapter
 import com.example.data.local.model.ClassificationEntry
 import com.example.data.repository.ClassificationRepository
+import com.example.ui.components.OrthoSearchBar
 import com.example.viewmodel.ClassificationViewModel
 
 /**
@@ -76,6 +77,10 @@ fun ClassificationChaptersScreen(
     modifier: Modifier = Modifier
 ) {
     LaunchedEffect(Unit) { viewModel.loadIndex() }
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredChapters = viewModel.chapters.filter { chapter ->
+        searchQuery.isBlank() || chapter.title.contains(searchQuery, ignoreCase = true)
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         when {
@@ -93,15 +98,25 @@ fun ClassificationChaptersScreen(
                 )
             }
             else -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .testTag("classification_chapters_list"),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(viewModel.chapters, key = { it.id }) { chapter ->
-                        ChapterRefCard(chapter = chapter, onClick = { onOpenChapter(chapter) })
+                Column(modifier = Modifier.fillMaxSize()) {
+                    OrthoSearchBar(
+                        query = searchQuery,
+                        onQueryChange = { searchQuery = it },
+                        onSearch = { searchQuery = it },
+                        onClear = { searchQuery = "" },
+                        placeholderText = "Search classifications...",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .testTag("classification_chapters_list"),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(filteredChapters, key = { it.id }) { chapter ->
+                            ChapterRefCard(chapter = chapter, onClick = { onOpenChapter(chapter) })
+                        }
                     }
                 }
             }
@@ -238,13 +253,29 @@ fun ClassificationChapterDetailScreen(
     repository: ClassificationRepository,
     modifier: Modifier = Modifier
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
             .testTag("classification_chapter_detail"),
         contentPadding = PaddingValues(16.dp)
     ) {
+        item {
+            OrthoSearchBar(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                onSearch = { searchQuery = it },
+                onClear = { searchQuery = "" },
+                placeholderText = "Search in this chapter...",
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
         chapter.sections.forEach { section ->
+            val filteredClassifications = section.classifications.filter { entry ->
+                searchQuery.isBlank() || entry.title.contains(searchQuery, ignoreCase = true)
+            }
+            if (filteredClassifications.isEmpty()) return@forEach
             item {
                 Text(
                     text = section.title,
@@ -254,7 +285,7 @@ fun ClassificationChapterDetailScreen(
                     modifier = Modifier.padding(top = 18.dp, bottom = 10.dp)
                 )
             }
-            items(section.classifications, key = { it.id }) { entry ->
+            items(filteredClassifications, key = { it.id }) { entry ->
                 ClassificationEntryCard(
                     entry = entry,
                     repository = repository,

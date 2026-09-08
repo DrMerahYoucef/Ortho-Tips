@@ -20,8 +20,8 @@ import androidx.compose.material.icons.filled.MedicalInformation
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,6 +31,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,6 +49,7 @@ import com.example.data.local.model.ClassificationBlock
 import com.example.data.local.model.ClassificationChapter
 import com.example.data.local.model.ClassificationEntry
 import com.example.data.repository.ClassificationRepository
+import com.example.ui.components.OrthoSearchBar
 
 private data class ClassificationChoice(
     val label: String,
@@ -95,6 +97,7 @@ private fun ClassificationPickerDialog(
     var selectedPhrase by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         try {
@@ -141,6 +144,7 @@ private fun ClassificationPickerDialog(
                                     selectedChapterRef = null
                                     selectedChapter = null
                                     selectedPhrase = null
+                                    searchQuery = ""
                                 } else onDismiss()
                             }
                         ) {
@@ -167,8 +171,11 @@ private fun ClassificationPickerDialog(
 
                 selectedChapter == null -> ChapterChoices(
                     chapters = chapters,
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = { searchQuery = it },
                     paddingValues = paddingValues,
                     onChapterSelected = { chapter ->
+                        searchQuery = ""
                         selectedChapterRef = chapter
                     }
                 )
@@ -177,6 +184,8 @@ private fun ClassificationPickerDialog(
                     chapter = selectedChapter!!,
                     paddingValues = paddingValues,
                     selectedPhrase = selectedPhrase,
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = { searchQuery = it },
                     onChoiceSelected = { selectedPhrase = it },
                     onConfirm = {
                         selectedPhrase?.let(onClassificationSelected)
@@ -190,15 +199,30 @@ private fun ClassificationPickerDialog(
 @Composable
 private fun ChapterChoices(
     chapters: List<ChapterRef>,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
     paddingValues: PaddingValues,
     onChapterSelected: (ChapterRef) -> Unit
 ) {
-    LazyColumn(
-        contentPadding = paddingValues,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
-    ) {
-        items(chapters, key = { it.id }) { chapter ->
+    val filteredChapters = chapters.filter { chapter ->
+        searchQuery.isBlank() || chapter.title.contains(searchQuery, ignoreCase = true)
+    }
+
+    Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+        OrthoSearchBar(
+            query = searchQuery,
+            onQueryChange = onSearchQueryChange,
+            onSearch = onSearchQueryChange,
+            onClear = { onSearchQueryChange("") },
+            placeholderText = "Search classifications...",
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+        LazyColumn(
+            contentPadding = PaddingValues(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
+        ) {
+            items(filteredChapters, key = { it.id }) { chapter ->
             Card(
                 modifier = Modifier.fillMaxWidth().clickable { onChapterSelected(chapter) },
                 shape = RoundedCornerShape(14.dp),
@@ -228,23 +252,41 @@ private fun ClassificationChoices(
     chapter: ClassificationChapter,
     paddingValues: PaddingValues,
     selectedPhrase: String?,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
     onChoiceSelected: (String) -> Unit,
     onConfirm: () -> Unit
 ) {
+    val filteredSections = chapter.sections.mapNotNull { section ->
+        val classifications = section.classifications.filter { entry ->
+            searchQuery.isBlank() || entry.title.contains(searchQuery, ignoreCase = true) ||
+                choicesForEntry(entry).any { choice -> choice.label.contains(searchQuery, ignoreCase = true) }
+        }
+        classifications.takeIf { it.isNotEmpty() }?.let { section.copy(classifications = it) }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
     ) {
+        OrthoSearchBar(
+            query = searchQuery,
+            onQueryChange = onSearchQueryChange,
+            onSearch = onSearchQueryChange,
+            onClear = { onSearchQueryChange("") },
+            placeholderText = "Search in this chapter...",
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
         LazyColumn(
-            contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
+            contentPadding = PaddingValues(top = 8.dp, bottom = 88.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
         ) {
-            chapter.sections.forEach { section ->
+            filteredSections.forEach { section ->
                 item {
                     Text(
                         section.title,
@@ -299,14 +341,13 @@ private fun ClassificationChoices(
             }
         }
 
-        Button(
-            onClick = onConfirm,
-            enabled = selectedPhrase != null,
+        FloatingActionButton(
+            onClick = { if (selectedPhrase != null) onConfirm() },
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .align(Alignment.End)
+                .padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
-            Text("Confirm selection")
+            Icon(Icons.Default.Check, contentDescription = "Confirm selection")
         }
     }
 }
