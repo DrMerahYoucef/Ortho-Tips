@@ -246,6 +246,7 @@ private fun ChapterChoices(
         }
     }
 }
+}
 
 @Composable
 private fun ClassificationChoices(
