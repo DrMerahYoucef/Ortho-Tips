@@ -221,40 +221,53 @@ private fun ClassificationChoices(
     paddingValues: PaddingValues,
     onChoiceSelected: (String) -> Unit
 ) {
-    val choices = chapter.sections.flatMap { section ->
-        section.classifications.flatMap { entry ->
-            choicesForEntry(entry).map { choice ->
-                val classificationName = classificationName(entry.title)
-                val phrase = "Classé ${choice.label} selon la classification de $classificationName"
-                Triple(section.title, entry.title, phrase)
-            }
-        }
-    }
-
     LazyColumn(
         contentPadding = paddingValues,
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
     ) {
-        choices.forEach { (sectionTitle, entryTitle, phrase) ->
+        chapter.sections.forEach { section ->
             item {
                 Text(
-                    sectionTitle,
+                    section.title,
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
                 )
-                Text(entryTitle, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             }
-            item {
+
+            items(section.classifications, key = { it.id }) { entry ->
                 Card(
-                    modifier = Modifier.fillMaxWidth().clickable { onChoiceSelected(phrase) },
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
-                    Text(phrase, modifier = Modifier.padding(14.dp), style = MaterialTheme.typography.bodyMedium)
+                    Column(modifier = Modifier.padding(18.dp)) {
+                        Text(
+                            text = entry.title,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                        )
+                        choicesForEntry(entry).forEach { choice ->
+                            val classificationName = classificationName(entry.title)
+                            val phrase = "${choice.label} selon la classification de $classificationName"
+                            Text(
+                                text = phrase,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onChoiceSelected(phrase) }
+                                    .padding(vertical = 10.dp)
+                            )
+                        }
+                    }
                 }
-                HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
             }
         }
     }
