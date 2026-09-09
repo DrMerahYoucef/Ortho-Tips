@@ -46,6 +46,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.local.entity.BodySide
 import com.example.data.repository.SuggestionField
 import com.example.data.repository.ClassificationRepository
+import com.example.data.repository.Cim10Repository
 import com.example.ui.components.ClassificationPickerButton
 import com.example.ui.components.SmartSuggestionField
 import com.example.ui.components.SuggestionsToggleCard
@@ -58,6 +59,7 @@ import com.example.viewmodel.PatientFormState
 fun PatientEditScreen(
     viewModel: PatientEditViewModel,
     classificationRepository: ClassificationRepository,
+    cim10Repository: Cim10Repository,
     onNavigateBack: () -> Unit,
     onSaved: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -65,6 +67,10 @@ fun PatientEditScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val suggestionsEnabled by viewModel.suggestionsEnabled.collectAsStateWithLifecycle()
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
+    val cim10Diseases by androidx.compose.runtime.produceState(emptyList<com.example.data.local.model.Cim10Disease>(), cim10Repository) {
+        value = cim10Repository.getDiseases()
+    }
+    val cim10Names = cim10Diseases.map { "${it.maladie} (${it.code})" }
 
     LaunchedEffect(uiState.savedPatientId) {
         uiState.savedPatientId?.let { onSaved(it) }
@@ -174,7 +180,7 @@ fun PatientEditScreen(
                     value = uiState.form.chronicDiseases,
                     onValueChange = { v -> viewModel.update { it.copy(chronicDiseases = v) } },
                     label = "Chronic diseases",
-                    suggestions = suggestions[SuggestionField.CHRONIC_DISEASES].orEmpty(),
+                    suggestions = suggestions[SuggestionField.CHRONIC_DISEASES].orEmpty() + cim10Names,
                     suggestionsEnabled = suggestionsEnabled,
                     singleLine = false
                 )
@@ -208,7 +214,7 @@ fun PatientEditScreen(
                         value = uiState.form.diagnosis,
                         onValueChange = { v -> viewModel.update { it.copy(diagnosis = v) } },
                         label = "Diagnosis",
-                        suggestions = suggestions[SuggestionField.DIAGNOSIS].orEmpty(),
+                        suggestions = suggestions[SuggestionField.DIAGNOSIS].orEmpty() + cim10Names,
                         suggestionsEnabled = suggestionsEnabled,
                         singleLine = false
                     )

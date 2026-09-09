@@ -61,7 +61,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.local.model.PatientDetail
+import com.example.data.local.model.Cim10Disease
+import com.example.data.repository.Cim10Repository
 import com.example.ui.components.EmptyStateView
+import com.example.ui.components.Cim10DiseaseText
 import com.example.ui.components.RegionBadge
 import com.example.ui.components.SurgeryRow
 import com.example.ui.components.TimelineEventRow
@@ -74,6 +77,7 @@ private enum class DetailTab { INFO, TIMELINE, SURGERIES, MEDIA }
 @Composable
 fun PatientDetailScreen(
     viewModel: PatientDetailViewModel,
+    cim10Repository: Cim10Repository,
     onNavigateBack: () -> Unit,
     onNavigateToEdit: () -> Unit,
     onNavigateToAddTimelineEvent: () -> Unit,
@@ -101,6 +105,9 @@ fun PatientDetailScreen(
     }
 
     val detail = uiState.detail
+    val cim10Diseases by androidx.compose.runtime.produceState(emptyList<Cim10Disease>(), cim10Repository) {
+        value = cim10Repository.getDiseases()
+    }
 
     Scaffold(
         topBar = {
@@ -161,7 +168,7 @@ fun PatientDetailScreen(
         }
 
         Column(modifier = Modifier.padding(paddingValues)) {
-            PatientHeader(detail)
+            PatientHeader(detail, cim10Diseases)
 
             PrimaryTabRow(selectedTabIndex = selectedTab) {
                 Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Info") })
@@ -171,17 +178,19 @@ fun PatientDetailScreen(
             }
 
             when (DetailTab.entries[selectedTab]) {
-                DetailTab.INFO -> InfoTab(detail)
+                DetailTab.INFO -> InfoTab(detail, cim10Diseases)
                 DetailTab.TIMELINE -> TimelineTab(
                     detail = detail,
                     onEventClick = onNavigateToEditTimelineEvent,
-                    onEventDelete = { viewModel.deleteTimelineEvent(it) }
+                    onEventDelete = { viewModel.deleteTimelineEvent(it) },
+                    cim10Diseases = cim10Diseases
                 )
                 DetailTab.SURGERIES -> SurgeriesTab(
                     detail = detail,
                     onSurgeryClick = onNavigateToEditSurgery,
                     onSurgeryDelete = { viewModel.deleteSurgery(it) },
-                    onGenerateProtocol = { surgeryId -> protocolSurgeryId = surgeryId }
+                    onGenerateProtocol = { surgeryId -> protocolSurgeryId = surgeryId },
+                    cim10Diseases = cim10Diseases
                 )
                 DetailTab.MEDIA -> MediaTab(
                     detail = detail,
@@ -424,7 +433,7 @@ private fun PdfOptionRow(label: String, checked: Boolean, enabled: Boolean = tru
 }
 
 @Composable
-private fun PatientHeader(detail: PatientDetail) {
+private fun PatientHeader(detail: PatientDetail, cim10Diseases: List<Cim10Disease>) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
@@ -446,10 +455,9 @@ private fun PatientHeader(detail: PatientDetail) {
         }
         if (detail.patient.diagnosis.isNotBlank()) {
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
+            Cim10DiseaseText(
                 text = detail.patient.diagnosis,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
+                diseases = cim10Diseases
             )
         }
         if (detail.patient.bodyRegion.isNotBlank()) {
@@ -465,7 +473,7 @@ private fun PatientHeader(detail: PatientDetail) {
 }
 
 @Composable
-private fun InfoTab(detail: PatientDetail) {
+private fun InfoTab(detail: PatientDetail, cim10Diseases: List<Cim10Disease>) {
     val p = detail.patient
     LazyColumn(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
@@ -481,7 +489,8 @@ private fun InfoTab(detail: PatientDetail) {
                     "Email" to p.email,
                     "Address" to p.address,
                     "Emergency contact" to listOf(p.emergencyContactName, p.emergencyContactPhone).filter { it.isNotBlank() }.joinToString(" — ")
-                )
+                ),
+                cim10Diseases = cim10Diseases
             )
         }
         item {
@@ -490,7 +499,8 @@ private fun InfoTab(detail: PatientDetail) {
                 rows = listOf(
                     "Provider" to p.insuranceProvider,
                     "Policy number" to p.insuranceNumber
-                )
+                ),
+                cim10Diseases = cim10Diseases
             )
         }
         item {
@@ -503,7 +513,8 @@ private fun InfoTab(detail: PatientDetail) {
                     "Previous surgeries" to p.previousSurgeries,
                     "Medications" to p.medications,
                     "Notes" to p.generalNotes
-                )
+                ),
+                cim10Diseases = cim10Diseases
             )
         }
         item {
@@ -518,14 +529,15 @@ private fun InfoTab(detail: PatientDetail) {
                     "Fracture classification" to p.fractureClassification,
                     "Imaging findings" to p.imagingFindings,
                     "Treatment plan" to p.treatmentPlan
-                )
+                ),
+                cim10Diseases = cim10Diseases
             )
         }
     }
 }
 
 @Composable
-private fun InfoSection(title: String, rows: List<Pair<String, String>>) {
+private fun InfoSection(title: String, rows: List<Pair<String, String>>, cim10Diseases: List<Cim10Disease>) {
     val visibleRows = rows.filter { it.second.isNotBlank() && it.second != "—" }
     if (visibleRows.isEmpty()) return
 
@@ -545,9 +557,9 @@ private fun InfoSection(title: String, rows: List<Pair<String, String>>) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(0.4f)
                 )
-                Text(
+                Cim10DiseaseText(
                     text = value,
-                    style = MaterialTheme.typography.bodyMedium,
+                    diseases = cim10Diseases,
                     modifier = Modifier.weight(0.6f)
                 )
             }
@@ -559,7 +571,8 @@ private fun InfoSection(title: String, rows: List<Pair<String, String>>) {
 private fun TimelineTab(
     detail: PatientDetail,
     onEventClick: (String) -> Unit,
-    onEventDelete: (String) -> Unit
+    onEventDelete: (String) -> Unit,
+    cim10Diseases: List<Cim10Disease>
 ) {
     val timeline = detail.timeline
     if (timeline.all.isEmpty()) {
@@ -579,15 +592,15 @@ private fun TimelineTab(
     ) {
         if (timeline.future.isNotEmpty()) {
             item { TimelineSectionLabel("Upcoming") }
-            items(timeline.future, key = { it.id }) { TimelineEventRow(it, onClick = { onEventClick(it.id) }, onDelete = { onEventDelete(it.id) }) }
+            items(timeline.future, key = { it.id }) { TimelineEventRow(it, onClick = { onEventClick(it.id) }, onDelete = { onEventDelete(it.id) }, cim10Diseases = cim10Diseases) }
         }
         if (timeline.current.isNotEmpty()) {
             item { TimelineSectionLabel("Today") }
-            items(timeline.current, key = { it.id }) { TimelineEventRow(it, onClick = { onEventClick(it.id) }, onDelete = { onEventDelete(it.id) }) }
+            items(timeline.current, key = { it.id }) { TimelineEventRow(it, onClick = { onEventClick(it.id) }, onDelete = { onEventDelete(it.id) }, cim10Diseases = cim10Diseases) }
         }
         if (timeline.past.isNotEmpty()) {
             item { TimelineSectionLabel("Previous") }
-            items(timeline.past, key = { it.id }) { TimelineEventRow(it, onClick = { onEventClick(it.id) }, onDelete = { onEventDelete(it.id) }) }
+            items(timeline.past, key = { it.id }) { TimelineEventRow(it, onClick = { onEventClick(it.id) }, onDelete = { onEventDelete(it.id) }, cim10Diseases = cim10Diseases) }
         }
     }
 }
@@ -608,7 +621,8 @@ private fun SurgeriesTab(
     detail: PatientDetail,
     onSurgeryClick: (String) -> Unit,
     onSurgeryDelete: (String) -> Unit,
-    onGenerateProtocol: (String) -> Unit
+    onGenerateProtocol: (String) -> Unit,
+    cim10Diseases: List<Cim10Disease>
 ) {
     if (detail.surgeries.isEmpty()) {
         EmptyStateView(
@@ -630,7 +644,8 @@ private fun SurgeriesTab(
                 surgery = surgery,
                 onClick = { onSurgeryClick(surgery.id) },
                 onDelete = { onSurgeryDelete(surgery.id) },
-                onGenerateProtocol = { onGenerateProtocol(surgery.id) }
+                onGenerateProtocol = { onGenerateProtocol(surgery.id) },
+                cim10Diseases = cim10Diseases
             )
         }
     }

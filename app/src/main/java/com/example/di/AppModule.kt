@@ -9,6 +9,7 @@ import com.example.data.prefs.ActivationRepository
 import com.example.data.prefs.SettingsRepository
 import com.example.data.prefs.SurgeonProfileRepository
 import com.example.data.repository.ClassificationRepository
+import com.example.data.repository.Cim10Repository
 import com.example.data.repository.OrthoRepository
 import com.example.data.repository.PatientRepository
 import com.example.data.repository.SuggestionRepository
@@ -48,6 +49,10 @@ class AppModule(private val context: Context) {
     // Static, asset-backed classification reference (read-only, see assets/classifications/)
     val classificationRepository: ClassificationRepository by lazy {
         ClassificationRepository(context)
+    }
+
+    val cim10Repository: Cim10Repository by lazy {
+        Cim10Repository(context)
     }
 
     // Patient management module

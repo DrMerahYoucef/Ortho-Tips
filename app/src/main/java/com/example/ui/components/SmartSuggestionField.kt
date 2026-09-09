@@ -114,12 +114,17 @@ fun SmartSuggestionField(
             singleLine = singleLine,
             isError = isError,
             trailingIcon = {
-                if (suggestionsEnabled) {
-                    Icon(
-                        imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (suggestionsEnabled) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
+                        )
+                    }
+                    FrenchVoiceInputButton { spokenText ->
+                        onValueChange(appendDictatedText(value, spokenText))
+                    }
                 }
             },
             modifier = Modifier
@@ -166,6 +171,9 @@ fun SmartSuggestionField(
     }
 }
 
+private fun appendDictatedText(existing: String, dictated: String): String =
+    if (existing.isBlank()) dictated.trim() else "$existing ${dictated.trim()}"
+
 /**
  * A protocol/steps field that auto-formats free text into bullet points: typing a
  * period ends the current bullet and starts a new one on the next line (and pressing
@@ -200,6 +208,16 @@ fun BulletProtocolField(
         },
         label = { Text(label) },
         placeholder = { Text(placeholder) },
+        trailingIcon = {
+            FrenchVoiceInputButton { spokenText ->
+                val dictated = if (fieldValue.text.isBlank()) {
+                    "\u2022 ${spokenText.trim()}"
+                } else {
+                    "${fieldValue.text.trimEnd()}\n\u2022 ${spokenText.trim()}"
+                }
+                onValueChange(dictated)
+            }
+        },
         minLines = 5,
         modifier = modifier.fillMaxWidth()
     )
