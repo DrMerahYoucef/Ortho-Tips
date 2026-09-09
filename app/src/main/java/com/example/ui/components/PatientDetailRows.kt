@@ -26,7 +26,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.data.local.entity.SurgeryEntity
 import com.example.data.local.entity.TimelineEventEntity
-import com.example.data.local.model.Cim10Disease
 import com.example.utils.DateFormat
 
 /** RegionBadge is already defined in Common.kt (same package) and reused as-is here. */
@@ -36,7 +35,6 @@ fun TimelineEventRow(
     event: TimelineEventEntity,
     onClick: () -> Unit,
     onDelete: () -> Unit,
-    cim10Diseases: List<Cim10Disease> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -65,9 +63,8 @@ fun TimelineEventRow(
                 )
                 if (event.description.isNotBlank()) {
                     Spacer(modifier = Modifier.height(3.dp))
-                    Cim10DiseaseText(
+                    Text(
                         text = event.description,
-                        diseases = cim10Diseases,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -87,7 +84,6 @@ fun SurgeryRow(
     onClick: () -> Unit,
     onDelete: () -> Unit,
     onGenerateProtocol: () -> Unit,
-    cim10Diseases: List<Cim10Disease> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -108,7 +104,7 @@ fun SurgeryRow(
                     color = MaterialTheme.colorScheme.primary
                 )
                 if (surgery.diagnosis.isNotBlank()) {
-                    Cim10DiseaseText(text = surgery.diagnosis, diseases = cim10Diseases)
+                    Text(text = surgery.diagnosis)
                 }
                 Spacer(modifier = Modifier.height(3.dp))
                 Text(

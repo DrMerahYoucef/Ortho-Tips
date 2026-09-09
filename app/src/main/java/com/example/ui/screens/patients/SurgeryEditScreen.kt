@@ -39,7 +39,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.repository.ClassificationRepository
-import com.example.data.repository.Cim10Repository
 import com.example.data.repository.SuggestionField
 import com.example.ui.components.BulletProtocolField
 import com.example.ui.components.ClassificationPickerButton
@@ -54,7 +53,6 @@ import com.example.viewmodel.SurgeryEditViewModel
 fun SurgeryEditScreen(
     viewModel: SurgeryEditViewModel,
     classificationRepository: ClassificationRepository,
-    cim10Repository: Cim10Repository,
     onNavigateBack: () -> Unit,
     onSaved: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -62,10 +60,6 @@ fun SurgeryEditScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val suggestionsEnabled by viewModel.suggestionsEnabled.collectAsStateWithLifecycle()
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
-    val cim10Diseases by androidx.compose.runtime.produceState(emptyList<com.example.data.local.model.Cim10Disease>(), cim10Repository) {
-        value = cim10Repository.getDiseases()
-    }
-    val cim10Names = cim10Diseases.map { "${it.maladie} (${it.code})" }
     var showPicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.savedSurgeryId) {
@@ -180,7 +174,7 @@ fun SurgeryEditScreen(
                         value = uiState.form.diagnosis,
                         onValueChange = { v -> viewModel.update { it.copy(diagnosis = v) } },
                         label = "Diagnosis",
-                        suggestions = suggestions[SuggestionField.SURGERY_DIAGNOSIS].orEmpty() + cim10Names,
+                        suggestions = suggestions[SuggestionField.SURGERY_DIAGNOSIS].orEmpty(),
                         suggestionsEnabled = suggestionsEnabled,
                         singleLine = false
                     )

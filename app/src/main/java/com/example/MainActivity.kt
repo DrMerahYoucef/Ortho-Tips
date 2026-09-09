@@ -293,7 +293,6 @@ fun OrthoAppNavHost(appModule: AppModule) {
             val savedChartPdfOptions by protocolViewModel.savedChartOptions.collectAsStateWithLifecycle()
             PatientDetailScreen(
                 viewModel = detailViewModel,
-                cim10Repository = appModule.cim10Repository,
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToEdit = { navController.navigate(OrthoDestinations.patientEdit(patientId)) },
                 onNavigateToAddTimelineEvent = { navController.navigate(OrthoDestinations.timelineEventEdit(patientId)) },
@@ -331,7 +330,6 @@ fun OrthoAppNavHost(appModule: AppModule) {
             PatientEditScreen(
                 viewModel = editViewModel,
                 classificationRepository = appModule.classificationRepository,
-                cim10Repository = appModule.cim10Repository,
                 onNavigateBack = { navController.popBackStack() },
                 onSaved = { savedId ->
                     navController.popBackStack()
@@ -398,7 +396,6 @@ fun OrthoAppNavHost(appModule: AppModule) {
             SurgeryEditScreen(
                 viewModel = editViewModel,
                 classificationRepository = appModule.classificationRepository,
-                cim10Repository = appModule.cim10Repository,
                 onNavigateBack = { navController.popBackStack() },
                 onSaved = { navController.popBackStack() }
             )
