@@ -196,12 +196,35 @@ private fun appendDictatedText(existing: String, dictated: String): String =
 fun BulletProtocolField(
     value: String,
     onValueChange: (String) -> Unit,
+    suggestions: List<String> = emptyList(),
+    suggestionsEnabled: Boolean = false,
     modifier: Modifier = Modifier,
     label: String = "Operative protocol",
     placeholder: String = "Type a step and end it with a period to start the next one…"
 ) {
     var fieldValue by remember {
         mutableStateOf(TextFieldValue(text = value, selection = TextRange(value.length)))
+    }
+    var isFocused by remember { mutableStateOf(false) }
+
+    val currentLineStart = value.lastIndexOf('\n') + 1
+    val currentLine = value.substring(currentLineStart)
+    val activeSegment = currentLine.removePrefix("\u2022").trimStart()
+    val filtered = remember(suggestions, activeSegment, suggestionsEnabled, isFocused) {
+        if (!suggestionsEnabled || !isFocused || activeSegment.trim().length < 2) {
+            emptyList()
+        } else {
+            val normalizedQuery = normalizeForSearch(activeSegment.trim())
+            suggestions.asSequence()
+                .filter { suggestion ->
+                    val normalizedSuggestion = normalizeForSearch(suggestion)
+                    normalizedSuggestion.contains(normalizedQuery) &&
+                        !normalizedSuggestion.equals(normalizedQuery)
+                }
+                .distinct()
+                .take(8)
+                .toList()
+        }
     }
 
     // Sync from external changes only (e.g. loading an existing surgery record) — never
@@ -232,8 +255,43 @@ fun BulletProtocolField(
             }
         },
         minLines = 5,
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .onFocusEvent { focusState -> isFocused = focusState.isFocused }
     )
+    if (filtered.isNotEmpty()) {
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            tonalElevation = 3.dp,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp)
+        ) {
+            Column {
+                filtered.forEachIndexed { index, suggestion ->
+                    Text(
+                        text = suggestion,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val bulletPrefix = if (currentLine.trimStart().startsWith("\u2022")) "\u2022 " else ""
+                                val replacement = value.substring(0, currentLineStart) + bulletPrefix + suggestion
+                                val selected = TextFieldValue(replacement, TextRange(replacement.length))
+                                fieldValue = selected
+                                onValueChange(selected.text)
+                            }
+                            .padding(horizontal = 16.dp, vertical = 10.dp)
+                    )
+                    if (index != filtered.lastIndex) {
+                        Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+                    }
+                }
+            }
+        }
+    }
 }
 
 private fun formatAsBulletPoints(old: TextFieldValue, new: TextFieldValue): TextFieldValue {

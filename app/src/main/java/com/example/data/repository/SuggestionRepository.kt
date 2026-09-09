@@ -37,6 +37,7 @@ object SuggestionField {
     const val SURGERY_MATERIALS = "surgery.materials"
     const val SURGERY_COMPLICATIONS = "surgery.complications"
     const val SURGERY_POSTOP = "surgery.postOp"
+    const val SURGERY_PROTOCOL = "surgery.protocol"
 }
 
 /**

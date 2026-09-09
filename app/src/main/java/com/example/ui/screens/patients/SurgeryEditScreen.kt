@@ -198,6 +198,8 @@ fun SurgeryEditScreen(
                 BulletProtocolField(
                     value = uiState.form.operativeProtocol,
                     onValueChange = { v -> viewModel.update { it.copy(operativeProtocol = v) } },
+                    suggestions = suggestions[SuggestionField.SURGERY_PROTOCOL].orEmpty(),
+                    suggestionsEnabled = suggestionsEnabled,
                     label = "Operative protocol (steps)"
                 )
             }

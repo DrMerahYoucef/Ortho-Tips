@@ -46,7 +46,8 @@ private val SUGGESTION_FIELDS = listOf(
     SuggestionField.SURGERY_PROCEDURE,
     SuggestionField.SURGERY_MATERIALS,
     SuggestionField.SURGERY_COMPLICATIONS,
-    SuggestionField.SURGERY_POSTOP
+    SuggestionField.SURGERY_POSTOP,
+    SuggestionField.SURGERY_PROTOCOL
 )
 
 class SurgeryEditViewModel(
@@ -138,6 +139,7 @@ class SurgeryEditViewModel(
         suggestionRepository.learn(SuggestionField.SURGERY_MATERIALS, form.materialsUsed)
         suggestionRepository.learn(SuggestionField.SURGERY_COMPLICATIONS, form.complications)
         suggestionRepository.learn(SuggestionField.SURGERY_POSTOP, form.postOpInstructions)
+        suggestionRepository.learn(SuggestionField.SURGERY_PROTOCOL, form.operativeProtocol)
     }
 
     companion object {
