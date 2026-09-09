@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -156,6 +155,17 @@ private fun ClassificationPickerDialog(
                         }
                     }
                 )
+            },
+            floatingActionButton = {
+                // Placed in Scaffold's own FAB slot so insets/nav-bar spacing are handled
+                // automatically instead of being manually (and incorrectly) padded in a Box.
+                if (selectedChapter != null && selectedPhrase != null) {
+                    FloatingActionButton(
+                        onClick = { onClassificationSelected(selectedPhrase!!) }
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = "Confirm selection")
+                    }
+                }
             }
         ) { paddingValues ->
             when {
@@ -187,10 +197,7 @@ private fun ClassificationPickerDialog(
                     selectedPhrase = selectedPhrase,
                     searchQuery = searchQuery,
                     onSearchQueryChange = { searchQuery = it },
-                    onChoiceSelected = { selectedPhrase = it },
-                    onConfirm = {
-                        selectedPhrase?.let(onClassificationSelected)
-                    }
+                    onChoiceSelected = { selectedPhrase = it }
                 )
             }
         }
@@ -224,29 +231,29 @@ private fun ChapterChoices(
             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
         ) {
             items(filteredChapters, key = { it.id }) { chapter ->
-            Card(
-                modifier = Modifier.fillMaxWidth().clickable { onChapterSelected(chapter) },
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Card(
+                    modifier = Modifier.fillMaxWidth().clickable { onChapterSelected(chapter) },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
-                    Icon(Icons.Default.MedicalInformation, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
-                        Text(chapter.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(
-                            "${chapter.classificationCount} classifications",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.MedicalInformation, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+                            Text(chapter.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(
+                                "${chapter.classificationCount} classifications",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
         }
     }
-}
 }
 
 @Composable
@@ -256,8 +263,7 @@ private fun ClassificationChoices(
     selectedPhrase: String?,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    onChoiceSelected: (String) -> Unit,
-    onConfirm: () -> Unit
+    onChoiceSelected: (String) -> Unit
 ) {
     val filteredSections = chapter.sections.mapNotNull { section ->
         val classifications = section.classifications.filter { entry ->
@@ -267,7 +273,7 @@ private fun ClassificationChoices(
         classifications.takeIf { it.isNotEmpty() }?.let { section.copy(classifications = it) }
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
@@ -278,12 +284,10 @@ private fun ClassificationChoices(
             onSearch = onSearchQueryChange,
             onClear = { onSearchQueryChange("") },
             placeholderText = "Search in this chapter...",
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
         LazyColumn(
-            contentPadding = PaddingValues(top = 72.dp, bottom = 96.dp),
+            contentPadding = PaddingValues(bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
                 .fillMaxSize()
@@ -342,16 +346,6 @@ private fun ClassificationChoices(
                     }
                 }
             }
-        }
-
-        FloatingActionButton(
-            onClick = { if (selectedPhrase != null) onConfirm() },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .navigationBarsPadding()
-                .padding(end = 16.dp, bottom = 16.dp)
-        ) {
-            Icon(Icons.Default.Check, contentDescription = "Confirm selection")
         }
     }
 }
