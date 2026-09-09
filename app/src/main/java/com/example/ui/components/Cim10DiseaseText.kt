@@ -71,16 +71,18 @@ private fun buildDiseaseAnnotatedString(
 ): AnnotatedString {
     val matches = mutableListOf<Triple<Int, Int, Cim10Disease>>()
     diseases.asSequence()
-        .filter { it.maladie.length >= 3 }
         .sortedByDescending { it.maladie.length }
         .forEach { disease ->
-            var start = text.indexOf(disease.maladie, ignoreCase = true)
-            while (start >= 0) {
-                val end = start + disease.maladie.length
-                if (matches.none { start < it.second && end > it.first }) {
-                    matches += Triple(start, end, disease)
+            listOf(disease.maladie, disease.code).forEach { searchableValue ->
+                if (searchableValue.length < 2) return@forEach
+                var start = text.indexOf(searchableValue, ignoreCase = true)
+                while (start >= 0) {
+                    val end = start + searchableValue.length
+                    if (matches.none { start < it.second && end > it.first }) {
+                        matches += Triple(start, end, disease)
+                    }
+                    start = text.indexOf(searchableValue, start + 1, ignoreCase = true)
                 }
-                start = text.indexOf(disease.maladie, start + 1, ignoreCase = true)
             }
         }
 

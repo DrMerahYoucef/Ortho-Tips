@@ -267,7 +267,7 @@ private fun ClassificationChoices(
         classifications.takeIf { it.isNotEmpty() }?.let { section.copy(classifications = it) }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
@@ -278,14 +278,15 @@ private fun ClassificationChoices(
             onSearch = onSearchQueryChange,
             onClear = { onSearchQueryChange("") },
             placeholderText = "Search in this chapter...",
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         )
         LazyColumn(
-            contentPadding = PaddingValues(top = 8.dp, bottom = 88.dp),
+            contentPadding = PaddingValues(top = 72.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
+                .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
             filteredSections.forEach { section ->
@@ -346,9 +347,9 @@ private fun ClassificationChoices(
         FloatingActionButton(
             onClick = { if (selectedPhrase != null) onConfirm() },
             modifier = Modifier
-                .align(Alignment.End)
+                .align(Alignment.BottomEnd)
                 .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 16.dp)
+                .padding(end = 16.dp, bottom = 16.dp)
         ) {
             Icon(Icons.Default.Check, contentDescription = "Confirm selection")
         }

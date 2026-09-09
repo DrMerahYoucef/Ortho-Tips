@@ -160,7 +160,7 @@ fun PatientEditScreen(
                     value = uiState.form.medicalHistory,
                     onValueChange = { v -> viewModel.update { it.copy(medicalHistory = v) } },
                     label = "Medical history",
-                    suggestions = suggestions[SuggestionField.MEDICAL_HISTORY].orEmpty(),
+                    suggestions = suggestions[SuggestionField.MEDICAL_HISTORY].orEmpty() + cim10Names,
                     suggestionsEnabled = suggestionsEnabled,
                     singleLine = false
                 )

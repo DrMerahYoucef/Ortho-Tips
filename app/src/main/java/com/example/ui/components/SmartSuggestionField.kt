@@ -32,6 +32,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import java.text.Normalizer
 
 /** A small banner card with a switch that turns smart suggestions/autofill on or off for a form. */
 @Composable
@@ -96,13 +97,20 @@ fun SmartSuggestionField(
     }
 
     val filtered = remember(suggestions, activeSegment, suggestionsEnabled, isFocused) {
-        if (!suggestionsEnabled || !isFocused || activeSegment.trim().length < 2) {
+        val query = activeSegment.trim()
+        if (!suggestionsEnabled || !isFocused || query.length < 2) {
             emptyList()
         } else {
-            suggestions.filter {
-                it.contains(activeSegment.trim(), ignoreCase = true) &&
-                    !it.equals(activeSegment.trim(), ignoreCase = true)
-            }.take(5)
+            val normalizedQuery = normalizeForSearch(query)
+            suggestions.asSequence()
+                .filter { suggestion ->
+                    val normalizedSuggestion = normalizeForSearch(suggestion)
+                    normalizedSuggestion.contains(normalizedQuery) &&
+                        !normalizedSuggestion.equals(normalizedQuery)
+                }
+                .distinct()
+                .take(8)
+                .toList()
         }
     }
 
@@ -170,6 +178,11 @@ fun SmartSuggestionField(
         }
     }
 }
+
+private fun normalizeForSearch(value: String): String =
+    Normalizer.normalize(value, Normalizer.Form.NFD)
+        .replace("\\p{InCombiningDiacriticalMarks}+".toRegex(), "")
+        .lowercase()
 
 private fun appendDictatedText(existing: String, dictated: String): String =
     if (existing.isBlank()) dictated.trim() else "$existing ${dictated.trim()}"
