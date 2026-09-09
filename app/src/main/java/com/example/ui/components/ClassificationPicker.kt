@@ -21,7 +21,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -153,19 +152,20 @@ private fun ClassificationPickerDialog(
                                 contentDescription = if (selectedChapter == null) "Close" else "Back"
                             )
                         }
+                    },
+                    actions = {
+                        if (selectedChapter != null && selectedPhrase != null) {
+                            IconButton(
+                                onClick = { onClassificationSelected(selectedPhrase!!) }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Confirm selection"
+                                )
+                            }
+                        }
                     }
                 )
-            },
-            floatingActionButton = {
-                // Placed in Scaffold's own FAB slot so insets/nav-bar spacing are handled
-                // automatically instead of being manually (and incorrectly) padded in a Box.
-                if (selectedChapter != null && selectedPhrase != null) {
-                    FloatingActionButton(
-                        onClick = { onClassificationSelected(selectedPhrase!!) }
-                    ) {
-                        Icon(Icons.Default.Check, contentDescription = "Confirm selection")
-                    }
-                }
             }
         ) { paddingValues ->
             when {
