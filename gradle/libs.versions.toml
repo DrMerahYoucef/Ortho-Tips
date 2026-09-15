@@ -47,6 +47,12 @@ mlkitTextRecognition = "16.0.1"
 mlkitBarcodeScanning = "17.3.0"
 zxingCore = "3.5.3"
 exifinterface = "1.3.7"
+# --- Telegram Drive backend -------------------------------------------------
+tdlib = "1.8.56"
+workManager = "2.9.1"
+documentfile = "1.0.1"
+roomTesting = "2.7.0"
+workTesting = "2.9.1"
 
 
 [libraries]
@@ -109,6 +115,15 @@ mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition"
 mlkit-barcode-scanning = { group = "com.google.mlkit", name = "barcode-scanning", version.ref = "mlkitBarcodeScanning" }
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxingCore" }
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
+
+# --- Telegram Drive backend -------------------------------------------------
+# TDLib Android bindings + prebuilt native libraries, published on JitPack.
+# Identical artifact to the one TeleDrive uses.
+tdlib = { group = "com.github.tdlibx", name = "td", version.ref = "tdlib" }
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workManager" }
+androidx-work-testing = { group = "androidx.work", name = "work-testing", version.ref = "workTesting" }
+androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
+androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "roomTesting" }
 
 
 [plugins]

@@ -13,6 +13,7 @@ import com.example.data.local.model.PatientSummary
 import com.example.data.local.model.PatientTimeline
 import com.example.data.local.model.calculateAge
 import com.example.data.local.model.toSummary
+import com.example.data.storage.PatientMediaGateway
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -26,10 +27,16 @@ import kotlinx.coroutines.withContext
  * [patientMediaDir] is the app-private root where captured/imported patient images and
  * documents are written (see [com.example.utils.PatientMediaStorage]). Optional so the
  * repository stays unit-testable without a real filesystem.
+ *
+ * [mediaGateway] routes media through the storage abstraction: saved files are queued
+ * for the active backend and deletions become recoverable soft deletes that propagate.
+ * Also optional, and null in tests — when it is absent the repository behaves exactly
+ * as it did before the Telegram Drive backend existed, including hard-deleting files.
  */
 class PatientRepository(
     private val database: OrthoDatabase,
-    private val patientMediaDir: File? = null
+    private val patientMediaDir: File? = null,
+    private val mediaGateway: PatientMediaGateway? = null
 ) {
 
     private val patientDao = database.patientDao()
@@ -108,7 +115,18 @@ class PatientRepository(
         patientDao.deletePatients(patientIds)
     }
 
-    private fun deleteMediaFiles(images: List<PatientImageEntity>, documents: List<PatientDocumentEntity>) {
+    /**
+     * With a gateway present this is a soft delete: files move to the recoverable
+     * trash and a tombstone is recorded so the removal reaches the drive. Without
+     * one it is the original unlink, so nothing changes for an install that has
+     * never enabled a cloud backend.
+     */
+    private suspend fun deleteMediaFiles(images: List<PatientImageEntity>, documents: List<PatientDocumentEntity>) {
+        val gateway = mediaGateway
+        if (gateway != null) {
+            gateway.onPatientMediaDeleted(images, documents)
+            return
+        }
         images.forEach { img ->
             File(img.filePath).delete()
             img.thumbnailPath?.let { File(it).delete() }
@@ -167,15 +185,53 @@ class PatientRepository(
 
     suspend fun saveImage(image: PatientImageEntity) = withContext(Dispatchers.IO) {
         imageDao.insertImage(image)
+        // Queued after the row is committed, so a transfer can never reference an
+        // image the database does not yet know about.
+        mediaGateway?.onImageSaved(image)
     }
 
     suspend fun deleteImage(imageId: String) = withContext(Dispatchers.IO) {
         val image = imageDao.getImageDirect(imageId)
         imageDao.deleteImage(imageId)
         image?.let {
-            File(it.filePath).delete()
-            it.thumbnailPath?.let { path -> File(path).delete() }
+            val gateway = mediaGateway
+            if (gateway != null) {
+                gateway.onImageDeleted(it)
+            } else {
+                File(it.filePath).delete()
+                it.thumbnailPath?.let { path -> File(path).delete() }
+            }
         }
+    }
+
+    /**
+     * Returns a readable file for a stored image, fetching it from the active
+     * backend when the local copy is gone. Callers that need the bytes rather
+     * than a path — the PDF exporter, the annotation canvas, the share sheet —
+     * should go through these instead of constructing a `File` from `filePath`.
+     */
+    suspend fun resolveImageFile(image: PatientImageEntity): File? =
+        mediaGateway?.resolve(image.filePath) ?: File(image.filePath).takeIf { it.exists() }
+
+    suspend fun resolveThumbnailFile(image: PatientImageEntity): File? =
+        mediaGateway?.resolve(image.thumbnailPath)
+            ?: image.thumbnailPath?.let { File(it) }?.takeIf { it.exists() }
+
+    suspend fun resolveDocumentFile(document: PatientDocumentEntity): File? =
+        mediaGateway?.resolve(document.filePath) ?: File(document.filePath).takeIf { it.exists() }
+
+    /**
+     * Warms the cache for a patient's media. Called when a record is opened so
+     * scrolling their imaging does not stall on a round trip per image.
+     */
+    suspend fun prefetchPatientMedia(patientId: String): Int {
+        val gateway = mediaGateway ?: return 0
+        val images = imageDao.getImagesForPatientDirect(patientId)
+        val documents = documentDao.getDocumentsForPatientDirect(patientId)
+        return gateway.prefetch(
+            images.map { it.thumbnailPath } + images.map { it.filePath } +
+                    documents.map { it.filePath }
+        )
     }
 
     fun getDocumentsForPatient(patientId: String): Flow<List<PatientDocumentEntity>> =
@@ -183,12 +239,16 @@ class PatientRepository(
 
     suspend fun saveDocument(document: PatientDocumentEntity) = withContext(Dispatchers.IO) {
         documentDao.insertDocument(document)
+        mediaGateway?.onDocumentSaved(document)
     }
 
     suspend fun deleteDocument(documentId: String) = withContext(Dispatchers.IO) {
         val document = documentDao.getDocumentDirect(documentId)
         documentDao.deleteDocument(documentId)
-        document?.let { File(it.filePath).delete() }
+        document?.let {
+            val gateway = mediaGateway
+            if (gateway != null) gateway.onDocumentDeleted(it) else File(it.filePath).delete()
+        }
     }
 
     // ---- Unified search ----------------------------------------------------------------

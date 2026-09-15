@@ -13,10 +13,13 @@ import com.example.data.local.dao.ImageDao
 import com.example.data.local.dao.PatientDao
 import com.example.data.local.dao.PatientDocumentDao
 import com.example.data.local.dao.PatientImageDao
+import com.example.data.local.dao.RemoteObjectDao
 import com.example.data.local.dao.SearchDao
 import com.example.data.local.dao.SuggestionDao
 import com.example.data.local.dao.SurgeryDao
+import com.example.data.local.dao.SyncTombstoneDao
 import com.example.data.local.dao.TimelineEventDao
+import com.example.data.local.dao.TransferQueueDao
 import com.example.data.local.dao.UserDataDao
 import com.example.data.local.entity.BookmarkEntity
 import com.example.data.local.entity.BoneEntity
@@ -27,9 +30,12 @@ import com.example.data.local.entity.NoteEntity
 import com.example.data.local.entity.PatientDocumentEntity
 import com.example.data.local.entity.PatientEntity
 import com.example.data.local.entity.PatientImageEntity
+import com.example.data.local.entity.RemoteObjectEntity
 import com.example.data.local.entity.SectionEntity
 import com.example.data.local.entity.SurgeryEntity
+import com.example.data.local.entity.SyncTombstoneEntity
 import com.example.data.local.entity.TimelineEventEntity
+import com.example.data.local.entity.TransferQueueEntity
 
 @Database(
     entities = [
@@ -44,10 +50,14 @@ import com.example.data.local.entity.TimelineEventEntity
         SurgeryEntity::class,
         PatientImageEntity::class,
         PatientDocumentEntity::class,
-        FieldSuggestionEntity::class
+        FieldSuggestionEntity::class,
+        // Telegram Drive backend (schema v5, additive only)
+        RemoteObjectEntity::class,
+        TransferQueueEntity::class,
+        SyncTombstoneEntity::class
     ],
-    version = 4,
-    exportSchema = false
+    version = 5,
+    exportSchema = true
 )
 abstract class OrthoDatabase : RoomDatabase() {
     abstract fun chapterDao(): ChapterDao
@@ -64,6 +74,11 @@ abstract class OrthoDatabase : RoomDatabase() {
     abstract fun surgeryDao(): SurgeryDao
     abstract fun patientImageDao(): PatientImageDao
     abstract fun patientDocumentDao(): PatientDocumentDao
+
+    // Telegram Drive backend
+    abstract fun remoteObjectDao(): RemoteObjectDao
+    abstract fun transferQueueDao(): TransferQueueDao
+    abstract fun syncTombstoneDao(): SyncTombstoneDao
 
     companion object {
         @Volatile
@@ -252,6 +267,79 @@ abstract class OrthoDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Telegram Drive backend. Purely additive: three new tables and their
+         * indices, no ALTER on anything that already holds patient data. An
+         * install that never enables Telegram Drive simply leaves them empty.
+         */
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `remote_objects` (
+                        `storageKey` TEXT NOT NULL,
+                        `kind` TEXT NOT NULL,
+                        `chatId` INTEGER NOT NULL,
+                        `messageId` INTEGER NOT NULL,
+                        `remoteFileId` TEXT NOT NULL,
+                        `uniqueFileId` TEXT NOT NULL,
+                        `sizeBytes` INTEGER NOT NULL,
+                        `contentHash` TEXT,
+                        `mimeType` TEXT NOT NULL,
+                        `encrypted` INTEGER NOT NULL,
+                        `modifiedAt` INTEGER NOT NULL,
+                        `syncedAt` INTEGER NOT NULL,
+                        `deletedAt` INTEGER,
+                        `revision` INTEGER NOT NULL,
+                        PRIMARY KEY(`storageKey`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_remote_objects_uniqueFileId` ON `remote_objects` (`uniqueFileId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_remote_objects_kind` ON `remote_objects` (`kind`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_remote_objects_deletedAt` ON `remote_objects` (`deletedAt`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_remote_objects_contentHash` ON `remote_objects` (`contentHash`)")
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `transfer_queue` (
+                        `id` INTEGER NOT NULL,
+                        `storageKey` TEXT NOT NULL,
+                        `direction` TEXT NOT NULL,
+                        `localPath` TEXT NOT NULL,
+                        `kind` TEXT NOT NULL,
+                        `mimeType` TEXT NOT NULL,
+                        `state` TEXT NOT NULL,
+                        `attemptCount` INTEGER NOT NULL,
+                        `nextAttemptAt` INTEGER NOT NULL,
+                        `bytesTransferred` INTEGER NOT NULL,
+                        `totalBytes` INTEGER NOT NULL,
+                        `lastError` TEXT,
+                        `createdAt` INTEGER NOT NULL,
+                        `updatedAt` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_transfer_queue_state` ON `transfer_queue` (`state`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_transfer_queue_storageKey` ON `transfer_queue` (`storageKey`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_transfer_queue_nextAttemptAt` ON `transfer_queue` (`nextAttemptAt`)")
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `sync_tombstones` (
+                        `storageKey` TEXT NOT NULL,
+                        `deletedAt` INTEGER NOT NULL,
+                        `reason` TEXT NOT NULL,
+                        `propagated` INTEGER NOT NULL,
+                        PRIMARY KEY(`storageKey`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_sync_tombstones_propagated` ON `sync_tombstones` (`propagated`)")
+            }
+        }
+
         fun getInstance(context: Context): OrthoDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: buildDatabase(context).also { INSTANCE = it }
@@ -264,7 +352,7 @@ abstract class OrthoDatabase : RoomDatabase() {
                 OrthoDatabase::class.java,
                 "ortho_tips.db"
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .fallbackToDestructiveMigration(true)
                 .fallbackToDestructiveMigrationOnDowngrade(true)
                 .build()
@@ -278,7 +366,8 @@ abstract class OrthoDatabase : RoomDatabase() {
                 // safely wipe the invalid database and re-create it cleanly
                 try {
                     db.close()
-                } catch (_: Throwable) {}
+                } catch (_: Throwable) {
+                }
                 context.applicationContext.deleteDatabase("ortho_tips.db")
                 val cleanDb = Room.databaseBuilder(
                     context.applicationContext,

@@ -107,7 +107,9 @@ class ImageAnnotationViewModel(
         viewModelScope.launch {
             val path = _uiState.value.filePath ?: return@launch
             _uiState.value = _uiState.value.copy(isRunningOcr = true)
-            val text = OcrProcessor.extractText(context, File(path))
+            val ocrSource = repository.getImageOrNull(imageId)?.let { repository.resolveImageFile(it) }
+                ?: File(path)
+            val text = OcrProcessor.extractText(context, ocrSource)
             _uiState.value = _uiState.value.copy(ocrText = text, isRunningOcr = false)
             val image = repository.getImageOrNull(imageId) ?: return@launch
             repository.saveImage(image.copy(ocrText = text))
@@ -123,8 +125,10 @@ class ImageAnnotationViewModel(
         viewModelScope.launch {
             val path = _uiState.value.filePath ?: return@launch
             _uiState.value = _uiState.value.copy(isRunningQuadOcr = true, quadOcrText = null)
+            val quadSource = repository.getImageOrNull(imageId)?.let { repository.resolveImageFile(it) }
             val text = withContext(Dispatchers.IO) {
-                val source = BitmapFactory.decodeFile(path) ?: return@withContext ""
+                val source = BitmapFactory.decodeFile(quadSource?.absolutePath ?: path)
+                    ?: return@withContext ""
                 val warped = runCatching { PerspectiveCrop.warp(source, corners) }.getOrNull()
                 source.recycle()
                 val result = warped?.let { OcrProcessor.extractTextFromBitmap(it) } ?: ""
@@ -155,12 +159,17 @@ class ImageAnnotationViewModel(
     fun rotate90() {
         viewModelScope.launch {
             val image = repository.getImageOrNull(imageId) ?: return@launch
+            // Resolve first: with a cloud backend the bytes may live only in the
+            // drive, and rotating a zero-byte placeholder would destroy the image.
+            val file = repository.resolveImageFile(image) ?: return@launch
             withContext(Dispatchers.IO) {
-                val file = File(image.filePath)
                 backupOriginalIfNeeded(file)
                 ImageCompressor.rotateFile(file, 90f)
                 image.thumbnailPath?.let { ImageCompressor.writeThumbnail(file, File(it)) }
             }
+            // Re-saving the unchanged row is what re-queues the altered pixels for
+            // upload; the hash differs, so the drive takes a new revision.
+            repository.saveImage(image)
             _uiState.value = _uiState.value.copy(fileRevision = _uiState.value.fileRevision + 1, hasBackup = true)
         }
     }
@@ -175,8 +184,9 @@ class ImageAnnotationViewModel(
     fun cropQuad(context: Context, corners: List<PointF>) {
         viewModelScope.launch {
             val image = repository.getImageOrNull(imageId) ?: return@launch
+            val cropTarget = repository.resolveImageFile(image) ?: return@launch
             val cropSucceeded = withContext(Dispatchers.IO) {
-                val file = File(image.filePath)
+                val file = cropTarget
                 backupOriginalIfNeeded(file)
                 val source = BitmapFactory.decodeFile(file.absolutePath) ?: return@withContext false
                 val warped = runCatching { PerspectiveCrop.warp(source, corners) }.getOrNull()

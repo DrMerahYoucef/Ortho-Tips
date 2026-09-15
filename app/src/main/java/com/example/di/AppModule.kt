@@ -2,19 +2,43 @@ package com.example.di
 
 import android.content.Context
 import com.example.data.backup.BackupManager
+import com.example.data.crypto.KeystoreManager
+import com.example.data.crypto.KeystoreTdlibKeyProvider
+import com.example.data.crypto.StreamCrypto
+import com.example.data.crypto.WrappedKeyRepository
 import com.example.data.importer.BoneDatabaseImporter
 import com.example.data.local.OrthoDatabase
 import com.example.data.prefs.PdfOptionsRepository
 import com.example.data.prefs.ActivationRepository
 import com.example.data.prefs.SettingsRepository
 import com.example.data.prefs.SurgeonProfileRepository
+import com.example.data.prefs.TelegramDriveRepository
 import com.example.data.repository.ClassificationRepository
 import com.example.data.repository.OrthoRepository
 import com.example.data.repository.PatientRepository
 import com.example.data.repository.SuggestionRepository
+import com.example.data.storage.LocalStorageProvider
+import com.example.data.storage.PatientMediaGateway
+import com.example.data.storage.StorageProviderRegistry
+import com.example.data.storage.TelegramStorageProvider
+import com.example.data.sync.DatabaseSnapshot
+import com.example.data.sync.ManifestCodec
+import com.example.data.sync.SyncEngine
+import com.example.data.telegram.TdLibTelegramClient
+import com.example.data.telegram.TelegramClient
+import com.example.data.telegram.TdlibDatabaseKeyProvider
 import com.example.utils.PatientMediaStorage
 import java.io.File
 
+/**
+ * The application's object graph.
+ *
+ * Everything below the "Telegram Drive backend" divider is new; everything above
+ * it is unchanged. The Telegram graph is built entirely from `by lazy`
+ * properties, so an install that never enables the drive never constructs a
+ * TDLib client, never touches the Keystore and never pays a millisecond of
+ * startup cost for a feature it does not use.
+ */
 class AppModule(private val context: Context) {
 
     val activationRepository: ActivationRepository by lazy {
@@ -56,7 +80,7 @@ class AppModule(private val context: Context) {
     }
 
     val patientRepository: PatientRepository by lazy {
-        PatientRepository(database, patientMediaRootDir)
+        PatientRepository(database, patientMediaRootDir, patientMediaGateway)
     }
 
     val surgeonProfileRepository: SurgeonProfileRepository by lazy {
@@ -69,5 +93,96 @@ class AppModule(private val context: Context) {
 
     val suggestionRepository: SuggestionRepository by lazy {
         SuggestionRepository(database, settingsRepository)
+    }
+
+    // ---- Telegram Drive backend ---------------------------------------------
+
+    val keystoreManager: KeystoreManager by lazy { KeystoreManager() }
+
+    val wrappedKeyRepository: WrappedKeyRepository by lazy {
+        WrappedKeyRepository(context, keystoreManager)
+    }
+
+    val streamCrypto: StreamCrypto by lazy { StreamCrypto() }
+
+    private val tdlibDatabaseKeyProvider: TdlibDatabaseKeyProvider by lazy {
+        KeystoreTdlibKeyProvider(wrappedKeyRepository)
+    }
+
+    val telegramDriveRepository: TelegramDriveRepository by lazy {
+        TelegramDriveRepository(context, keystoreManager)
+    }
+
+    val telegramClient: TelegramClient by lazy {
+        TdLibTelegramClient(context, tdlibDatabaseKeyProvider)
+    }
+
+    val manifestCodec: ManifestCodec by lazy {
+        ManifestCodec(streamCrypto, wrappedKeyRepository)
+    }
+
+    /**
+     * The local provider resolves keys against `filesDir`, which is exactly where
+     * [PatientMediaStorage] already writes. That identity is deliberate: existing
+     * installs keep reading and writing the same bytes with no migration.
+     */
+    val localStorageProvider: LocalStorageProvider by lazy {
+        LocalStorageProvider(context, context.filesDir)
+    }
+
+    val telegramStorageProvider: TelegramStorageProvider by lazy {
+        TelegramStorageProvider(
+            context = context,
+            client = telegramClient,
+            remoteObjectDao = database.remoteObjectDao(),
+            manifestCodec = manifestCodec,
+            streamCrypto = streamCrypto,
+            wrappedKeys = wrappedKeyRepository,
+            driveRepository = telegramDriveRepository
+        )
+    }
+
+    val storageRegistry: StorageProviderRegistry by lazy {
+        StorageProviderRegistry(
+            local = localStorageProvider,
+            telegram = telegramStorageProvider,
+            driveRepository = telegramDriveRepository
+        )
+    }
+
+    val databaseSnapshot: DatabaseSnapshot by lazy { DatabaseSnapshot(database) }
+
+    private val snapshotWorkDir: File by lazy {
+        File(context.cacheDir, "snapshots").also { it.mkdirs() }
+    }
+
+    /**
+     * Routes patient media through the storage abstraction. Constructed lazily
+     * like everything else here, so it costs nothing until a record is saved.
+     */
+    val patientMediaGateway: PatientMediaGateway by lazy {
+        PatientMediaGateway(
+            context = context,
+            registry = storageRegistry,
+            syncEngine = syncEngine,
+            driveRepository = telegramDriveRepository
+        )
+    }
+
+    val syncEngine: SyncEngine by lazy {
+        SyncEngine(
+            registry = storageRegistry,
+            telegram = telegramStorageProvider,
+            local = localStorageProvider,
+            client = telegramClient,
+            remoteObjectDao = database.remoteObjectDao(),
+            transferQueueDao = database.transferQueueDao(),
+            tombstoneDao = database.syncTombstoneDao(),
+            manifestCodec = manifestCodec,
+            databaseSnapshot = databaseSnapshot,
+            driveRepository = telegramDriveRepository,
+            localRootDir = context.filesDir,
+            snapshotWorkDir = snapshotWorkDir
+        )
     }
 }

@@ -19,6 +19,12 @@ dependencyResolutionManagement {
   repositories {
     google()
     mavenCentral()
+    // TDLib Android bindings are only published on JitPack. The content filter
+    // keeps every other dependency resolving from google()/mavenCentral() exactly
+    // as before, so nothing already working can start resolving from here.
+    maven("https://jitpack.io") {
+      content { includeGroup("com.github.tdlibx") }
+    }
   }
 }
 

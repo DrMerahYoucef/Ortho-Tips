@@ -50,6 +50,15 @@ class PatientDataTransferViewModel(
                     withContext(Dispatchers.IO) { repository.getPatientsByIdsOnce(patientIds) }
                 }
 
+                // With a cloud backend some media may be drive-only. The exporter
+                // skips files it cannot find on disk, so fetch them first rather
+                // than writing a silently incomplete archive.
+                withContext(Dispatchers.IO) {
+                    patients.forEach { patient ->
+                        runCatching { repository.prefetchPatientMedia(patient.id) }
+                    }
+                }
+
                 val bundles = withContext(Dispatchers.IO) {
                     patients.map { patient ->
                         PatientExportBundle(

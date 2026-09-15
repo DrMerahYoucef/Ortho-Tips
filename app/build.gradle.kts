@@ -57,12 +57,21 @@ android {
     compose = true
     buildConfig = true
   }
+  // TDLib ships prebuilt .so files for four ABIs. Uncompressed packaging is
+  // required on API 23+ and lets the loader map them straight out of the APK.
+  packaging {
+    jniLibs { useLegacyPackaging = false }
+  }
   testOptions { unitTests { isIncludeAndroidResources = true } }
   dependenciesInfo {
     includeInApk = false
     includeInBundle = true
   }
 }
+
+// Room schemas are exported so the Telegram Drive migration tests can verify
+// that an existing v4 database still opens after upgrading to v5.
+ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
 // to match the convention used in Web projects.
@@ -125,6 +134,12 @@ dependencies {
   implementation(libs.okhttp)
   // implementation(libs.play.services.location)
   implementation(libs.retrofit)
+
+  // --- Telegram Drive backend (optional storage provider) -------------------
+  implementation(libs.tdlib)
+  implementation(libs.androidx.work.runtime.ktx)
+  implementation(libs.androidx.documentfile)
+
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)
@@ -139,6 +154,8 @@ dependencies {
   androidTestImplementation(libs.androidx.espresso.core)
   androidTestImplementation(libs.androidx.junit)
   androidTestImplementation(libs.androidx.runner)
+  androidTestImplementation(libs.androidx.room.testing)
+  androidTestImplementation(libs.androidx.work.testing)
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   debugImplementation(libs.androidx.compose.ui.tooling)
   "ksp"(libs.androidx.room.compiler)

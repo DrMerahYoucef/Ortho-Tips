@@ -71,6 +71,7 @@ fun MainScreen(
     onNavigateToSurgeonProfile: () -> Unit,
     onNavigateToDataTransfer: () -> Unit,
     onNavigateToQrScanner: () -> Unit,
+    onNavigateToTelegramDrive: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedItem by rememberSaveable { mutableStateOf(NavigationItem.STUDIES) }
@@ -184,7 +185,8 @@ fun MainScreen(
                 )
                 NavigationItem.SETTINGS -> SettingsScreen(
                     viewModel = settingsViewModel,
-                    onNavigateToImport = onNavigateToImport
+                    onNavigateToImport = onNavigateToImport,
+                    onNavigateToTelegramDrive = onNavigateToTelegramDrive
                 )
             }
         }

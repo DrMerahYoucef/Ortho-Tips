@@ -46,6 +46,9 @@ import com.example.ui.screens.patients.SurgeryEditScreen
 import com.example.ui.screens.patients.SurgeonProfileScreen
 import com.example.ui.screens.patients.TimelineEventEditScreen
 import com.example.ui.screens.splash.SplashScreen
+import com.example.ui.screens.storage.StorageDiagnosticsScreen
+import com.example.ui.screens.storage.TelegramDriveSettingsScreen
+import com.example.ui.screens.storage.TelegramSetupWizardScreen
 import com.example.ui.screens.viewer.ImageViewerScreen
 import com.example.ui.theme.OrthoTipsTheme
 import com.example.utils.ProtocolLanguage
@@ -62,6 +65,8 @@ import com.example.viewmodel.PatientDataTransferViewModel
 import com.example.viewmodel.PatientDetailViewModel
 import com.example.viewmodel.PatientEditViewModel
 import com.example.viewmodel.SurgeonProfileViewModel
+import com.example.viewmodel.TelegramDriveSettingsViewModel
+import com.example.viewmodel.TelegramSetupViewModel
 import com.example.viewmodel.SurgeryEditViewModel
 import com.example.viewmodel.TimelineEventEditViewModel
 import com.example.viewmodel.ViewerViewModel
@@ -175,6 +180,9 @@ fun OrthoAppNavHost(appModule: AppModule) {
                 },
                 onNavigateToQrScanner = {
                     navController.navigate(OrthoDestinations.QR_SCANNER)
+                },
+                onNavigateToTelegramDrive = {
+                    navController.navigate(OrthoDestinations.TELEGRAM_DRIVE_SETTINGS)
                 }
             )
         }
@@ -464,6 +472,54 @@ fun OrthoAppNavHost(appModule: AppModule) {
             )
             SurgeonProfileScreen(
                 viewModel = profileViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(OrthoDestinations.TELEGRAM_DRIVE_SETTINGS) {
+            val driveContext = LocalContext.current.applicationContext
+            val driveViewModel: TelegramDriveSettingsViewModel = viewModel(
+                key = "telegram_drive_settings",
+                factory = TelegramDriveSettingsViewModel.provideFactory(appModule, driveContext)
+            )
+            TelegramDriveSettingsScreen(
+                viewModel = driveViewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSetup = {
+                    navController.navigate(OrthoDestinations.TELEGRAM_DRIVE_SETUP)
+                },
+                onNavigateToDiagnostics = {
+                    navController.navigate(OrthoDestinations.TELEGRAM_DRIVE_DIAGNOSTICS)
+                }
+            )
+        }
+
+        composable(OrthoDestinations.TELEGRAM_DRIVE_SETUP) {
+            val setupContext = LocalContext.current.applicationContext
+            val setupViewModel: TelegramSetupViewModel = viewModel(
+                key = "telegram_drive_setup",
+                factory = TelegramSetupViewModel.provideFactory(appModule, setupContext)
+            )
+            TelegramSetupWizardScreen(
+                viewModel = setupViewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onSetupComplete = {
+                    navController.popBackStack(
+                        route = OrthoDestinations.TELEGRAM_DRIVE_SETTINGS,
+                        inclusive = false
+                    )
+                }
+            )
+        }
+
+        composable(OrthoDestinations.TELEGRAM_DRIVE_DIAGNOSTICS) {
+            val diagnosticsContext = LocalContext.current.applicationContext
+            val diagnosticsViewModel: TelegramDriveSettingsViewModel = viewModel(
+                key = "telegram_drive_settings",
+                factory = TelegramDriveSettingsViewModel.provideFactory(appModule, diagnosticsContext)
+            )
+            StorageDiagnosticsScreen(
+                viewModel = diagnosticsViewModel,
                 onNavigateBack = { navController.popBackStack() }
             )
         }

@@ -24,6 +24,11 @@ object OrthoDestinations {
     const val IMAGE_ANNOTATE = "image_annotate/{imageId}"
     const val QR_SCANNER = "qr_scanner"
 
+    // Optional Telegram Drive storage backend
+    const val TELEGRAM_DRIVE_SETTINGS = "telegram_drive"
+    const val TELEGRAM_DRIVE_SETUP = "telegram_drive_setup"
+    const val TELEGRAM_DRIVE_DIAGNOSTICS = "telegram_drive_diagnostics"
+
     fun chapterBones(chapterId: String, chapterTitle: String): String {
         return "chapter/${Uri.encode(chapterId)}/${Uri.encode(chapterTitle)}"
     }

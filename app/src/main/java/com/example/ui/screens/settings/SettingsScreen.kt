@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.DeleteForever
@@ -69,6 +70,7 @@ import com.example.viewmodel.SettingsViewModel
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     onNavigateToImport: () -> Unit,
+    onNavigateToTelegramDrive: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
@@ -391,6 +393,17 @@ fun SettingsScreen(
                         }
                         Switch(checked = settings.smartSuggestionsEnabled, onCheckedChange = { viewModel.setSmartSuggestions(it) })
                     }
+                }
+            }
+
+            item {
+                SettingsSection(title = "CLOUD STORAGE") {
+                    SettingsActionRow(
+                        icon = Icons.Default.Cloud,
+                        title = "Telegram Drive",
+                        subtitle = "Optional encrypted cloud backup for patients, media and records",
+                        onClick = onNavigateToTelegramDrive
+                    )
                 }
             }
 
