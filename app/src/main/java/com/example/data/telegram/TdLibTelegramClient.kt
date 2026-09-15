@@ -327,10 +327,21 @@ class TdLibTelegramClient(
                     return@withLock candidate
                 }
             }
+            // Cheap pass first: title search, server-side then local. Retried
+            // because right after sign-in the chat list is often still syncing
+            // and the drive simply is not visible yet.
             repeat(DISCOVERY_ATTEMPTS) { attempt ->
-                findStorageChat()?.let { return@withLock it }
+                searchStorageChat()?.let { return@withLock it }
                 if (attempt < DISCOVERY_ATTEMPTS - 1) delay(DISCOVERY_RETRY_MS.milliseconds)
             }
+
+            // Expensive pass, exactly once: walking the chat lists costs one
+            // GetChat per chat. Running it inside the retry loop above turned a
+            // few seconds of work into thousands of requests and looked like a
+            // hang on any account with a normal number of chats.
+            scanChatListsForStorageChat()?.let { return@withLock it }
+
+            DriveLog.i(TAG, "No existing drive found; creating one")
             val chat = send(
                 TdApi.CreateNewSupergroupChat(
                     STORAGE_CHAT_TITLE,
@@ -411,11 +422,10 @@ class TdLibTelegramClient(
     }
 
     /**
-     * Server-side search finds the channel even before the local chat list has
-     * synced, which is the case right after signing in. The cached list is only a
-     * fallback for accounts where the title was changed.
+     * Title search, server-side then local. Cheap enough to retry in a loop:
+     * two requests plus a handful of lookups for whatever matched.
      */
-    private suspend fun findStorageChat(): Long? {
+    private suspend fun searchStorageChat(): Long? {
         val candidates = LinkedHashSet<Long>()
 
         runCatching { send(TdApi.SearchChatsOnServer(STORAGE_CHAT_TITLE, CHAT_SEARCH_LIMIT)) }
@@ -425,14 +435,24 @@ class TdLibTelegramClient(
             .onFailure { DriveLog.d(TAG, "Local chat search failed: ${it.message}") }
             .getOrNull()?.chatIds?.forEach { candidates.add(it) }
 
-        matchStorageChat(candidates)?.let { return it }
+        if (candidates.isEmpty()) return null
+        return matchStorageChat(candidates)
+    }
 
+    /**
+     * Last resort for an account where the drive channel was renamed, so title
+     * search cannot find it. Costs one GetChat per chat, so it runs once and only
+     * after the cheap pass has been given several tries.
+     */
+    private suspend fun scanChatListsForStorageChat(): Long? {
+        val candidates = LinkedHashSet<Long>()
         for (chatList in listOf(TdApi.ChatListMain(), TdApi.ChatListArchive())) {
             runCatching { send(TdApi.GetChats(chatList, CHAT_LIST_LIMIT)) }
                 .onFailure { DriveLog.d(TAG, "Chat list read failed: ${it.message}") }
                 .getOrNull()?.chatIds?.forEach { candidates.add(it) }
         }
-        DriveLog.d(TAG, "Drive chat scan checked ${candidates.size} chats")
+        if (candidates.isEmpty()) return null
+        DriveLog.d(TAG, "Scanning ${candidates.size} chats for a renamed drive")
         return matchStorageChat(candidates)
     }
 
@@ -769,11 +789,11 @@ class TdLibTelegramClient(
         private const val RATE_LIMIT_RETRIES = 5
         private const val RATE_LIMIT_FALLBACK_SECONDS = 5
         private val MARKER_SEPARATOR = System.lineSeparator()
-        private const val DISCOVERY_ATTEMPTS = 8
-        private const val DISCOVERY_RETRY_MS = 1_500L
+        private const val DISCOVERY_ATTEMPTS = 4
+        private const val DISCOVERY_RETRY_MS = 1_000L
         private const val AUTH_WAIT_MS = 30_000L
         private const val CHAT_SEARCH_LIMIT = 50
-        private const val CHAT_LIST_LIMIT = 1_000
+        private const val CHAT_LIST_LIMIT = 500
         private const val HISTORY_RETRIES = 3
         private const val HISTORY_RETRY_MS = 400L
         private const val CLOSE_WAIT_LIMIT_MS = 5_000L

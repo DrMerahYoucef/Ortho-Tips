@@ -54,6 +54,22 @@ enum class SetupStep {
 
     val index: Int get() = ordinal
 
+    /**
+     * Steps that perform work rather than collect input. These run as soon as
+     * they are shown; Continue unlocks once the work succeeds.
+     *
+     * TELEGRAM_LOGIN is not in this set even though it talks to the network: it
+     * is driven by what the user types, and its gate is the auth state.
+     */
+    val isAutomatic: Boolean
+        get() = this in setOf(
+            DRIVE_INITIALISATION,
+            STORAGE_VERIFICATION,
+            CONNECTION_TEST,
+            MANIFEST,
+            INITIAL_SYNC
+        )
+
     companion object {
         val total: Int get() = entries.size
     }
@@ -77,15 +93,29 @@ data class SetupUiState(
     val verifiedBytes: Long = 0,
     val manifestEntries: Int = 0,
     val initialSyncReport: SyncReport? = null,
-    val existingDriveFound: Boolean = false
+    val existingDriveFound: Boolean = false,
+    /** Automatic steps whose work has finished successfully. */
+    val completedSteps: Set<SetupStep> = emptySet()
 ) {
+    /**
+     * Gating an automatic step on its own output would deadlock: the output is
+     * produced by work that only runs once the step is allowed to proceed. So
+     * automatic steps gate on having completed, and the work is started by the
+     * screen when the step appears.
+     */
     val canAdvance: Boolean
-        get() = !busy && when (step) {
-            SetupStep.CREDENTIALS -> apiId.toIntOrNull() != null && apiHash.length >= 16
-            SetupStep.TELEGRAM_LOGIN -> authState == TelegramAuthState.Ready
-            SetupStep.DRIVE_INITIALISATION -> chatId != null
+        get() = !busy && when {
+            step == SetupStep.CREDENTIALS ->
+                apiId.toIntOrNull() != null && apiHash.length >= 16
+
+            step == SetupStep.TELEGRAM_LOGIN -> authState == TelegramAuthState.Ready
+            step.isAutomatic -> step in completedSteps
             else -> true
         }
+
+    /** True while an automatic step is running or waiting to be retried. */
+    val isStepPending: Boolean
+        get() = step.isAutomatic && step !in completedSteps
 }
 
 /**
@@ -153,42 +183,85 @@ class TelegramSetupViewModel(
     fun back() {
         val current = _uiState.value.step
         if (current == SetupStep.WELCOME) return
-        _uiState.value = _uiState.value.copy(
-            step = SetupStep.entries[current.ordinal - 1],
-            error = null
-        )
+        goTo(SetupStep.entries[current.ordinal - 1])
     }
 
-    /** Runs the work belonging to the current step, then advances on success. */
-    fun advance() {
+    /**
+     * Runs the work for an automatic step. Called by the screen when the step
+     * appears, and again by Retry after a failure. Re-entry is cheap: a step that
+     * already succeeded returns immediately, so a recomposition cannot start a
+     * second drive creation.
+     */
+    fun runCurrentStep() {
         val state = _uiState.value
-        if (!state.canAdvance) return
+        val step = state.step
+        if (!step.isAutomatic || state.busy || step in state.completedSteps) return
         viewModelScope.launch {
             setBusy(true)
+            _uiState.value = _uiState.value.copy(error = null)
             val ok = runCatching {
-                when (state.step) {
-                    SetupStep.CREDENTIALS -> startTelegram()
+                when (step) {
                     SetupStep.DRIVE_INITIALISATION -> initialiseDrive()
                     SetupStep.STORAGE_VERIFICATION -> verifyStorage()
                     SetupStep.CONNECTION_TEST -> testConnection()
                     SetupStep.MANIFEST -> buildManifest()
                     SetupStep.INITIAL_SYNC -> runInitialSync()
-                    SetupStep.COMPLETE -> finish()
                     else -> true
                 }
             }.getOrElse { error ->
-                DriveLog.e(TAG, "Setup step ${state.step} failed", error)
-                _uiState.value = _uiState.value.copy(error = error.message ?: "Step failed")
+                DriveLog.e(TAG, "Setup step $step failed", error)
+                _uiState.value = _uiState.value.copy(
+                    error = error.message ?: "This step could not be completed"
+                )
                 false
             }
             setBusy(false)
-            if (ok && !_uiState.value.step.isLast) {
+            if (ok) {
                 _uiState.value = _uiState.value.copy(
-                    step = SetupStep.entries[_uiState.value.step.ordinal + 1],
-                    error = null
+                    completedSteps = _uiState.value.completedSteps + step
                 )
             }
         }
+    }
+
+    /** Clears the failure and runs the step again. */
+    fun retryCurrentStep() {
+        _uiState.value = _uiState.value.copy(error = null, statusLine = "")
+        runCurrentStep()
+    }
+
+    /**
+     * Moves to the next step. Input steps do their small amount of work here;
+     * automatic steps have already done theirs, so this is pure navigation.
+     */
+    fun advance() {
+        val state = _uiState.value
+        if (!state.canAdvance) return
+        viewModelScope.launch {
+            val ok = when (state.step) {
+                SetupStep.CREDENTIALS -> runCatching { startTelegram() }.getOrElse { error ->
+                    _uiState.value = _uiState.value.copy(
+                        error = error.message ?: "Could not start Telegram"
+                    )
+                    false
+                }
+
+                SetupStep.COMPLETE -> {
+                    runCatching { finish() }
+                    true
+                }
+
+                else -> true
+            }
+            if (ok && !state.step.isLast) {
+                goTo(SetupStep.entries[state.step.ordinal + 1])
+            }
+        }
+    }
+
+    /** Single place that changes step, so stale status text never carries over. */
+    private fun goTo(step: SetupStep) {
+        _uiState.value = _uiState.value.copy(step = step, error = null, statusLine = "")
     }
 
     private suspend fun startTelegram(): Boolean {
@@ -262,9 +335,13 @@ class TelegramSetupViewModel(
     }
 
     private suspend fun testConnection(): Boolean {
-        status("Sending a test object…")
+        status("Checking the connection…")
+        val user = client.getCurrentUser()
         val limits = client.getLimits()
-        status("Connected. Up to ${limits.maxFileBytes / (1024 * 1024)} MB per file.")
+        status(
+            "Connected as ${user.displayName}. Up to " +
+                    "${limits.maxFileBytes / (1024 * 1024)} MB per file."
+        )
         return true
     }
 

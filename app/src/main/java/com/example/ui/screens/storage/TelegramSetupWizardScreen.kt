@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,6 +63,13 @@ fun TelegramSetupWizardScreen(
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Automatic steps start as soon as they appear. Keying on the step means a
+    // recomposition cannot restart one, and the ViewModel ignores a repeat call
+    // for a step that already succeeded.
+    LaunchedEffect(state.step) {
+        viewModel.runCurrentStep()
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -117,6 +125,22 @@ fun TelegramSetupWizardScreen(
                     SetupStep.COMPLETE -> CompleteStep(state)
                 }
 
+                if (state.error == null && state.isStepPending) {
+                    Spacer(Modifier.height(20.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.width(18.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            text = state.statusLine.ifBlank { "Working…" },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
                 state.error?.let { error ->
                     Spacer(Modifier.height(16.dp))
                     Card(
@@ -126,12 +150,20 @@ fun TelegramSetupWizardScreen(
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
-                            text = error,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.padding(14.dp)
-                        )
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Text(
+                                text = error,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            if (state.step.isAutomatic) {
+                                Spacer(Modifier.height(8.dp))
+                                TextButton(
+                                    onClick = viewModel::retryCurrentStep,
+                                    enabled = !state.busy
+                                ) { Text("Try again") }
+                            }
+                        }
                     }
                 }
             }

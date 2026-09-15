@@ -193,7 +193,43 @@ repository behaves exactly as it did before, hard deletes included.
 
 ---
 
-## 7. Not yet done
+## 7. Fixes after the first device run
+
+Two bugs surfaced on the first real install, both at step 6 of the wizard.
+
+**The wizard deadlocked on "Create the drive".** `canAdvance` gated that step on
+`chatId != null`, but `chatId` is produced by the very work that `advance()`
+runs — and `advance()` returned early when `canAdvance` was false. The step could
+never start, so Continue stayed disabled forever with the previous step's status
+text ("Checking code…") still on screen.
+
+Fixed by separating the two concerns. `SetupStep.isAutomatic` marks the five
+steps that do work rather than collect input; those now run from a
+`LaunchedEffect(state.step)` as soon as they appear, record themselves in
+`completedSteps`, and gate Continue on that instead of on their own output.
+`advance()` is pure navigation for them. A failure now shows a **Try again**
+button rather than a dead end, and `goTo()` is the single place that changes
+step so stale status text cannot carry over.
+
+**Drive discovery was quadratic.** `ensureStorageChat` retried `findStorageChat`
+eight times, and each attempt fell through to walking both chat lists with one
+`GetChat` per chat — up to sixteen thousand sequential requests on an account
+with a normal number of chats. It would have looked like a hang even once the
+deadlock was cleared, and would likely have tripped Telegram's flood limits.
+
+Split into `searchStorageChat` (two title searches plus lookups for whatever
+matched — cheap, and the one that is retried while the chat list syncs) and
+`scanChatListsForStorageChat` (the expensive walk, run exactly once, and only as
+a fallback for a drive channel that was renamed). Retries dropped from eight to
+four now that each is cheap.
+
+Also corrected: the connection-test step claimed to be "sending a test object"
+when it only queried account limits. It now says what it does and reports the
+signed-in account.
+
+---
+
+## 8. Not yet done
 
 Honest list, so nothing here surprises you later.
 
