@@ -1,5 +1,8 @@
 package com.example.ui.screens.patients
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.imePadding
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -16,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Draw
@@ -48,6 +50,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.example.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -98,7 +102,7 @@ fun SurgeonProfileScreen(
             }
             val result = runCatching {
                 SignatureProcessor.processFromUri(context.contentResolver, uri, destination)
-            }.getOrElse { SignatureResult.Failure("Something went wrong processing that image.") }
+            }.getOrElse { SignatureResult.Failure(R.string.signature_error_generic) }
 
             scope.launch {
                 when (result) {
@@ -111,11 +115,11 @@ fun SurgeonProfileScreen(
                     is SignatureResult.Warning -> {
                         form = form.copy(signatureImagePath = result.file.absolutePath)
                         signatureRevision = System.currentTimeMillis()
-                        signatureStatusMessage = result.message
+                        signatureStatusMessage = context.getString(result.messageRes)
                         signatureStatusIsWarning = true
                     }
                     is SignatureResult.Failure -> {
-                        signatureStatusMessage = result.message
+                        signatureStatusMessage = context.getString(result.messageRes)
                         signatureStatusIsWarning = true
                     }
                 }
@@ -140,7 +144,7 @@ fun SurgeonProfileScreen(
                     form = form.copy(logoImagePath = file.absolutePath)
                     logoRevision = System.currentTimeMillis()
                 }.onFailure {
-                    logoStatusMessage = "Unable to load that logo."
+                    logoStatusMessage = context.getString(R.string.surgeon_profile_logo_load_failed)
                 }
             }
         }
@@ -161,9 +165,9 @@ fun SurgeonProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Surgeon profile", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.surgeon_profile_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") }
+                    IconButton(onClick = onNavigateBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back)) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
@@ -173,26 +177,30 @@ fun SurgeonProfileScreen(
         LazyColumn(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 48.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxSize().padding(paddingValues)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .consumeWindowInsets(paddingValues)
+                .imePadding()
         ) {
             item {
                 Text(
-                    text = "Used to auto-fill operative protocols and PDF exports.",
+                    text = stringResource(R.string.surgeon_profile_intro),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            item { ProfileField("Full name", form.name) { form = form.copy(name = it) } }
-            item { ProfileField("Specialty", form.specialty) { form = form.copy(specialty = it) } }
-            item { ProfileField("Hospital / clinic", form.hospital) { form = form.copy(hospital = it) } }
-            item { ProfileField("Address", form.address, singleLine = false) { form = form.copy(address = it) } }
-            item { ProfileField("Phone", form.phone) { form = form.copy(phone = it) } }
-            item { ProfileField("Email", form.email) { form = form.copy(email = it) } }
-            item { ProfileField("Registration number", form.registrationNumber) { form = form.copy(registrationNumber = it) } }
+            item { ProfileField(stringResource(R.string.surgeon_profile_full_name), form.name) { form = form.copy(name = it) } }
+            item { ProfileField(stringResource(R.string.surgeon_profile_specialty), form.specialty) { form = form.copy(specialty = it) } }
+            item { ProfileField(stringResource(R.string.surgeon_profile_hospital), form.hospital) { form = form.copy(hospital = it) } }
+            item { ProfileField(stringResource(R.string.surgeon_profile_address), form.address, singleLine = false) { form = form.copy(address = it) } }
+            item { ProfileField(stringResource(R.string.surgeon_profile_phone), form.phone) { form = form.copy(phone = it) } }
+            item { ProfileField(stringResource(R.string.surgeon_profile_email), form.email) { form = form.copy(email = it) } }
+            item { ProfileField(stringResource(R.string.surgeon_profile_registration_number), form.registrationNumber) { form = form.copy(registrationNumber = it) } }
 
             item {
                 Text(
-                    text = "CLINIC LOGO",
+                    text = stringResource(R.string.surgeon_profile_clinic_logo_header),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -200,7 +208,7 @@ fun SurgeonProfileScreen(
             }
             item {
                 Text(
-                    text = "This logo will appear in the header of exported PDFs.",
+                    text = stringResource(R.string.surgeon_profile_logo_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -218,11 +226,11 @@ fun SurgeonProfileScreen(
                     if (form.logoImagePath != null) {
                         AsyncImage(
                             model = "file://${form.logoImagePath}?rev=$logoRevision",
-                            contentDescription = "Clinic logo",
+                            contentDescription = stringResource(R.string.surgeon_profile_clinic_logo),
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        Text("No logo selected", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.surgeon_profile_no_logo), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -233,12 +241,12 @@ fun SurgeonProfileScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     OutlinedButton(onClick = { logoPicker.launch("image/*") }, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text(" Select logo", modifier = Modifier.padding(start = 4.dp))
+                        Text(stringResource(R.string.surgeon_profile_select_logo), modifier = Modifier.padding(start = 4.dp))
                     }
                     if (form.logoImagePath != null) {
                         TextButton(onClick = { form = form.copy(logoImagePath = null); logoStatusMessage = null }) {
                             Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Text(" Remove", modifier = Modifier.padding(start = 4.dp))
+                            Text(stringResource(R.string.surgeon_profile_remove), modifier = Modifier.padding(start = 4.dp))
                         }
                     }
                 }
@@ -246,7 +254,7 @@ fun SurgeonProfileScreen(
 
             item {
                 Text(
-                    text = "SIGNATURE",
+                    text = stringResource(R.string.surgeon_profile_signature_header),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -254,7 +262,7 @@ fun SurgeonProfileScreen(
             }
             item {
                 Text(
-                    text = "Scan or upload a photo of your signature — the background is removed automatically.",
+                    text = stringResource(R.string.surgeon_profile_signature_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -275,7 +283,7 @@ fun SurgeonProfileScreen(
                         isProcessingSignature -> CircularProgressIndicator()
                         form.signatureImagePath != null -> AsyncImage(
                             model = "file://${form.signatureImagePath}?rev=$signatureRevision",
-                            contentDescription = "Signature",
+                            contentDescription = stringResource(R.string.surgeon_profile_signature),
                             modifier = Modifier.fillMaxSize()
                         )
                         else -> Icon(Icons.Default.Draw, contentDescription = null, modifier = Modifier.size(32.dp))
@@ -302,7 +310,7 @@ fun SurgeonProfileScreen(
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text(" Scan", modifier = Modifier.padding(start = 4.dp))
+                        Text(stringResource(R.string.surgeon_profile_scan), modifier = Modifier.padding(start = 4.dp))
                     }
                     OutlinedButton(
                         onClick = { galleryPicker.launch("image/*") },
@@ -310,7 +318,7 @@ fun SurgeonProfileScreen(
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text(" Upload", modifier = Modifier.padding(start = 4.dp))
+                        Text(stringResource(R.string.surgeon_profile_upload), modifier = Modifier.padding(start = 4.dp))
                     }
                 }
             }
@@ -324,7 +332,7 @@ fun SurgeonProfileScreen(
                         enabled = !isProcessingSignature
                     ) {
                         Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text(" Remove signature", modifier = Modifier.padding(start = 4.dp))
+                        Text(stringResource(R.string.surgeon_profile_remove_signature), modifier = Modifier.padding(start = 4.dp))
                     }
                 }
                 item {
@@ -335,7 +343,7 @@ fun SurgeonProfileScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Include signature on exported PDFs",
+                                text = stringResource(R.string.surgeon_profile_include_signature),
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.weight(1f)
                             )
@@ -354,7 +362,7 @@ fun SurgeonProfileScreen(
                     enabled = !isProcessingSignature,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Save")
+                    Text(stringResource(R.string.surgeon_profile_save))
                 }
             }
         }
@@ -368,6 +376,11 @@ private fun ProfileField(label: String, value: String, singleLine: Boolean = tru
         onValueChange = onValueChange,
         label = { Text(label) },
         singleLine = singleLine,
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+            capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences,
+            imeAction = if (singleLine) androidx.compose.ui.text.input.ImeAction.Next
+            else androidx.compose.ui.text.input.ImeAction.Default
+        ),
         modifier = Modifier.fillMaxWidth()
     )
 }

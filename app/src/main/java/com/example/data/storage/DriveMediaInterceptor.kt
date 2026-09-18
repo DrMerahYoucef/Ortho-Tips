@@ -1,5 +1,6 @@
 package com.example.data.storage
 
+import android.net.Uri
 import coil.intercept.Interceptor
 import coil.request.ImageResult
 import com.example.data.telegram.DriveLog
@@ -26,9 +27,13 @@ class DriveMediaInterceptor(
 
     override suspend fun intercept(chain: Interceptor.Chain): ImageResult {
         val request = chain.request
+        // The gallery passes "file:///data/...jpg?rev=3" and the annotation screen
+        // appends a cache-busting query. Matching only bare paths meant every one
+        // of those slipped past the interceptor straight into a missing file.
         val path = when (val data = request.data) {
             is File -> data.absolutePath
-            is String -> data.takeIf { it.startsWith('/') }
+            is Uri -> data.takeIf { it.scheme == null || it.scheme == "file" }?.path
+            is String -> data.toLocalPath()
             else -> null
         } ?: return chain.proceed(request)
 
@@ -42,6 +47,16 @@ class DriveMediaInterceptor(
 
         DriveLog.d(TAG, "Served ${fetched.name} from the drive")
         return chain.proceed(request.newBuilder().data(fetched).build())
+    }
+
+    /** Strips the file scheme and any query suffix, or null if not a local path. */
+    private fun String.toLocalPath(): String? {
+        val withoutScheme = when {
+            startsWith("file://") -> removePrefix("file://")
+            startsWith('/') -> this
+            else -> return null
+        }
+        return withoutScheme.substringBefore('?').takeIf { it.startsWith('/') }
     }
 
     companion object {

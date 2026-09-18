@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.sp
 import com.example.data.local.entity.ImageEntity
 import com.example.data.local.entity.SectionEntity
 import com.example.utils.MediaActions
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun PageSectionCard(
@@ -50,14 +52,14 @@ fun PageSectionCard(
     val context = LocalContext.current
 
     val (badgeColor, typeIcon, typeLabel) = when (section.sectionType.uppercase()) {
-        "ANATOMY" -> Triple(MaterialTheme.colorScheme.tertiary, Icons.Default.Visibility, "ANATOMY & LANDMARKS")
-        "APPROACH" -> Triple(MaterialTheme.colorScheme.primary, Icons.Default.MedicalServices, "SURGICAL APPROACH")
-        "REDUCTION" -> Triple(MaterialTheme.colorScheme.secondary, Icons.Default.PanTool, "REDUCTION MANEUVER")
-        "FIXATION" -> Triple(MaterialTheme.colorScheme.primary, Icons.Default.Healing, "FIXATION CONSTRUCT")
-        "PEARLS" -> Triple(MaterialTheme.colorScheme.tertiary, Icons.Default.Psychology, "SURGICAL PEARLS")
-        "COMPLICATIONS" -> Triple(MaterialTheme.colorScheme.error, Icons.Default.Warning, "COMPLICATIONS & PITFALLS")
-        "REHAB" -> Triple(MaterialTheme.colorScheme.secondary, Icons.Default.Speed, "REHABILITATION")
-        else -> Triple(MaterialTheme.colorScheme.primary, Icons.Default.MedicalServices, section.sectionType)
+        "ANATOMY" -> Triple(MaterialTheme.colorScheme.tertiary, Icons.Default.Visibility, stringResource(R.string.section_type_anatomy))
+        "APPROACH" -> Triple(MaterialTheme.colorScheme.primary, Icons.Default.MedicalServices, stringResource(R.string.section_type_approach))
+        "REDUCTION" -> Triple(MaterialTheme.colorScheme.secondary, Icons.Default.PanTool, stringResource(R.string.section_type_reduction))
+        "FIXATION" -> Triple(MaterialTheme.colorScheme.primary, Icons.Default.Healing, stringResource(R.string.section_type_fixation))
+        "PEARLS" -> Triple(MaterialTheme.colorScheme.tertiary, Icons.Default.Psychology, stringResource(R.string.section_type_pearls))
+        "COMPLICATIONS" -> Triple(MaterialTheme.colorScheme.error, Icons.Default.Warning, stringResource(R.string.section_type_complications))
+        "REHAB" -> Triple(MaterialTheme.colorScheme.secondary, Icons.Default.Speed, stringResource(R.string.section_type_rehab))
+        else -> Triple(MaterialTheme.colorScheme.primary, Icons.Default.MedicalServices, if (section.sectionType.equals("OVERVIEW", true)) stringResource(R.string.section_type_overview) else section.sectionType)
     }
 
     Card(
@@ -124,7 +126,7 @@ fun PageSectionCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Copy Section",
+                            contentDescription = stringResource(R.string.page_section_card_copy_section),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             modifier = Modifier.size(18.dp)
                         )
@@ -140,7 +142,7 @@ fun PageSectionCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
-                            contentDescription = "Share Section",
+                            contentDescription = stringResource(R.string.page_section_card_share_section),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             modifier = Modifier.size(18.dp)
                         )

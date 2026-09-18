@@ -1,5 +1,8 @@
 package com.example.ui.screens.storage
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,7 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDone
@@ -35,6 +38,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -58,12 +63,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.local.entity.TransferDirection
 import com.example.data.local.entity.TransferState
+import com.example.data.storage.StorageObjectKind
 import com.example.data.prefs.CachePolicy
-import com.example.data.prefs.SyncMode
+import com.example.data.prefs.SyncFrequency
 import com.example.data.storage.StorageBackend
 import com.example.data.telegram.TelegramAuthState
 import com.example.data.telegram.TelegramConnectionState
@@ -72,6 +80,8 @@ import com.example.viewmodel.TelegramDriveSettingsViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 /**
  * The Telegram Drive section of Settings.
@@ -112,7 +122,7 @@ fun TelegramDriveSettingsScreen(
                 }) { Text(action.confirmLabel) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmAction = null }) { Text("Cancel") }
+                TextButton(onClick = { confirmAction = null }) { Text(stringResource(R.string.action_cancel)) }
             }
         )
     }
@@ -122,10 +132,10 @@ fun TelegramDriveSettingsScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Telegram Drive") },
+                title = { Text(stringResource(R.string.drive_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 }
             )
@@ -139,28 +149,29 @@ fun TelegramDriveSettingsScreen(
                 item { ConnectionCard(state) }
 
                 item {
-                    DriveSection("STORAGE BACKEND") {
-                        BackendRow(
-                            label = "Local storage",
-                            description = "Records stay on this device only. This is the default.",
-                            selected = state.settings.backend == StorageBackend.LOCAL,
-                            onClick = { viewModel.selectBackend(StorageBackend.LOCAL) }
-                        )
-                        BackendRow(
-                            label = "Telegram Drive",
-                            description = if (state.settings.setupCompleted) {
-                                "Encrypted copies in your private Telegram channel."
+                    DriveSection(stringResource(R.string.drive_sec_backup)) {
+                        // Not a choice of where data lives any more. Patients and
+                        // media are always written to this device; the drive is an
+                        // encrypted second copy you can lean on to free space.
+                        DriveToggleRow(
+                            title = stringResource(R.string.drive_backup_toggle),
+                            subtitle = if (state.settings.setupCompleted) {
+stringResource(R.string.drive_backup_on_subtitle)
                             } else {
-                                "Not set up yet — tap Run setup below."
+                                stringResource(R.string.drive_backup_off_subtitle)
                             },
-                            selected = state.settings.backend == StorageBackend.TELEGRAM,
-                            onClick = { viewModel.selectBackend(StorageBackend.TELEGRAM) }
+                            checked = state.settings.backend == StorageBackend.TELEGRAM,
+                            onChange = { enabled ->
+                                viewModel.selectBackend(
+                                    if (enabled) StorageBackend.TELEGRAM else StorageBackend.LOCAL
+                                )
+                            }
                         )
                         if (!state.settings.setupCompleted) {
                             DriveActionRow(
                                 icon = Icons.Default.CloudUpload,
-                                title = "Run Telegram Drive setup",
-                                subtitle = "Link an account and create your private drive",
+                                title = stringResource(R.string.drive_run_setup),
+                                subtitle = stringResource(R.string.drive_run_setup_subtitle),
                                 onClick = onNavigateToSetup
                             )
                         }
@@ -168,13 +179,24 @@ fun TelegramDriveSettingsScreen(
                 }
 
                 if (state.settings.setupCompleted) {
-                    item { DriveSection("ACCOUNT") { AccountRows(state, viewModel, onNavigateToSetup) { confirmAction = it } } }
-                    item { DriveSection("STORAGE USE") { UsageRows(state) } }
-                    item { DriveSection("SYNCHRONISATION") { SyncRows(state, viewModel) } }
-                    item { DriveSection("TRANSFERS") { TransferRows(state, viewModel) } }
-                    item { DriveSection("CACHE") { CacheRows(state, viewModel) } }
-                    item { DriveSection("MIGRATION") { MigrationRows(viewModel) { confirmAction = it } } }
-                    item { DriveSection("MAINTENANCE") { MaintenanceRows(viewModel, onNavigateToDiagnostics) { confirmAction = it } } }
+                    item { DriveSection(stringResource(R.string.drive_sec_account)) { AccountRows(state, viewModel, onNavigateToSetup) { confirmAction = it } } }
+                    item {
+                        DriveSection(stringResource(R.string.passphrase_section_header)) {
+                            PassphraseRows(
+                                ui = state.passphrase,
+                                onSave = viewModel::savePassphrase,
+                                onUnlock = viewModel::unlockDrive,
+                                onRecheck = viewModel::refreshPassphrase,
+                                onDialogClosed = viewModel::clearPassphraseOutcome
+                            )
+                        }
+                    }
+                    item { DriveSection(stringResource(R.string.drive_sec_usage)) { UsageRows(state) } }
+                    item { DriveSection(stringResource(R.string.drive_sec_sync)) { SyncRows(state, viewModel) } }
+                    item { DriveSection(stringResource(R.string.drive_sec_transfers)) { TransferRows(state, viewModel) } }
+                    item { DriveSection(stringResource(R.string.drive_sec_cache)) { CacheRows(state, viewModel) } }
+                    item { DriveSection(stringResource(R.string.drive_sec_migration)) { MigrationRows(viewModel) { confirmAction = it } } }
+                    item { DriveSection(stringResource(R.string.drive_sec_maintenance)) { MaintenanceRows(viewModel, onNavigateToDiagnostics) { confirmAction = it } } }
                     item { TransferHistoryCard(state) }
                 }
 
@@ -237,11 +259,11 @@ private fun ConnectionCard(state: DriveSettingsUiState) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = when {
-                        !state.settings.setupCompleted -> "Not set up"
-                        connected -> "Connected"
+                        !state.settings.setupCompleted -> stringResource(R.string.drive_status_not_set_up)
+                        connected -> stringResource(R.string.drive_status_connected)
                         state.authState is TelegramAuthState.Failed ->
                             (state.authState as TelegramAuthState.Failed).message
-                        else -> "Connecting…"
+                        else -> stringResource(R.string.drive_status_connecting)
                     },
                     style = MaterialTheme.typography.titleMedium
                 )
@@ -256,10 +278,10 @@ private fun ConnectionCard(state: DriveSettingsUiState) {
                         }
                         append(
                             when (state.connection) {
-                                TelegramConnectionState.READY -> "network ready"
-                                TelegramConnectionState.UPDATING -> "updating"
-                                TelegramConnectionState.CONNECTING -> "connecting"
-                                TelegramConnectionState.WAITING_FOR_NETWORK -> "offline"
+                                TelegramConnectionState.READY -> stringResource(R.string.drive_net_ready)
+                                TelegramConnectionState.UPDATING -> stringResource(R.string.drive_net_updating)
+                                TelegramConnectionState.CONNECTING -> stringResource(R.string.drive_net_connecting)
+                                TelegramConnectionState.WAITING_FOR_NETWORK -> stringResource(R.string.drive_net_offline)
                             }
                         )
                     },
@@ -267,7 +289,7 @@ private fun ConnectionCard(state: DriveSettingsUiState) {
                 )
                 if (state.settings.lastSyncAt > 0) {
                     Text(
-                        text = "Last sync ${formatTime(state.settings.lastSyncAt)}",
+                        text = stringResource(R.string.drive_last_sync, formatTime(state.settings.lastSyncAt)),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -286,31 +308,32 @@ private fun AccountRows(
 ) {
     DriveActionRow(
         icon = Icons.Default.Refresh,
-        title = "Reconnect",
-        subtitle = "Restart the Telegram session using stored credentials",
+        title = stringResource(R.string.drive_reconnect),
+        subtitle = stringResource(R.string.drive_reconnect_subtitle),
         onClick = viewModel::reconnect
     )
     DriveActionRow(
         icon = Icons.Default.CloudUpload,
-        title = "Re-run setup",
-        subtitle = "Link a different account or rebuild the drive",
+        title = stringResource(R.string.drive_rerun_setup),
+        subtitle = stringResource(R.string.drive_rerun_setup_subtitle),
         onClick = onNavigateToSetup
     )
     state.keyFingerprint?.let {
-        DriveInfoRow("Encryption key", "Fingerprint $it — keep this device to keep access")
+        DriveInfoRow(stringResource(R.string.passphrase_key_row_title), stringResource(R.string.passphrase_key_row_value, it))
     }
+    val signOutTitle = stringResource(R.string.telegram_drive_settings_sign_out_of_telegram)
+    val signOutBody = stringResource(R.string.drive_sign_out_body)
+    val signOutLabel = stringResource(R.string.telegram_drive_settings_sign_out)
     DriveActionRow(
         icon = Icons.Default.Logout,
-        title = "Sign out of Telegram",
-        subtitle = "Reverts to local storage. Nothing is deleted on either side.",
+        title = stringResource(R.string.drive_sign_out),
+        subtitle = stringResource(R.string.drive_sign_out_subtitle),
         onClick = {
             onConfirm(
                 ConfirmAction(
-                    title = "Sign out of Telegram?",
-                    body = "Ortho Tips will switch back to local storage. Your local files " +
-                            "stay on this device and the drive channel stays in your Telegram " +
-                            "account. Nothing is deleted.",
-                    confirmLabel = "Sign out",
+                    title = signOutTitle,
+                    body = signOutBody,
+                    confirmLabel = signOutLabel,
                     onConfirm = viewModel::logout
                 )
             )
@@ -322,81 +345,119 @@ private fun AccountRows(
 private fun UsageRows(state: DriveSettingsUiState) {
     state.localUsage?.let {
         DriveInfoRow(
-            "Local storage",
-            "${formatBytes(it.usedBytes)} across ${it.objectCount} files • " +
-                    "${formatBytes(it.availableBytes)} free on device"
+            stringResource(R.string.drive_local_storage),
+            stringResource(R.string.drive_local_usage, formatBytes(it.usedBytes), it.objectCount, formatBytes(it.availableBytes))
         )
     }
     state.driveUsage?.let {
         DriveInfoRow(
-            "Telegram Drive",
-            "${formatBytes(it.usedBytes)} across ${it.objectCount} objects • " +
-                    "no account quota, 2 GB per file (4 GB with Premium)"
+            stringResource(R.string.drive_title),
+            stringResource(R.string.drive_remote_usage, formatBytes(it.usedBytes), it.objectCount)
         )
     }
 }
 
 @Composable
 private fun SyncRows(state: DriveSettingsUiState, viewModel: TelegramDriveSettingsViewModel) {
+    var frequencyMenuOpen by remember { mutableStateOf(false) }
+    Column(modifier = Modifier.padding(14.dp)) {
+        Text(stringResource(R.string.drive_frequency_title), style = MaterialTheme.typography.titleSmall)
+        Text(
+            text = stringResource(R.string.drive_frequency_explainer),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(10.dp))
+        Box {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { frequencyMenuOpen = true }
+                    .padding(vertical = 12.dp, horizontal = 4.dp)
+            ) {
+                Text(
+                    text = state.settings.syncFrequency.label,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(Icons.Default.ArrowDropDown, contentDescription = stringResource(R.string.telegram_drive_settings_change_frequency))
+            }
+            DropdownMenu(
+                expanded = frequencyMenuOpen,
+                onDismissRequest = { frequencyMenuOpen = false }
+            ) {
+                SyncFrequency.entries.forEach { frequency ->
+                    DropdownMenuItem(
+                        text = { Text(frequency.label) },
+                        onClick = {
+                            frequencyMenuOpen = false
+                            viewModel.setSyncFrequency(frequency)
+                        },
+                        leadingIcon = {
+                            if (state.settings.syncFrequency == frequency) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null)
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
     DriveToggleRow(
-        title = "Automatic synchronisation",
-        subtitle = "Queue changes as you work instead of only on demand",
-        checked = state.settings.syncMode == SyncMode.AUTOMATIC,
-        onChange = { viewModel.setSyncMode(if (it) SyncMode.AUTOMATIC else SyncMode.MANUAL) }
-    )
-    DriveToggleRow(
-        title = "Background synchronisation",
-        subtitle = "Run a periodic sync even when Ortho Tips is closed",
+        title = stringResource(R.string.drive_background_sync),
+        subtitle = stringResource(R.string.drive_background_sync_subtitle),
         checked = state.settings.backgroundSyncEnabled,
         onChange = viewModel::setBackgroundSync
     )
     DriveToggleRow(
-        title = "Sync on Wi-Fi only",
-        subtitle = "Radiographs are large; this avoids mobile data charges",
+        title = stringResource(R.string.drive_wifi_only),
+        subtitle = stringResource(R.string.drive_wifi_only_subtitle),
         checked = state.settings.syncOnWifiOnly,
         onChange = viewModel::setWifiOnly
     )
     DriveToggleRow(
-        title = "Sync while charging only",
-        subtitle = "Defers transfers until the phone is on a charger",
+        title = stringResource(R.string.drive_charging_only),
+        subtitle = stringResource(R.string.drive_charging_only_subtitle),
         checked = state.settings.syncWhileChargingOnly,
         onChange = viewModel::setChargingOnly
     )
     DriveToggleRow(
-        title = "Encrypt uploads",
-        subtitle = "AES-256 before anything leaves the device. Recommended for patient data.",
+        title = stringResource(R.string.drive_encrypt_uploads),
+        subtitle = stringResource(R.string.drive_encrypt_uploads_subtitle),
         checked = state.settings.encryptUploads,
         onChange = viewModel::setEncryptUploads
     )
     DriveToggleRow(
-        title = "Keep version history",
-        subtitle = "Retain superseded copies in the drive instead of replacing them",
+        title = stringResource(R.string.drive_version_history),
+        subtitle = stringResource(R.string.drive_version_history_subtitle),
         checked = state.settings.keepVersionHistory,
         onChange = viewModel::setKeepVersionHistory
     )
     DriveActionRow(
         icon = Icons.Default.Sync,
-        title = "Synchronise now",
-        subtitle = "Run an incremental sync straight away",
+        title = stringResource(R.string.drive_sync_now),
+        subtitle = stringResource(R.string.drive_sync_now_subtitle),
         onClick = { viewModel.syncNow(full = false) }
     )
     DriveActionRow(
         icon = Icons.Default.Sync,
-        title = "Full synchronisation",
-        subtitle = "Re-examine every object rather than only what changed",
+        title = stringResource(R.string.drive_full_sync),
+        subtitle = stringResource(R.string.drive_full_sync_subtitle),
         onClick = { viewModel.syncNow(full = true) }
     )
 }
 
 @Composable
 private fun TransferRows(state: DriveSettingsUiState, viewModel: TelegramDriveSettingsViewModel) {
-    DriveInfoRow("Pending uploads", "${state.pendingUploads} waiting")
-    DriveInfoRow("Pending downloads", "${state.pendingDownloads} waiting")
+    DriveInfoRow(stringResource(R.string.drive_pending_uploads), stringResource(R.string.drive_waiting_count, state.pendingUploads))
+    DriveInfoRow(stringResource(R.string.drive_pending_downloads), stringResource(R.string.drive_waiting_count, state.pendingDownloads))
     if (state.failedTransfers > 0) {
         DriveActionRow(
             icon = Icons.Default.Refresh,
-            title = "Retry failed transfers",
-            subtitle = "${state.failedTransfers} failed and can be requeued",
+            title = stringResource(R.string.drive_retry_failed),
+            subtitle = stringResource(R.string.drive_failed_requeue, state.failedTransfers),
             onClick = viewModel::retryFailedTransfers
         )
     }
@@ -405,7 +466,7 @@ private fun TransferRows(state: DriveSettingsUiState, viewModel: TelegramDriveSe
 @Composable
 private fun CacheRows(state: DriveSettingsUiState, viewModel: TelegramDriveSettingsViewModel) {
     Column(modifier = Modifier.padding(14.dp)) {
-        Text("What stays on this device", style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.drive_cache_title), style = MaterialTheme.typography.titleSmall)
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             CachePolicy.entries.forEach { policy ->
@@ -415,9 +476,9 @@ private fun CacheRows(state: DriveSettingsUiState, viewModel: TelegramDriveSetti
                     label = {
                         Text(
                             when (policy) {
-                                CachePolicy.KEEP_EVERYTHING -> "Everything"
-                                CachePolicy.HYBRID -> "Recent"
-                                CachePolicy.MINIMAL -> "Minimal"
+                                CachePolicy.KEEP_EVERYTHING -> stringResource(R.string.drive_cache_everything)
+                                CachePolicy.HYBRID -> stringResource(R.string.drive_cache_recent)
+                                CachePolicy.MINIMAL -> stringResource(R.string.drive_cache_minimal)
                             }
                         )
                     }
@@ -426,7 +487,7 @@ private fun CacheRows(state: DriveSettingsUiState, viewModel: TelegramDriveSetti
         }
         Spacer(Modifier.height(12.dp))
         Text(
-            text = "Cache limit: ${state.settings.cacheBudgetMb} MB",
+            text = stringResource(R.string.drive_cache_limit, state.settings.cacheBudgetMb),
             style = MaterialTheme.typography.bodySmall
         )
         Slider(
@@ -438,8 +499,8 @@ private fun CacheRows(state: DriveSettingsUiState, viewModel: TelegramDriveSetti
     }
     DriveActionRow(
         icon = Icons.Default.DeleteSweep,
-        title = "Clear cache",
-        subtitle = "Frees downloaded copies only. Drive content is not affected.",
+        title = stringResource(R.string.drive_clear_cache),
+        subtitle = stringResource(R.string.drive_clear_cache_subtitle),
         onClick = viewModel::clearCache
     )
 }
@@ -449,17 +510,22 @@ private fun MigrationRows(
     viewModel: TelegramDriveSettingsViewModel,
     onConfirm: (ConfirmAction) -> Unit
 ) {
+    val copyTitle = stringResource(R.string.telegram_drive_settings_copy_everything_to_telegram_drive)
+    val copyBody = stringResource(R.string.drive_copy_up_body)
+    val copyLabel = stringResource(R.string.telegram_drive_settings_start)
+    val restoreTitle = stringResource(R.string.telegram_drive_settings_restore_from_telegram_drive)
+    val restoreBody = stringResource(R.string.drive_restore_body)
+    val restoreLabel = stringResource(R.string.action_restore)
     DriveActionRow(
         icon = Icons.Default.CloudUpload,
-        title = "Copy local content to the drive",
-        subtitle = "Uploads everything on this device. Local copies are kept.",
+        title = stringResource(R.string.drive_copy_up),
+        subtitle = stringResource(R.string.drive_copy_up_subtitle),
         onClick = {
             onConfirm(
                 ConfirmAction(
-                    title = "Copy everything to Telegram Drive?",
-                    body = "Every patient image, document and record on this device will be " +
-                            "queued for upload. Local files are kept exactly as they are.",
-                    confirmLabel = "Start",
+                    title = copyTitle,
+                    body = copyBody,
+                    confirmLabel = copyLabel,
                     onConfirm = viewModel::migrateLocalToDrive
                 )
             )
@@ -467,15 +533,14 @@ private fun MigrationRows(
     )
     DriveActionRow(
         icon = Icons.Default.Download,
-        title = "Restore drive content to this device",
-        subtitle = "Downloads everything from the drive and merges records.",
+        title = stringResource(R.string.drive_restore_down),
+        subtitle = stringResource(R.string.drive_restore_down_subtitle),
         onClick = {
             onConfirm(
                 ConfirmAction(
-                    title = "Restore from Telegram Drive?",
-                    body = "Records from the drive are merged into this device. Rows that " +
-                            "exist only here are kept — nothing local is erased.",
-                    confirmLabel = "Restore",
+                    title = restoreTitle,
+                    body = restoreBody,
+                    confirmLabel = restoreLabel,
                     onConfirm = viewModel::migrateDriveToLocal
                 )
             )
@@ -489,23 +554,25 @@ private fun MaintenanceRows(
     onNavigateToDiagnostics: () -> Unit,
     onConfirm: (ConfirmAction) -> Unit
 ) {
+    val rebuildTitle = stringResource(R.string.telegram_drive_settings_rebuild_the_manifest)
+    val rebuildLabel = stringResource(R.string.telegram_drive_settings_rebuild)
+    val rebuildBody = stringResource(R.string.drive_rebuild_body)
     DriveActionRow(
         icon = Icons.Default.VerifiedUser,
-        title = "Verify integrity",
-        subtitle = "Checks every indexed object still resolves and hashes correctly",
+        title = stringResource(R.string.drive_verify),
+        subtitle = stringResource(R.string.drive_verify_subtitle),
         onClick = viewModel::verifyIntegrity
     )
     DriveActionRow(
         icon = Icons.Default.Restore,
-        title = "Rebuild manifest",
-        subtitle = "Re-reads the drive to repair the local index. Nothing is uploaded.",
+        title = stringResource(R.string.drive_rebuild),
+        subtitle = stringResource(R.string.drive_rebuild_subtitle),
         onClick = {
             onConfirm(
                 ConfirmAction(
-                    title = "Rebuild the manifest?",
-                    body = "The local index is discarded and rebuilt from the drive channel. " +
-                            "No file is uploaded, downloaded or deleted.",
-                    confirmLabel = "Rebuild",
+                    title = rebuildTitle,
+                    body = rebuildBody,
+                    confirmLabel = rebuildLabel,
                     onConfirm = viewModel::rebuildManifest
                 )
             )
@@ -513,8 +580,8 @@ private fun MaintenanceRows(
     )
     DriveActionRow(
         icon = Icons.Default.BugReport,
-        title = "Diagnostics and logs",
-        subtitle = "Transfer history, storage health and recent events",
+        title = stringResource(R.string.drive_diagnostics),
+        subtitle = stringResource(R.string.drive_diagnostics_subtitle),
         onClick = onNavigateToDiagnostics
     )
 }
@@ -522,11 +589,44 @@ private fun MaintenanceRows(
 @Composable
 private fun TransferHistoryCard(state: DriveSettingsUiState) {
     if (state.history.isEmpty()) return
-    DriveSection("RECENT TRANSFERS") {
+    DriveSection(stringResource(R.string.transfer_history_title)) {
         state.history.take(12).forEach { row ->
+            // A photo is sent as two objects that share a file name: the full
+            // image and its small preview. Saying which one it is stops them
+            // looking like duplicates.
+            val kindLabel = stringResource(
+                when (row.kind) {
+                    StorageObjectKind.PATIENT_IMAGE.name -> R.string.transfer_kind_photo
+                    StorageObjectKind.PATIENT_THUMBNAIL.name -> R.string.transfer_kind_thumbnail
+                    StorageObjectKind.PATIENT_DOCUMENT.name -> R.string.transfer_kind_document
+                    StorageObjectKind.DATABASE_SNAPSHOT.name -> R.string.transfer_kind_records
+                    else -> R.string.transfer_kind_file
+                }
+            )
+            val directionLabel = stringResource(
+                if (row.direction == TransferDirection.UPLOAD.name) R.string.transfer_direction_upload
+                else R.string.transfer_direction_download
+            )
+            val stateLabel = stringResource(
+                when (row.state) {
+                    TransferState.PENDING.name -> R.string.transfer_state_pending
+                    TransferState.RUNNING.name -> R.string.transfer_state_running
+                    TransferState.SUCCEEDED.name -> R.string.transfer_state_done
+                    TransferState.FAILED.name -> R.string.transfer_state_failed
+                    else -> R.string.transfer_state_cancelled
+                }
+            )
+            val isThumbnail = row.kind == StorageObjectKind.PATIENT_THUMBNAIL.name
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(14.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        start = if (isThumbnail) 30.dp else 14.dp,
+                        end = 14.dp,
+                        top = if (isThumbnail) 4.dp else 12.dp,
+                        bottom = if (isThumbnail) 12.dp else 4.dp
+                    )
             ) {
                 Icon(
                     imageVector = when (row.state) {
@@ -535,18 +635,19 @@ private fun TransferHistoryCard(state: DriveSettingsUiState) {
                         else -> Icons.Default.Sync
                     },
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp)
+                    tint = if (row.state == TransferState.FAILED.name) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(if (isThumbnail) 14.dp else 18.dp)
                 )
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = row.storageKey.substringAfterLast('/'),
-                        style = MaterialTheme.typography.bodyMedium
+                        text = "$kindLabel · ${row.storageKey.substringAfterLast('/').take(8)}",
+                        style = if (isThumbnail) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        text = "${row.direction.lowercase()} • ${row.state.lowercase()}" +
-                                (row.lastError?.let { " • $it" } ?: ""),
+                        text = "$directionLabel • $stateLabel" +
+                                (row.lastError?.takeIf { row.state == TransferState.FAILED.name }?.let { " • $it" } ?: ""),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -567,53 +668,21 @@ private fun TransferHistoryCard(state: DriveSettingsUiState) {
 @Composable
 internal fun DriveSection(title: String, content: @Composable () -> Unit) {
     Column {
+        // Same look as the Settings sections: one visual language across both screens.
         Text(
             text = title,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 6.dp, bottom = 8.dp)
+            modifier = Modifier
+                .padding(start = 6.dp, bottom = 8.dp)
+                .semantics { heading() }
         )
         Card(
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column { content() }
-        }
-    }
-}
-
-@Composable
-private fun BackendRow(
-    label: String,
-    description: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(14.dp)
-    ) {
-        Icon(
-            imageVector = if (selected) Icons.Default.CheckCircle else Icons.Default.CloudOff,
-            contentDescription = null,
-            tint = if (selected) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.outline
-            },
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.titleSmall)
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }

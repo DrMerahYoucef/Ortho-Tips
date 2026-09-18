@@ -22,6 +22,10 @@ android {
     versionName = "1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+    // Size: only ship native code for 64-bit ARM phones. TDLib and ML Kit otherwise
+    // bundle their .so files for four CPU types, which was most of the APK.
+    ndk { abiFilters += listOf("arm64-v8a") }
   }
 
   signingConfigs {
@@ -43,7 +47,9 @@ android {
   buildTypes {
     release {
       isCrunchPngs = false
-      isMinifyEnabled = false
+      // Size: strip unused library code (the extended icon set alone is huge) and resources.
+      isMinifyEnabled = true
+      isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
@@ -57,10 +63,10 @@ android {
     compose = true
     buildConfig = true
   }
-  // TDLib ships prebuilt .so files for four ABIs. Uncompressed packaging is
-  // required on API 23+ and lets the loader map them straight out of the APK.
+  // Size: store TDLib's native library compressed inside the APK. Android extracts
+  // it at install time, so the download is much smaller.
   packaging {
-    jniLibs { useLegacyPackaging = false }
+    jniLibs { useLegacyPackaging = true }
   }
   testOptions { unitTests { isIncludeAndroidResources = true } }
   dependenciesInfo {
@@ -87,7 +93,6 @@ googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.W
 // This makes it easy to add them back in the future if needed.
 dependencies {
   implementation(platform(libs.androidx.compose.bom))
-  implementation(platform(libs.firebase.bom))
   // implementation(libs.accompanist.permissions)
   implementation(libs.androidx.activity.compose)
   implementation(libs.androidx.camera.camera2)
@@ -99,6 +104,9 @@ dependencies {
   implementation(libs.mlkit.barcode.scanning)
   implementation(libs.zxing.core)
   implementation(libs.androidx.exifinterface)
+  // Fingerprint / face / PIN prompt for the app lock. Pulls in androidx.fragment,
+  // which MainActivity now extends so the prompt can attach to it.
+  implementation(libs.androidx.biometric)
   implementation(libs.androidx.compose.material.icons.core)
   implementation(libs.androidx.compose.material.icons.extended)
   implementation(libs.androidx.compose.material3)
@@ -114,8 +122,6 @@ dependencies {
   implementation(libs.androidx.room.ktx)
   implementation(libs.androidx.room.runtime)
   implementation(libs.coil.compose)
-  implementation(libs.converter.moshi)
-  implementation(libs.firebase.ai)
   // Uncomment to use Firestore:
   // implementation(libs.firebase.firestore)
 
@@ -125,15 +131,10 @@ dependencies {
   // implementation(libs.androidx.credentials)
   // implementation(libs.androidx.credentials.play.services)
   // implementation(libs.googleid)
-  implementation(libs.firebase.appcheck.recaptcha)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.kotlinx.serialization.json)
-  implementation(libs.logging.interceptor)
-  implementation(libs.moshi.kotlin)
-  implementation(libs.okhttp)
   // implementation(libs.play.services.location)
-  implementation(libs.retrofit)
 
   // --- Telegram Drive backend (optional storage provider) -------------------
   implementation(libs.tdlib)
@@ -159,5 +160,4 @@ dependencies {
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   debugImplementation(libs.androidx.compose.ui.tooling)
   "ksp"(libs.androidx.room.compiler)
-  "ksp"(libs.moshi.kotlin.codegen)
 }

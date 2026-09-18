@@ -47,6 +47,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.importer.ImportState
 import com.example.viewmodel.ImportViewModel
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,7 +74,7 @@ fun ImportScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Import Clinical Database",
+                        text = stringResource(R.string.import_import_clinical_database),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -84,7 +86,7 @@ fun ImportScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                 },
@@ -105,14 +107,14 @@ fun ImportScreen(
         ) {
             item {
                 Text(
-                    text = "Clinical Database Importer",
+                    text = stringResource(R.string.import_clinical_database_importer),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Select a .zip database archive from your device to load bones, sections, chapter text, and figures into Ortho Tips' offline library.",
+                    text = stringResource(R.string.import_select_a_zip_database_archive),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -138,14 +140,14 @@ fun ImportScreen(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "Expected format",
+                                text = stringResource(R.string.import_expected_format),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "A .zip archive containing a bones.json file at its root plus one folder per bone (matching the bone's ID) holding that bone's .jpg figures.",
+                                text = stringResource(R.string.import_a_zip_archive_containing_a),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -171,7 +173,7 @@ fun ImportScreen(
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Select ZIP Database File", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.import_select_zip_database_file), fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -208,7 +210,7 @@ fun ImportScreen(
                             CircularProgressIndicator(modifier = Modifier.size(20.dp))
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = state.progressMessage,
+                                text = stringResource(R.string.import_progress),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -231,20 +233,25 @@ fun ImportScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = "Success",
+                                    contentDescription = stringResource(R.string.import_success),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(28.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        text = "Import Succeeded",
+                                        text = stringResource(R.string.import_import_succeeded),
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                     Text(
-                                        text = state.details,
+                                        text = stringResource(
+                                            R.string.import_summary,
+                                            state.summary.boneCount,
+                                            state.summary.chapterCount,
+                                            state.summary.figureCount
+                                        ),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
@@ -269,14 +276,14 @@ fun ImportScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Error,
-                                    contentDescription = "Error",
+                                    contentDescription = stringResource(R.string.import_error),
                                     tint = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.size(28.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        text = "Import Failed",
+                                        text = stringResource(R.string.import_import_failed),
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.error

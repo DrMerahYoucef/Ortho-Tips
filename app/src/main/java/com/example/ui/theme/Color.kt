@@ -50,30 +50,11 @@ val OrthoSurfaceVariantDark = Color(0xFF3F4849)
 val OrthoOnSurfaceVariantDark = Color(0xFFBFC8CA)
 val OrthoOutlineDark = Color(0xFF899294)
 
-// Clean Minimalism Pastel Accents (kept for existing note tags / cards)
-val PastelLavenderContainer = Color(0xFFE3DEF8)
-val PastelLavenderText = Color(0xFF241B5D)
-val PastelRoseContainer = Color(0xFFFFDAD9)
-val PastelRoseText = Color(0xFF410004)
-val PastelSageContainer = Color(0xFFD8E8CE)
-val PastelSageText = Color(0xFF15230A)
-val PastelAmberContainer = Color(0xFFFCE49A)
-val PastelAmberText = Color(0xFF261E00)
-val PastelSkyContainer = Color(0xFFC7E7F5)
-val PastelSkyText = Color(0xFF001E28)
-
-val MinimalNavContainer = Color(0xFFE7EFF1)
-val MinimalNavBorder = Color(0xFFDAE4E6)
-val MinimalNavActivePill = Color(0xFFCDE7ED)
-val MinimalNavActiveContent = Color(0xFF051F24)
-
-// Clinical & Badge Semantic Accents — each section type keeps a distinct,
-// instantly-recognizable hue so surgeons can identify content by color alone.
-val ClinicalPearl = Color(0xFF00677D)       // matches primary — "core reference"
-val ClinicalWarning = Color(0xFFA6720A)     // amber — caution, not yet danger
-val ClinicalDanger = Color(0xFFBA1A1A)      // red — irreversible/danger-zone content
-val ClinicalAnatomy = Color(0xFF6A4C93)     // violet — landmarks/anatomy
-val ClinicalApproach = Color(0xFF00707A)    // deep cyan — surgical approach
-val ClinicalFixation = Color(0xFF2E6B9E)    // steel blue — hardware/fixation
-val ClinicalRehab = Color(0xFF8C4A56)       // muted rose — postoperative/rehab
-val ClinicalBadgeBackground = Color(0x1F00677D)
+// Attendance ("the patient came"). Material 3 has no success role, so the green
+// lives here, with a dark variant, instead of being tinted from primary.
+val AttendedLight = Color(0xFF2E7D32)
+val AttendedContainerLight = Color(0xFFD3EED3)
+val OnAttendedContainerLight = Color(0xFF0B3A12)
+val AttendedDark = Color(0xFF8BD68E)
+val AttendedContainerDark = Color(0xFF1D3B20)
+val OnAttendedContainerDark = Color(0xFFBFF0C0)

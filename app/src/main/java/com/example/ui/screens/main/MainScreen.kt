@@ -1,63 +1,67 @@
 package com.example.ui.screens.main
 
+import android.content.Context
+import androidx.annotation.StringRes
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.PeopleOutline
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.R
 import com.example.di.AppModule
-import com.example.ui.screens.favorites.FavoritesScreen
+import com.example.ui.components.DriveSpaceBadge
+import com.example.ui.screens.agenda.AgendaScreen
 import com.example.ui.screens.home.HomeScreen
 import com.example.ui.screens.patients.PatientListScreen
-import com.example.ui.screens.search.SearchScreen
-import com.example.ui.screens.settings.SettingsScreen
+import com.example.viewmodel.AppointmentsViewModel
 import com.example.viewmodel.ClassificationViewModel
 import com.example.viewmodel.HomeViewModel
+import com.example.viewmodel.PatientDataTransferViewModel
 import com.example.viewmodel.PatientListViewModel
-import com.example.viewmodel.SavedViewModel
-import com.example.viewmodel.SearchViewModel
-import com.example.viewmodel.SettingsViewModel
+import com.example.viewmodel.ShiftsViewModel
 
-enum class NavigationItem(
-    val title: String,
-    val selectedIcon: androidx.compose.ui.graphics.vector.ImageVector,
-    val unselectedIcon: androidx.compose.ui.graphics.vector.ImageVector,
+/**
+ * The three top-level areas. Search, Saved and Settings are ordinary screens
+ * pushed on top (with a back arrow), not hidden tabs.
+ */
+enum class MainTab(
+    @StringRes val titleRes: Int,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector,
     val testTag: String
 ) {
-    STUDIES("Studies", Icons.Filled.MenuBook, Icons.Outlined.MenuBook, "nav_home"),
-    PATIENTS("Patients", Icons.Filled.People, Icons.Outlined.PeopleOutline, "nav_patients"),
-    SEARCH("Search", Icons.Filled.Search, Icons.Outlined.Search, "nav_search"),
-    SAVED("Saved", Icons.Filled.Bookmark, Icons.Outlined.BookmarkBorder, "nav_saved"),
-    SETTINGS("Settings", Icons.Filled.Settings, Icons.Outlined.Settings, "nav_settings")
+    STUDIES(R.string.nav_studies, Icons.Filled.MenuBook, Icons.Outlined.MenuBook, "nav_home"),
+    AGENDA(R.string.nav_agenda, Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth, "nav_agenda"),
+    PATIENTS(R.string.nav_patients, Icons.Filled.People, Icons.Outlined.PeopleOutline, "nav_patients")
 }
+
+private const val UI_PREFS = "ui_state"
+private const val KEY_LAST_TAB = "main_tab"
 
 @Composable
 fun MainScreen(
@@ -71,123 +75,115 @@ fun MainScreen(
     onNavigateToSurgeonProfile: () -> Unit,
     onNavigateToDataTransfer: () -> Unit,
     onNavigateToQrScanner: () -> Unit,
-    onNavigateToTelegramDrive: () -> Unit,
+    onNavigateToSearch: () -> Unit,
+    onNavigateToSaved: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selectedItem by rememberSaveable { mutableStateOf(NavigationItem.STUDIES) }
-
-    val homeViewModel: HomeViewModel = viewModel(
-        factory = HomeViewModel.provideFactory(appModule.orthoRepository)
-    )
-    val classificationViewModel: ClassificationViewModel = viewModel(
-        factory = ClassificationViewModel.provideFactory(appModule.classificationRepository)
-    )
-    val searchViewModel: SearchViewModel = viewModel(
-        factory = SearchViewModel.provideFactory(appModule.orthoRepository)
-    )
-    val savedViewModel: SavedViewModel = viewModel(
-        factory = SavedViewModel.provideFactory(appModule.orthoRepository)
-    )
-    val settingsViewModel: SettingsViewModel = viewModel(
-        factory = SettingsViewModel.provideFactory(
-            appModule.settingsRepository,
-            appModule.backupManager,
-            appModule.orthoRepository
+    val context = LocalContext.current
+    // The app reopens on the tab last used; a small file read once, like AppLocale.
+    val prefs = remember { context.getSharedPreferences(UI_PREFS, Context.MODE_PRIVATE) }
+    var selectedTab by rememberSaveable {
+        mutableStateOf(
+            prefs.getString(KEY_LAST_TAB, null)
+                ?.let { saved -> MainTab.entries.firstOrNull { it.name == saved } }
+                ?: MainTab.STUDIES
         )
-    )
-    val patientListViewModel: PatientListViewModel = viewModel(
-        factory = PatientListViewModel.provideFactory(appModule.patientRepository)
-    )
-    val dataTransferViewModel: com.example.viewmodel.PatientDataTransferViewModel = viewModel(
-        factory = com.example.viewmodel.PatientDataTransferViewModel.provideFactory(appModule.patientRepository)
-    )
-    val mainScreenContext = androidx.compose.ui.platform.LocalContext.current
+    }
+    fun select(tab: MainTab) {
+        selectedTab = tab
+        prefs.edit().putString(KEY_LAST_TAB, tab.name).apply()
+    }
+
+    // Keeps each tab's scroll position and sub-tab while another tab is shown.
+    val tabStates = rememberSaveableStateHolder()
 
     Scaffold(
         bottomBar = {
-            Surface(
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-                color = MaterialTheme.colorScheme.surface,
-                shadowElevation = 8.dp,
-                modifier = Modifier.testTag("main_bottom_nav_container")
-            ) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 0.dp,
-                    modifier = Modifier.testTag("main_bottom_nav")
-                ) {
-                    NavigationItem.entries.forEach { item ->
-                        val isSelected = selectedItem == item
-                        NavigationBarItem(
-                            selected = isSelected,
-                            onClick = { selectedItem = item },
-                            icon = {
-                                Icon(
-                                    imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
-                                    contentDescription = item.title
-                                )
-                            },
-                            label = {
-                                Text(
-                                    text = item.title,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                )
-                            },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
-                            ),
-                            modifier = Modifier.testTag(item.testTag)
-                        )
-                    }
+            NavigationBar(modifier = Modifier.testTag("main_bottom_nav")) {
+                MainTab.entries.forEach { tab ->
+                    val isSelected = selectedTab == tab
+                    NavigationBarItem(
+                        selected = isSelected,
+                        onClick = { select(tab) },
+                        icon = {
+                            val icon = if (isSelected) tab.selectedIcon else tab.unselectedIcon
+                            // Only Patients carries the badge, and only while backed-up
+                            // media is still taking local space.
+                            if (tab == MainTab.PATIENTS) {
+                                DriveSpaceBadge(refreshKey = selectedTab) { Icon(icon, contentDescription = null) }
+                            } else {
+                                Icon(icon, contentDescription = null)
+                            }
+                        },
+                        label = { Text(stringResource(tab.titleRes), maxLines = 1) },
+                        modifier = Modifier.testTag(tab.testTag)
+                    )
                 }
             }
         },
+        // The bar draws its own inset; each tab's app bar handles the status bar.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         modifier = modifier
-    ) { paddingValues ->
+    ) { padding ->
         Crossfade(
-            targetState = selectedItem,
+            targetState = selectedTab,
             label = "tab_crossfade",
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-        ) { currentTab ->
-            when (currentTab) {
-                NavigationItem.STUDIES -> HomeScreen(
-                    viewModel = homeViewModel,
-                    classificationViewModel = classificationViewModel,
-                    onNavigateToChapter = onNavigateToChapter,
-                    onNavigateToBoneDetail = onNavigateToBoneDetail,
-                    onNavigateToSearch = { selectedItem = NavigationItem.SEARCH },
-                    onNavigateToImport = onNavigateToImport,
-                    onNavigateToClassificationChapter = onNavigateToClassificationChapter
-                )
-                NavigationItem.PATIENTS -> PatientListScreen(
-                    viewModel = patientListViewModel,
-                    onNavigateToPatientDetail = onNavigateToPatientDetail,
-                    onNavigateToAddPatient = onNavigateToAddPatient,
-                    onNavigateToSurgeonProfile = onNavigateToSurgeonProfile,
-                    onNavigateToDataTransfer = onNavigateToDataTransfer,
-                    onNavigateToQrScanner = onNavigateToQrScanner,
-                    onExportSelected = { ids -> dataTransferViewModel.exportPatients(mainScreenContext, ids) }
-                )
-                NavigationItem.SEARCH -> SearchScreen(
-                    viewModel = searchViewModel,
-                    onNavigateToBoneDetail = onNavigateToBoneDetail
-                )
-                NavigationItem.SAVED -> FavoritesScreen(
-                    viewModel = savedViewModel,
-                    onNavigateToBoneDetail = onNavigateToBoneDetail
-                )
-                NavigationItem.SETTINGS -> SettingsScreen(
-                    viewModel = settingsViewModel,
-                    onNavigateToImport = onNavigateToImport,
-                    onNavigateToTelegramDrive = onNavigateToTelegramDrive
-                )
+                .padding(padding)
+                // Tells the tabs' own Scaffolds the bottom bar already covers the
+                // navigation bar, so no extra gap is added above it.
+                .consumeWindowInsets(padding)
+        ) { tab ->
+            tabStates.SaveableStateProvider(tab.name) {
+                // ViewModels are created when their tab is first shown, not all at
+                // launch. They live on the Main back-stack entry, so switching tabs
+                // keeps them.
+                when (tab) {
+                    MainTab.STUDIES -> HomeScreen(
+                        viewModel = viewModel(factory = HomeViewModel.provideFactory(appModule.orthoRepository)),
+                        classificationViewModel = viewModel<ClassificationViewModel>(
+                            factory = ClassificationViewModel.provideFactory(appModule.classificationRepository)
+                        ),
+                        onNavigateToChapter = onNavigateToChapter,
+                        onNavigateToBoneDetail = onNavigateToBoneDetail,
+                        onNavigateToSearch = onNavigateToSearch,
+                        onNavigateToSaved = onNavigateToSaved,
+                        onNavigateToImport = onNavigateToImport,
+                        onNavigateToSettings = onNavigateToSettings,
+                        onNavigateToClassificationChapter = onNavigateToClassificationChapter
+                    )
+
+                    MainTab.AGENDA -> AgendaScreen(
+                        appointmentsViewModel = viewModel<AppointmentsViewModel>(
+                            factory = AppointmentsViewModel.provideFactory(context)
+                        ),
+                        shiftsViewModel = viewModel<ShiftsViewModel>(
+                            factory = ShiftsViewModel.provideFactory(appModule.shiftRepository)
+                        ),
+                        onOpenPatient = onNavigateToPatientDetail,
+                        onOpenSettings = onNavigateToSettings
+                    )
+
+                    MainTab.PATIENTS -> {
+                        val dataTransferViewModel: PatientDataTransferViewModel = viewModel(
+                            factory = PatientDataTransferViewModel.provideFactory(appModule.patientRepository)
+                        )
+                        PatientListScreen(
+                            viewModel = viewModel<PatientListViewModel>(
+                                factory = PatientListViewModel.provideFactory(appModule.patientRepository)
+                            ),
+                            onNavigateToPatientDetail = onNavigateToPatientDetail,
+                            onNavigateToAddPatient = onNavigateToAddPatient,
+                            onNavigateToSurgeonProfile = onNavigateToSurgeonProfile,
+                            onNavigateToDataTransfer = onNavigateToDataTransfer,
+                            onNavigateToQrScanner = onNavigateToQrScanner,
+                            onNavigateToSettings = onNavigateToSettings,
+                            onExportSelected = { ids -> dataTransferViewModel.exportPatients(context, ids) }
+                        )
+                    }
+                }
             }
         }
     }

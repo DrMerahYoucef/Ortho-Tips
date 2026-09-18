@@ -118,3 +118,15 @@ fun PatientEntity.toSummary(): PatientSummary = PatientSummary(
     isArchived = isArchived,
     updatedAt = updatedAt
 )
+
+/** A timeline event plus who it belongs to, for the widget and daily overviews. */
+data class TimelineEventWithPatient(
+    val id: String,
+    val eventDate: Long,
+    val title: String,
+    val description: String,
+    val attendance: String,
+    val remark: String,
+    val patientName: String,
+    val patientId: String
+)

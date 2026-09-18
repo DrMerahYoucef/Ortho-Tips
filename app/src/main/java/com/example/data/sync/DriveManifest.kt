@@ -80,39 +80,68 @@ class ManifestCodec(
         }
     }
 
-    /** Returns null for captions that are not Ortho Tips manifests. */
-    fun decode(caption: String): DriveManifest? = runCatching {
-        when {
-            caption.startsWith(PREFIX_PLAIN) -> json.decodeFromString(
-                DriveManifest.serializer(),
-                caption.removePrefix(PREFIX_PLAIN)
-            )
+    /**
+     * Why a caption did not yield a manifest. The distinction matters: a foreign
+     * caption is noise, while an unreadable one means real content in the drive
+     * that this device has lost the key for — a very different problem, and one
+     * the user has to be told about rather than have silently skipped.
+     */
+    sealed interface Decoded {
+        data class Ok(val manifest: DriveManifest) : Decoded
+        data object NotOurs : Decoded
+        data object Unreadable : Decoded
+    }
 
-            caption.startsWith(PREFIX_ENCRYPTED) -> {
-                val key = wrappedKeyRepository.get(CryptoKeys.CONTENT) ?: return null
-                val plaintext = streamCrypto.decryptBytes(
-                    key,
-                    Base64.decode(caption.removePrefix(PREFIX_ENCRYPTED), Base64.NO_WRAP)
+    fun inspect(caption: String): Decoded = when {
+        caption.startsWith(PREFIX_PLAIN) ->
+            runCatching {
+                Decoded.Ok(
+                    json.decodeFromString(
+                        DriveManifest.serializer(),
+                        caption.removePrefix(PREFIX_PLAIN)
+                    )
                 )
-                json.decodeFromString(
-                    DriveManifest.serializer(),
-                    String(plaintext, Charsets.UTF_8)
-                )
+            }.getOrDefault(Decoded.Unreadable)
+
+        caption.startsWith(PREFIX_ENCRYPTED) -> {
+            val key = wrappedKeyRepository.get(CryptoKeys.CONTENT)
+            if (key == null) {
+                Decoded.Unreadable
+            } else {
+                runCatching {
+                    val plaintext = streamCrypto.decryptBytes(
+                        key,
+                        Base64.decode(caption.removePrefix(PREFIX_ENCRYPTED), Base64.NO_WRAP)
+                    )
+                    Decoded.Ok(
+                        json.decodeFromString(
+                            DriveManifest.serializer(),
+                            String(plaintext, Charsets.UTF_8)
+                        )
+                    )
+                }.getOrDefault(Decoded.Unreadable)
             }
-
-            else -> null
         }
-    }.getOrNull()
+
+        else -> Decoded.NotOurs
+    }
+
+    /** Returns null for captions that are not Ortho Tips manifests. */
+    fun decode(caption: String): DriveManifest? =
+        (inspect(caption) as? Decoded.Ok)?.manifest
 
     fun isEncryptedManifest(caption: String): Boolean = caption.startsWith(PREFIX_ENCRYPTED)
 
     /**
-     * True when the caption is an encrypted manifest this device cannot read,
-     * which means the content key was never created here — the signal that the
-     * drive belongs to another install and needs key recovery, not a wipe.
+     * True when the caption is one of ours but this device cannot read it.
+     *
+     * The earlier version only checked whether *a* content key existed, which
+     * missed the case that actually happens: a key exists, but it is a different
+     * one than the object was sealed with, so every decrypt silently fails and
+     * the content looks like it was never there.
      */
     fun isLocked(caption: String): Boolean =
-        isEncryptedManifest(caption) && !wrappedKeyRepository.exists(CryptoKeys.CONTENT)
+        isEncryptedManifest(caption) && inspect(caption) is Decoded.Unreadable
 
     companion object {
         private const val PREFIX_PLAIN = "ot1:"

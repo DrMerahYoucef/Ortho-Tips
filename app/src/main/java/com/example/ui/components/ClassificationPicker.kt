@@ -49,6 +49,8 @@ import com.example.data.local.model.ClassificationChapter
 import com.example.data.local.model.ClassificationEntry
 import com.example.data.repository.ClassificationRepository
 import com.example.ui.components.OrthoSearchBar
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 private data class ClassificationChoice(
     val label: String,
@@ -68,7 +70,7 @@ fun ClassificationPickerButton(
         modifier = modifier.fillMaxWidth()
     ) {
         Icon(Icons.Default.Add, contentDescription = null)
-        Text("Add classification", modifier = Modifier.padding(start = 8.dp))
+        Text(stringResource(R.string.classification_picker_add_classification), modifier = Modifier.padding(start = 8.dp))
     }
 
     if (showPicker) {
@@ -97,12 +99,14 @@ private fun ClassificationPickerDialog(
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var searchQuery by remember { mutableStateOf("") }
+    val loadFailedText = stringResource(R.string.classification_picker_load_failed)
+    val chapterFailedText = stringResource(R.string.classification_picker_chapter_load_failed)
 
     LaunchedEffect(Unit) {
         try {
             chapters = repository.getIndex().chapters
         } catch (error: Exception) {
-            errorMessage = error.message ?: "Unable to load classifications."
+            errorMessage = error.message ?: loadFailedText
         } finally {
             isLoading = false
         }
@@ -116,7 +120,7 @@ private fun ClassificationPickerDialog(
             selectedChapter = repository.getChapter(chapterRef.file)
         } catch (error: Exception) {
             selectedChapter = null
-            errorMessage = error.message ?: "Unable to load this chapter."
+            errorMessage = error.message ?: chapterFailedText
         } finally {
             isLoading = false
         }
@@ -132,7 +136,7 @@ private fun ClassificationPickerDialog(
                 TopAppBar(
                     title = {
                         Text(
-                            selectedChapter?.title ?: "Choose a classification",
+                            selectedChapter?.title ?: stringResource(R.string.classification_picker_choose),
                             maxLines = 2
                         )
                     },
@@ -149,7 +153,7 @@ private fun ClassificationPickerDialog(
                         ) {
                             Icon(
                                 imageVector = if (selectedChapter == null) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = if (selectedChapter == null) "Close" else "Back"
+                                contentDescription = stringResource(if (selectedChapter == null) R.string.action_close else R.string.action_back)
                             )
                         }
                     },
@@ -160,7 +164,7 @@ private fun ClassificationPickerDialog(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Check,
-                                    contentDescription = "Confirm selection"
+                                    contentDescription = stringResource(R.string.classification_picker_confirm_selection)
                                 )
                             }
                         }
@@ -175,7 +179,7 @@ private fun ClassificationPickerDialog(
                 ) { CircularProgressIndicator() }
 
                 errorMessage != null -> Text(
-                    text = errorMessage ?: "Unable to load classifications.",
+                    text = errorMessage ?: stringResource(R.string.classification_picker_load_failed),
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(paddingValues).padding(24.dp)
                 )
@@ -222,7 +226,7 @@ private fun ChapterChoices(
             onQueryChange = onSearchQueryChange,
             onSearch = onSearchQueryChange,
             onClear = { onSearchQueryChange("") },
-            placeholderText = "Search classifications...",
+            placeholderText = stringResource(R.string.classification_picker_search_all),
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
         LazyColumn(
@@ -283,7 +287,7 @@ private fun ClassificationChoices(
             onQueryChange = onSearchQueryChange,
             onSearch = onSearchQueryChange,
             onClear = { onSearchQueryChange("") },
-            placeholderText = "Search in this chapter...",
+            placeholderText = stringResource(R.string.classification_picker_search_chapter),
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
         LazyColumn(

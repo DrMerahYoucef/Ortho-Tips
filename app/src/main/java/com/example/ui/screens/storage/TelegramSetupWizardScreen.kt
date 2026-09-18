@@ -1,5 +1,6 @@
 package com.example.ui.screens.storage
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,7 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
@@ -46,6 +46,9 @@ import com.example.data.telegram.TelegramAuthState
 import com.example.viewmodel.SetupStep
 import com.example.viewmodel.SetupUiState
 import com.example.viewmodel.TelegramSetupViewModel
+import com.example.R
+import com.example.ui.components.InternationalPhoneField
+import androidx.compose.ui.res.stringResource
 
 /**
  * First-time setup for Telegram Drive.
@@ -75,13 +78,13 @@ fun TelegramSetupWizardScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Telegram Drive setup") },
+                title = { Text(stringResource(R.string.telegram_setup_wizard_telegram_drive_setup)) },
                 navigationIcon = {
                     IconButton(onClick = {
                         viewModel.cancel()
                         onNavigateBack()
                     }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 }
             )
@@ -100,7 +103,7 @@ fun TelegramSetupWizardScreen(
                     .padding(vertical = 12.dp)
             )
             Text(
-                text = "Step ${state.step.index + 1} of ${SetupStep.total}",
+                text = stringResource(R.string.wizard_step_of, state.step.index + 1, SetupStep.total),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline
             )
@@ -120,9 +123,9 @@ fun TelegramSetupWizardScreen(
                     SetupStep.DRIVE_INITIALISATION -> DriveInitStep(state)
                     SetupStep.STORAGE_VERIFICATION -> VerificationStep(state)
                     SetupStep.CONNECTION_TEST -> ConnectionTestStep(state)
-                    SetupStep.MANIFEST -> ManifestStep(state)
+                    SetupStep.MANIFEST -> ManifestStep(state, viewModel)
                     SetupStep.INITIAL_SYNC -> InitialSyncStep(state)
-                    SetupStep.COMPLETE -> CompleteStep(state)
+                    SetupStep.COMPLETE -> CompleteStep(state, viewModel)
                 }
 
                 if (state.error == null && state.isStepPending) {
@@ -134,7 +137,7 @@ fun TelegramSetupWizardScreen(
                         )
                         Spacer(Modifier.width(12.dp))
                         Text(
-                            text = state.statusLine.ifBlank { "Working…" },
+                            text = state.statusLine.ifBlank { stringResource(R.string.wizard_working) },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -161,7 +164,7 @@ fun TelegramSetupWizardScreen(
                                 TextButton(
                                     onClick = viewModel::retryCurrentStep,
                                     enabled = !state.busy
-                                ) { Text("Try again") }
+                                ) { Text(stringResource(R.string.action_try_again)) }
                             }
                         }
                     }
@@ -188,7 +191,7 @@ fun TelegramSetupWizardScreen(
                         onClick = viewModel::back,
                         enabled = !state.busy,
                         modifier = Modifier.weight(1f)
-                    ) { Text("Back") }
+                    ) { Text(stringResource(R.string.action_back)) }
                 }
                 Button(
                     onClick = {
@@ -203,7 +206,7 @@ fun TelegramSetupWizardScreen(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text(if (state.step.isLast) "Finish" else "Continue")
+                        Text(stringResource(if (state.step.isLast) R.string.wizard_finish else R.string.wizard_continue))
                     }
                 }
             }
@@ -225,44 +228,34 @@ private fun StepHeading(title: String, body: String) {
 @Composable
 private fun WelcomeStep() {
     StepHeading(
-        title = "Store your records in Telegram",
-        body = "Telegram Drive gives Ortho Tips a private cloud backup using a channel " +
-                "only you can see. Patient photos, radiographs, documents and records are " +
-                "copied there so a lost or replaced phone does not mean lost cases.\n\n" +
-                "Local storage keeps working exactly as it does today. You can switch back " +
-                "at any time, and nothing is ever deleted when you switch."
+        title = stringResource(R.string.telegram_setup_wizard_store_your_records_in_telegram),
+        body = stringResource(R.string.wizard_welcome_body)
     )
 }
 
 @Composable
 private fun RequirementsStep() {
     StepHeading(
-        title = "What you need",
-        body = "• A Telegram account you already use.\n" +
-                "• Your own API id and hash from my.telegram.org — free, takes two minutes.\n" +
-                "• A network connection for the first synchronisation.\n\n" +
-                "Ortho Tips never sends your credentials anywhere except Telegram itself, " +
-                "and stores them sealed with this device's hardware keystore."
+        title = stringResource(R.string.telegram_setup_wizard_what_you_need),
+        body = stringResource(R.string.wizard_requirements_body)
     )
     Spacer(Modifier.height(16.dp))
     ClinicalNoteCard(
-        "Patient data is medical data. Everything uploaded is encrypted with a key that " +
-                "never leaves this device, so even Telegram cannot read the contents."
+        stringResource(R.string.wizard_medical_note)
     )
 }
 
 @Composable
 private fun CredentialsStep(state: SetupUiState, viewModel: TelegramSetupViewModel) {
     StepHeading(
-        title = "Telegram API credentials",
-        body = "Sign in at my.telegram.org, open “API development tools”, and create an " +
-                "application. Copy the App api_id and App api_hash here."
+        title = stringResource(R.string.telegram_setup_wizard_telegram_api_credentials),
+        body = stringResource(R.string.wizard_credentials_body)
     )
     Spacer(Modifier.height(20.dp))
     OutlinedTextField(
         value = state.apiId,
         onValueChange = viewModel::onApiId,
-        label = { Text("API id") },
+        label = { Text(stringResource(R.string.telegram_setup_wizard_api_id)) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth()
@@ -271,7 +264,7 @@ private fun CredentialsStep(state: SetupUiState, viewModel: TelegramSetupViewMod
     OutlinedTextField(
         value = state.apiHash,
         onValueChange = viewModel::onApiHash,
-        label = { Text("API hash") },
+        label = { Text(stringResource(R.string.telegram_setup_wizard_api_hash)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth()
     )
@@ -280,36 +273,32 @@ private fun CredentialsStep(state: SetupUiState, viewModel: TelegramSetupViewMod
 @Composable
 private fun LoginStep(state: SetupUiState, viewModel: TelegramSetupViewModel) {
     StepHeading(
-        title = "Sign in to Telegram",
-        body = "Ortho Tips signs in the same way an official Telegram client does."
+        title = stringResource(R.string.telegram_setup_wizard_sign_in_to_telegram),
+        body = stringResource(R.string.telegram_setup_wizard_ortho_tips_signs_in_the)
     )
     Spacer(Modifier.height(20.dp))
 
     when (val auth = state.authState) {
         is TelegramAuthState.WaitingForPhoneNumber -> {
-            OutlinedTextField(
-                value = state.phoneNumber,
-                onValueChange = viewModel::onPhoneNumber,
-                label = { Text("Phone number with country code") },
-                placeholder = { Text("+33…") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                modifier = Modifier.fillMaxWidth()
+            InternationalPhoneField(
+                fullNumber = state.phoneNumber,
+                onFullNumberChange = viewModel::onPhoneNumber,
+                enabled = !state.busy
             )
             Spacer(Modifier.height(12.dp))
             Button(
                 onClick = viewModel::submitPhoneNumber,
                 enabled = state.phoneNumber.length > 5 && !state.busy,
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Send code") }
+            ) { Text(stringResource(R.string.telegram_setup_wizard_send_code)) }
             TextButton(onClick = viewModel::useQrLogin, modifier = Modifier.fillMaxWidth()) {
-                Text("Sign in by QR code instead")
+                Text(stringResource(R.string.telegram_setup_wizard_sign_in_by_qr_code))
             }
         }
 
         is TelegramAuthState.WaitingForCode -> {
             Text(
-                text = "Code sent via ${auth.channel.name.lowercase().replace('_', ' ')}.",
+                text = stringResource(R.string.wizard_code_sent_via, auth.channel.name.lowercase().replace('_', ' ')),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -317,7 +306,7 @@ private fun LoginStep(state: SetupUiState, viewModel: TelegramSetupViewModel) {
             OutlinedTextField(
                 value = state.code,
                 onValueChange = viewModel::onCode,
-                label = { Text("Login code") },
+                label = { Text(stringResource(R.string.telegram_setup_wizard_login_code)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
@@ -327,16 +316,16 @@ private fun LoginStep(state: SetupUiState, viewModel: TelegramSetupViewModel) {
                 onClick = viewModel::submitCode,
                 enabled = state.code.isNotBlank() && !state.busy,
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Verify") }
+            ) { Text(stringResource(R.string.telegram_setup_wizard_verify)) }
             TextButton(onClick = viewModel::resendCode, modifier = Modifier.fillMaxWidth()) {
-                Text("Resend code")
+                Text(stringResource(R.string.telegram_setup_wizard_resend_code))
             }
         }
 
         is TelegramAuthState.WaitingForPassword -> {
             auth.passwordHint?.let {
                 Text(
-                    text = "Hint: $it",
+                    text = stringResource(R.string.wizard_password_hint, it),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -345,7 +334,7 @@ private fun LoginStep(state: SetupUiState, viewModel: TelegramSetupViewModel) {
             OutlinedTextField(
                 value = state.password,
                 onValueChange = viewModel::onPassword,
-                label = { Text("Two-step verification password") },
+                label = { Text(stringResource(R.string.telegram_setup_wizard_two_step_verification_password)) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
@@ -356,14 +345,14 @@ private fun LoginStep(state: SetupUiState, viewModel: TelegramSetupViewModel) {
                 onClick = viewModel::submitPassword,
                 enabled = state.password.isNotBlank() && !state.busy,
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Sign in") }
+            ) { Text(stringResource(R.string.telegram_setup_wizard_sign_in)) }
         }
 
         is TelegramAuthState.WaitingForEmailAddress -> {
             OutlinedTextField(
                 value = state.email,
                 onValueChange = viewModel::onEmail,
-                label = { Text("Login email") },
+                label = { Text(stringResource(R.string.telegram_setup_wizard_login_email)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth()
@@ -373,19 +362,19 @@ private fun LoginStep(state: SetupUiState, viewModel: TelegramSetupViewModel) {
                 onClick = viewModel::submitEmail,
                 enabled = state.email.contains('@') && !state.busy,
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Send email code") }
+            ) { Text(stringResource(R.string.telegram_setup_wizard_send_email_code)) }
         }
 
         is TelegramAuthState.WaitingForEmailCode -> {
             Text(
-                text = "Code sent to ${auth.emailPattern}.",
+                text = stringResource(R.string.wizard_code_sent_to, auth.emailPattern),
                 style = MaterialTheme.typography.bodySmall
             )
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
                 value = state.code,
                 onValueChange = viewModel::onCode,
-                label = { Text("Email code") },
+                label = { Text(stringResource(R.string.telegram_setup_wizard_email_code)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -394,13 +383,12 @@ private fun LoginStep(state: SetupUiState, viewModel: TelegramSetupViewModel) {
                 onClick = viewModel::submitEmailCode,
                 enabled = state.code.isNotBlank() && !state.busy,
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Verify") }
+            ) { Text(stringResource(R.string.telegram_setup_wizard_verify)) }
         }
 
         is TelegramAuthState.WaitingForQrScan -> {
             Text(
-                text = "Open Telegram on another device, go to Settings → Devices → Link " +
-                        "Desktop Device, and scan this link.",
+                text = stringResource(R.string.wizard_qr_instructions),
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(Modifier.height(12.dp))
@@ -413,23 +401,22 @@ private fun LoginStep(state: SetupUiState, viewModel: TelegramSetupViewModel) {
                 )
             }
             TextButton(onClick = viewModel::usePhoneLogin, modifier = Modifier.fillMaxWidth()) {
-                Text("Use a phone number instead")
+                Text(stringResource(R.string.telegram_setup_wizard_use_a_phone_number_instead))
             }
         }
 
         TelegramAuthState.RegistrationRequired -> ClinicalNoteCard(
-            "That number has no Telegram account. Create one in the official Telegram app " +
-                    "first, then come back."
+            stringResource(R.string.wizard_registration_required)
         )
 
-        TelegramAuthState.Ready -> SuccessNote("Signed in as ${state.accountName.ifBlank { "your account" }}.")
+        TelegramAuthState.Ready -> SuccessNote(stringResource(R.string.wizard_signed_in_as, state.accountName.ifBlank { stringResource(R.string.wizard_your_account) }))
 
         is TelegramAuthState.Failed -> ClinicalNoteCard(auth.message)
 
         else -> Row(verticalAlignment = Alignment.CenterVertically) {
             CircularProgressIndicator(modifier = Modifier.width(20.dp), strokeWidth = 2.dp)
             Spacer(Modifier.width(12.dp))
-            Text("Connecting to Telegram…", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.telegram_setup_wizard_connecting_to_telegram), style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
@@ -437,27 +424,22 @@ private fun LoginStep(state: SetupUiState, viewModel: TelegramSetupViewModel) {
 @Composable
 private fun PermissionsStep() {
     StepHeading(
-        title = "Notifications",
-        body = "Ortho Tips shows a notification while large transfers run, so you can see " +
-                "progress and cancel without keeping the app open.\n\n" +
-                "Android will ask for permission the first time a transfer starts. Declining " +
-                "is fine — synchronisation still works, you just will not see progress."
+        title = stringResource(R.string.telegram_setup_wizard_notifications),
+        body = stringResource(R.string.wizard_permissions_body)
     )
 }
 
 @Composable
 private fun DriveInitStep(state: SetupUiState) {
     StepHeading(
-        title = "Create the drive",
-        body = "Ortho Tips will look for an existing “Ortho Tips Drive” channel on your " +
-                "account and create a private one if there is none. It is never public and " +
-                "has no members other than you."
+        title = stringResource(R.string.telegram_setup_wizard_create_the_drive),
+        body = stringResource(R.string.wizard_drive_init_body)
     )
     if (state.chatId != null) {
         Spacer(Modifier.height(16.dp))
         SuccessNote(
-            if (state.existingDriveFound) "Found your existing drive."
-            else "Private drive channel created."
+            if (state.existingDriveFound) stringResource(R.string.wizard_drive_found)
+            else stringResource(R.string.wizard_drive_created)
         )
     }
 }
@@ -465,70 +447,117 @@ private fun DriveInitStep(state: SetupUiState) {
 @Composable
 private fun VerificationStep(state: SetupUiState) {
     StepHeading(
-        title = "Storage check",
-        body = "Confirms this device has room for the local cache and prepares the " +
-                "encryption key used for uploads."
+        title = stringResource(R.string.telegram_setup_wizard_storage_check),
+        body = stringResource(R.string.wizard_verification_body)
     )
     if (state.verifiedBytes > 0) {
         Spacer(Modifier.height(16.dp))
-        SuccessNote("${state.verifiedBytes / (1024 * 1024)} MB free on this device.")
+        SuccessNote(stringResource(R.string.wizard_mb_free, state.verifiedBytes / (1024 * 1024)))
     }
 }
 
 @Composable
 private fun ConnectionTestStep(state: SetupUiState) {
     StepHeading(
-        title = "Connection test",
-        body = "Checks that Telegram accepts uploads from this account and reports the " +
-                "per-file size limit that applies to you."
+        title = stringResource(R.string.telegram_setup_wizard_connection_test),
+        body = stringResource(R.string.wizard_connection_body)
     )
-    if (state.statusLine.startsWith("Connected")) {
+    // Language-independent: the step is done, rather than matching English text.
+    if (SetupStep.CONNECTION_TEST in state.completedSteps && state.statusLine.isNotBlank()) {
         Spacer(Modifier.height(16.dp))
         SuccessNote(state.statusLine)
     }
 }
 
 @Composable
-private fun ManifestStep(state: SetupUiState) {
+private fun ManifestStep(state: SetupUiState, viewModel: TelegramSetupViewModel) {
     StepHeading(
-        title = "Reading the drive",
-        body = "Every object in the drive carries its own description, so Ortho Tips can " +
-                "tell what is already there without any record on this device. This is what " +
-                "makes the drive a real backup rather than a mirror."
+        title = stringResource(R.string.telegram_setup_wizard_reading_the_drive),
+        body = stringResource(R.string.wizard_manifest_body)
     )
     if (state.manifestEntries > 0) {
         Spacer(Modifier.height(16.dp))
-        SuccessNote("${state.manifestEntries} objects already in this drive.")
+        SuccessNote(stringResource(R.string.wizard_manifest_count, state.manifestEntries))
+    }
+    if (state.driveLocked) {
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = stringResource(R.string.passphrase_unlock_title),
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = if (state.driveHasKeyBackup) {
+                stringResource(R.string.passphrase_wizard_locked, state.lockedObjects)
+            } else {
+                stringResource(R.string.passphrase_status_locked_no_backup, state.lockedObjects)
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (state.driveHasKeyBackup) {
+            Spacer(Modifier.height(12.dp))
+            PassphraseForm(
+                confirm = false,
+                buttonLabel = stringResource(R.string.passphrase_unlock_button),
+                working = state.passphrase.working,
+                outcome = state.passphrase.outcome,
+                onSubmit = viewModel::unlockDrive
+            )
+        }
+        TextButton(onClick = viewModel::skipUnlock, enabled = !state.passphrase.working) {
+            Text(stringResource(R.string.passphrase_skip))
+        }
+    } else if (state.passphrase.outcome == com.example.viewmodel.PassphraseOutcome.UNLOCKED) {
+        Spacer(Modifier.height(12.dp))
+        SuccessNote(stringResource(R.string.passphrase_unlocked))
     }
 }
 
 @Composable
 private fun InitialSyncStep(state: SetupUiState) {
     StepHeading(
-        title = "First synchronisation",
-        body = "Your existing patient media and records will be queued for upload. Local " +
-                "copies stay exactly where they are — nothing is moved or removed."
+        title = stringResource(R.string.telegram_setup_wizard_first_synchronisation),
+        body = stringResource(R.string.wizard_initial_sync_body)
     )
     state.initialSyncReport?.let { report ->
         Spacer(Modifier.height(16.dp))
         SuccessNote(
-            "${report.uploadsQueued} objects queued for upload, " +
-                    "${report.downloadsQueued} for download."
+            stringResource(R.string.wizard_queued_both, report.uploadsQueued, report.downloadsQueued)
         )
     }
 }
 
 @Composable
-private fun CompleteStep(state: SetupUiState) {
+private fun CompleteStep(state: SetupUiState, viewModel: TelegramSetupViewModel) {
     StepHeading(
-        title = "Telegram Drive is on",
-        body = "Transfers run in the background under the network and battery rules you set " +
-                "in Settings → Telegram Drive. You can switch back to local storage there at " +
-                "any time."
+        title = stringResource(R.string.telegram_setup_wizard_telegram_drive_is_on),
+        body = stringResource(R.string.wizard_complete_body)
     )
     state.initialSyncReport?.let {
         Spacer(Modifier.height(16.dp))
-        SuccessNote("Queued ${it.uploadsQueued} uploads. Progress is shown in Settings.")
+        SuccessNote(stringResource(R.string.wizard_queued_uploads, it.uploadsQueued))
+    }
+    if (!state.driveHasKeyBackup) {
+        Spacer(Modifier.height(20.dp))
+        Text(stringResource(R.string.passphrase_set_title), style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            stringResource(R.string.passphrase_set_explain),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(12.dp))
+        PassphraseForm(
+            confirm = true,
+            buttonLabel = stringResource(R.string.passphrase_save),
+            working = state.passphrase.working,
+            outcome = state.passphrase.outcome,
+            onSubmit = viewModel::savePassphrase
+        )
+    } else if (state.passphrase.outcome == com.example.viewmodel.PassphraseOutcome.SAVED) {
+        Spacer(Modifier.height(16.dp))
+        SuccessNote(stringResource(R.string.passphrase_saved))
     }
 }
 

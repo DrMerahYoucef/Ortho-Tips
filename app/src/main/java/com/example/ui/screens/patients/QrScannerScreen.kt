@@ -1,5 +1,10 @@
 package com.example.ui.screens.patients
 
+import com.example.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -17,7 +22,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -66,6 +70,7 @@ fun QrScannerScreen(
     }
     var permissionPermanentlyDenied by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
+    val notOurCode = stringResource(R.string.qr_not_patient_code)
     var handled by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -87,7 +92,7 @@ fun QrScannerScreen(
             handled = true
             onPatientFound(patientId)
         } else {
-            statusMessage = "That's not an OrthoTips patient QR code."
+            statusMessage = notOurCode
         }
     }
 
@@ -155,10 +160,10 @@ fun QrScannerScreen(
             }
 
             Text(
-                text = "Point the camera at a patient's QR code",
+                text = stringResource(R.string.qr_point_camera),
                 color = Color.White,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 48.dp)
+                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 48.dp)
             )
 
             statusMessage?.let { message ->
@@ -180,7 +185,7 @@ fun QrScannerScreen(
                 verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Camera access is needed to scan a QR code.", color = Color.White, style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.qr_camera_needed), color = Color.White, style = MaterialTheme.typography.bodyLarge)
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(onClick = {
                     if (permissionPermanentlyDenied) {
@@ -193,16 +198,16 @@ fun QrScannerScreen(
                         permissionLauncher.launch(Manifest.permission.CAMERA)
                     }
                 }) {
-                    Text(if (permissionPermanentlyDenied) "Open app settings" else "Grant camera access")
+                    Text(stringResource(if (permissionPermanentlyDenied) R.string.qr_open_settings else R.string.qr_grant_camera))
                 }
             }
         }
 
         IconButton(
             onClick = onNavigateBack,
-            modifier = Modifier.align(Alignment.TopStart).padding(12.dp)
+            modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(12.dp)
         ) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = Color.White)
         }
     }
 }

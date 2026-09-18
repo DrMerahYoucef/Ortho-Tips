@@ -1,5 +1,6 @@
 package com.example.viewmodel
 
+import com.example.R
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -31,10 +32,15 @@ data class SurgeryFormState(
 
 data class SurgeryEditUiState(
     val form: SurgeryFormState = SurgeryFormState(),
-    val procedureError: String? = null,
+    /** String resource, resolved by the screen, so the message follows the app language. */
+    @androidx.annotation.StringRes val procedureError: Int? = null,
     val isSaving: Boolean = false,
-    val savedSurgeryId: String? = null
-)
+    val savedSurgeryId: String? = null,
+    /** The form as it was loaded or last saved; what "unsaved changes" compares against. */
+    val savedForm: SurgeryFormState = SurgeryFormState()
+) {
+    val hasUnsavedChanges: Boolean get() = form != savedForm
+}
 
 /** Every surgery field wired to smart suggestions, in the order the form learns from on save. */
 private val SUGGESTION_FIELDS = listOf(
@@ -57,24 +63,27 @@ class SurgeryEditViewModel(
     private val existingSurgery: SurgeryEntity?
 ) : ViewModel() {
 
+    private val loadedForm: SurgeryFormState = run {
+        val it = existingSurgery
+        if (it != null) {
+            SurgeryFormState(
+                surgeryDate = it.surgeryDate,
+                hospitalClinic = it.hospitalClinic,
+                surgeon = it.surgeon,
+                assistants = it.assistants,
+                anesthesiaType = it.anesthesiaType,
+                diagnosis = it.diagnosis,
+                procedure = it.procedure,
+                materialsUsed = it.materialsUsed,
+                complications = it.complications,
+                postOpInstructions = it.postOpInstructions,
+                operativeProtocol = it.operativeProtocol
+            )
+        } else SurgeryFormState()
+    }
+
     private val _uiState = MutableStateFlow(
-        SurgeryEditUiState(
-            form = existingSurgery?.let {
-                SurgeryFormState(
-                    surgeryDate = it.surgeryDate,
-                    hospitalClinic = it.hospitalClinic,
-                    surgeon = it.surgeon,
-                    assistants = it.assistants,
-                    anesthesiaType = it.anesthesiaType,
-                    diagnosis = it.diagnosis,
-                    procedure = it.procedure,
-                    materialsUsed = it.materialsUsed,
-                    complications = it.complications,
-                    postOpInstructions = it.postOpInstructions,
-                    operativeProtocol = it.operativeProtocol
-                )
-            } ?: SurgeryFormState()
-        )
+        SurgeryEditUiState(form = loadedForm, savedForm = loadedForm)
     )
     val uiState: StateFlow<SurgeryEditUiState> = _uiState.asStateFlow()
 
@@ -96,10 +105,15 @@ class SurgeryEditViewModel(
         viewModelScope.launch { suggestionRepository.setEnabled(enabled) }
     }
 
+    /** Removes a learned value after the surgeon long-presses it. */
+    fun forget(fieldKey: String, value: String) {
+        viewModelScope.launch { suggestionRepository.forget(fieldKey, value) }
+    }
+
     fun save() {
         val form = _uiState.value.form
         if (form.procedure.isBlank()) {
-            _uiState.value = _uiState.value.copy(procedureError = "Procedure is required")
+            _uiState.value = _uiState.value.copy(procedureError = R.string.surgery_edit_error_procedure_required)
             return
         }
 
@@ -125,21 +139,28 @@ class SurgeryEditViewModel(
                 )
             )
             learnFromForm(form)
-            _uiState.value = _uiState.value.copy(isSaving = false, savedSurgeryId = id)
+            _uiState.value = _uiState.value.copy(isSaving = false, savedSurgeryId = id, savedForm = form)
         }
     }
 
     private suspend fun learnFromForm(form: SurgeryFormState) {
-        suggestionRepository.learn(SuggestionField.SURGERY_HOSPITAL, form.hospitalClinic)
-        suggestionRepository.learn(SuggestionField.SURGERY_SURGEON, form.surgeon)
-        suggestionRepository.learn(SuggestionField.SURGERY_ASSISTANTS, form.assistants)
-        suggestionRepository.learn(SuggestionField.SURGERY_ANESTHESIA, form.anesthesiaType)
-        suggestionRepository.learn(SuggestionField.SURGERY_DIAGNOSIS, form.diagnosis)
-        suggestionRepository.learn(SuggestionField.SURGERY_PROCEDURE, form.procedure)
-        suggestionRepository.learn(SuggestionField.SURGERY_MATERIALS, form.materialsUsed)
-        suggestionRepository.learn(SuggestionField.SURGERY_COMPLICATIONS, form.complications)
-        suggestionRepository.learn(SuggestionField.SURGERY_POSTOP, form.postOpInstructions)
-        suggestionRepository.learn(SuggestionField.SURGERY_PROTOCOL, form.operativeProtocol)
+        // One call instead of one per field: learnRecord also records which
+        // values appeared together, which is what lets the surgery form predict
+        // the next field from the one before it.
+        suggestionRepository.learnRecord(
+            mapOf(
+                SuggestionField.SURGERY_HOSPITAL to form.hospitalClinic,
+                SuggestionField.SURGERY_SURGEON to form.surgeon,
+                SuggestionField.SURGERY_ASSISTANTS to form.assistants,
+                SuggestionField.SURGERY_ANESTHESIA to form.anesthesiaType,
+                SuggestionField.SURGERY_DIAGNOSIS to form.diagnosis,
+                SuggestionField.SURGERY_PROCEDURE to form.procedure,
+                SuggestionField.SURGERY_MATERIALS to form.materialsUsed,
+                SuggestionField.SURGERY_COMPLICATIONS to form.complications,
+                SuggestionField.SURGERY_POSTOP to form.postOpInstructions,
+                SuggestionField.SURGERY_PROTOCOL to form.operativeProtocol
+            )
+        )
     }
 
     companion object {

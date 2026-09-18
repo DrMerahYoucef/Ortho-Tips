@@ -1,5 +1,6 @@
 package com.example.ui.screens.patients
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material3.Button
@@ -42,6 +42,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.viewmodel.PatientDataTransferViewModel
 import com.example.viewmodel.TransferMode
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,9 +62,9 @@ fun PatientDataTransferScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Patient database", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.patient_data_transfer_patient_database), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") }
+                    IconButton(onClick = onNavigateBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back)) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
@@ -74,7 +76,7 @@ fun PatientDataTransferScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Export a ZIP with every patient record, image, and document — or import one exported from another device.",
+                text = stringResource(R.string.patient_data_transfer_export_a_zip_with_every),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -86,7 +88,7 @@ fun PatientDataTransferScreen(
             ) {
                 Icon(Icons.Default.CloudUpload, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Export all patients")
+                Text(stringResource(R.string.patient_data_transfer_export_all_patients))
             }
 
             OutlinedButton(
@@ -96,7 +98,7 @@ fun PatientDataTransferScreen(
             ) {
                 Icon(Icons.Default.CloudDownload, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Import from ZIP file")
+                Text(stringResource(R.string.patient_data_transfer_import_from_zip_file))
             }
 
             if (uiState.mode != TransferMode.IDLE || uiState.progress.isComplete) {

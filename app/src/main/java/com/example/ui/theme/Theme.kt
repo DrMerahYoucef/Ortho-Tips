@@ -10,7 +10,8 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -85,8 +86,8 @@ fun OrthoTipsTheme(
         SideEffect {
             val window = (view.context as? Activity)?.window
             if (window != null) {
-                window.statusBarColor = colorScheme.surface.toArgb()
-                window.navigationBarColor = colorScheme.surface.toArgb()
+                // Bars stay transparent (edge-to-edge); only their icon colour follows
+                // the app's own theme, which can differ from the system's.
                 val insetsController = WindowCompat.getInsetsController(window, view)
                 insetsController.isAppearanceLightStatusBars = !darkTheme
                 insetsController.isAppearanceLightNavigationBars = !darkTheme
@@ -99,4 +100,17 @@ fun OrthoTipsTheme(
         typography = Typography,
         content = content
     )
+}
+
+private val isDarkScheme: Boolean
+    @Composable get() = MaterialTheme.colorScheme.background.luminance() < 0.5f
+
+/** Semantic colours Material 3 does not provide, resolved for light or dark. */
+object OrthoColors {
+    val attended: Color
+        @Composable get() = if (isDarkScheme) AttendedDark else AttendedLight
+    val attendedContainer: Color
+        @Composable get() = if (isDarkScheme) AttendedContainerDark else AttendedContainerLight
+    val onAttendedContainer: Color
+        @Composable get() = if (isDarkScheme) OnAttendedContainerDark else OnAttendedContainerLight
 }

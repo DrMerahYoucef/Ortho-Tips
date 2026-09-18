@@ -181,7 +181,16 @@ object PatientZipImporter {
                                 continue
                             }
                             val newImageId = java.util.UUID.randomUUID().toString()
-                            val destFile = PatientMediaStorage.newImageFile(context, newPatientId, newImageId)
+                            val isVideo = imageJson.optString("mediaType") ==
+                                com.example.data.local.entity.MediaType.VIDEO.name
+                            val destFile = if (isVideo) {
+                                PatientMediaStorage.newVideoFile(
+                                    context, newPatientId, newImageId,
+                                    sourceFile.extension.ifBlank { "mp4" }
+                                )
+                            } else {
+                                PatientMediaStorage.newImageFile(context, newPatientId, newImageId)
+                            }
                             sourceFile.copyTo(destFile, overwrite = true)
 
                             var destThumbPath: String? = null
@@ -206,6 +215,11 @@ object PatientZipImporter {
                                     ocrText = imageJson.optString("ocrText"),
                                     annotationsJson = imageJson.optString("annotationsJson"),
                                     notes = imageJson.optString("notes"),
+                                    mediaType = imageJson.optString(
+                                        "mediaType",
+                                        com.example.data.local.entity.MediaType.IMAGE.name
+                                    ),
+                                    durationMs = imageJson.optLong("durationMs", 0L),
                                     capturedAt = imageJson.optLong("capturedAt", System.currentTimeMillis())
                                 )
                             )

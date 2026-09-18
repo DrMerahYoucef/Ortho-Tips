@@ -10,6 +10,12 @@ data class ChapterEntity(
     @PrimaryKey val id: String,
     val title: String,
     val description: String,
+    // French text lives beside the English rather than in its own row, so bone
+    // ids stay stable and bookmarks, notes and figures keep pointing at the same
+    // record whichever language the app is showing. Null means "not translated",
+    // which falls back to English rather than showing a blank.
+    val titleFr: String? = null,
+    val descriptionFr: String? = null,
     val icon: String,
     val orderIndex: Int
 )
@@ -34,6 +40,10 @@ data class BoneEntity(
     val region: String,
     val traumaType: String,
     val classificationSummary: String,
+    val nameFr: String? = null,
+    val subtitleFr: String? = null,
+    val regionFr: String? = null,
+    val classificationSummaryFr: String? = null,
     val orderIndex: Int,
     val isHighYield: Boolean = true
 )
@@ -58,6 +68,10 @@ data class SectionEntity(
     val content: String,
     val pearls: String = "", // Delimited clinical pearls
     val warnings: String = "", // Surgical danger zones
+    val titleFr: String? = null,
+    val contentFr: String? = null,
+    val pearlsFr: String? = null,
+    val warningsFr: String? = null,
     val orderIndex: Int = 0
 )
 
@@ -79,6 +93,8 @@ data class ImageEntity(
     val sectionId: String? = null,
     val title: String,
     val description: String,
+    val titleFr: String? = null,
+    val descriptionFr: String? = null,
     val drawableResName: String = "",
     val imagePath: String? = null, // Absolute file path for images imported from a JSON database (base64 figures)
     val figureNumber: String,

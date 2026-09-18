@@ -80,7 +80,7 @@ class AppModule(private val context: Context) {
     }
 
     val patientRepository: PatientRepository by lazy {
-        PatientRepository(database, patientMediaRootDir, patientMediaGateway)
+        PatientRepository(database, patientMediaRootDir, patientMediaGateway, context)
     }
 
     val surgeonProfileRepository: SurgeonProfileRepository by lazy {
@@ -89,6 +89,10 @@ class AppModule(private val context: Context) {
 
     val pdfOptionsRepository: PdfOptionsRepository by lazy {
         PdfOptionsRepository(context)
+    }
+
+    val shiftRepository: com.example.data.repository.ShiftRepository by lazy {
+        com.example.data.repository.ShiftRepository(database, context)
     }
 
     val suggestionRepository: SuggestionRepository by lazy {
@@ -119,6 +123,17 @@ class AppModule(private val context: Context) {
 
     val manifestCodec: ManifestCodec by lazy {
         ManifestCodec(streamCrypto, wrappedKeyRepository)
+    }
+
+    /** Passphrase-sealed copy of the content key, kept in the drive channel. */
+    val passphraseKeyBackup: com.example.data.crypto.PassphraseKeyBackup by lazy {
+        com.example.data.crypto.PassphraseKeyBackup(
+            client = telegramClient,
+            drive = telegramDriveRepository,
+            wrappedKeys = wrappedKeyRepository,
+            manifestCodec = manifestCodec,
+            workDir = File(context.cacheDir, "key-backup")
+        )
     }
 
     /**
@@ -165,6 +180,7 @@ class AppModule(private val context: Context) {
             context = context,
             registry = storageRegistry,
             syncEngine = syncEngine,
+            remoteObjectDao = database.remoteObjectDao(),
             driveRepository = telegramDriveRepository
         )
     }

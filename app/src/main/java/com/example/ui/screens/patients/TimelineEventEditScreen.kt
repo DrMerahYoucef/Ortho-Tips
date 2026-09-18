@@ -1,5 +1,11 @@
 package com.example.ui.screens.patients
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.imePadding
+import com.example.ui.components.CalendarDateField
+import com.example.ui.components.TimeField
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
@@ -40,6 +45,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.utils.DateFormat
 import com.example.viewmodel.TimelineEventEditViewModel
+import com.example.R
+import com.example.ui.components.rememberLeaveGuard
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,7 +58,17 @@ fun TimelineEventEditScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var showPicker by remember { mutableStateOf(false) }
+    val titleSuggestions by viewModel.titleSuggestions.collectAsStateWithLifecycle()
+    val descriptionSuggestions by viewModel.descriptionSuggestions.collectAsStateWithLifecycle()
+    val suggestionsEnabled by viewModel.suggestionsEnabled.collectAsStateWithLifecycle()
+
+    // Leaving with edits still in the form asks first, for the arrow and for the
+    // phone's back gesture.
+    val attemptBack = rememberLeaveGuard(
+        isDirty = uiState.hasUnsavedChanges,
+        onSave = viewModel::save,
+        onLeave = onNavigateBack
+    )
 
     LaunchedEffect(uiState.savedEventId) {
         uiState.savedEventId?.let { onSaved(it) }
@@ -59,15 +77,15 @@ fun TimelineEventEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Timeline event", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.timeline_event_edit_timeline_event), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") }
+                    IconButton(onClick = attemptBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back)) }
                 },
                 actions = {
                     TextButton(onClick = { viewModel.save() }, enabled = !uiState.isSaving) {
                         Icon(Icons.Default.Check, contentDescription = null)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Save")
+                        Text(stringResource(R.string.patient_edit_save))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
@@ -76,46 +94,54 @@ fun TimelineEventEditScreen(
         modifier = modifier
     ) { paddingValues ->
         LazyColumn(
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 48.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 48.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxSize().padding(paddingValues)
+            // The keyboard pushes the form up instead of covering the lower fields.
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .consumeWindowInsets(paddingValues)
+                .imePadding()
         ) {
             item {
-                OutlinedTextField(
-                    value = DateFormat.formatDate(uiState.form.eventDate),
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Date") },
-                    trailingIcon = {
-                        IconButton(onClick = { showPicker = true }) {
-                            Icon(Icons.Default.CalendarToday, contentDescription = "Pick date")
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            item {
-                Column {
-                    OutlinedTextField(
-                        value = uiState.form.title,
-                        onValueChange = { v -> viewModel.update { it.copy(title = v) } },
-                        label = { Text("Title") },
-                        isError = uiState.titleError != null,
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                // Date and time side by side: the Agenda and the widget show the
+                // appointment's time, which the form could not set before.
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CalendarDateField(
+                        label = stringResource(R.string.timeline_event_edit_date),
+                        millis = uiState.form.eventDate,
+                        onChange = { millis -> viewModel.update { it.copy(eventDate = millis) } },
+                        modifier = Modifier.weight(1.4f)
                     )
-                    uiState.titleError?.let {
-                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                    }
+                    TimeField(
+                        label = stringResource(R.string.timeline_event_edit_time),
+                        millis = uiState.form.eventDate,
+                        onChange = { millis -> viewModel.update { it.copy(eventDate = millis) } },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
             item {
-                OutlinedTextField(
+                com.example.ui.components.SmartSuggestionField(
+                    value = uiState.form.title,
+                    onValueChange = { v -> viewModel.update { it.copy(title = v) } },
+                    label = stringResource(R.string.timeline_event_edit_title),
+                    suggestions = titleSuggestions,
+                    suggestionsEnabled = suggestionsEnabled,
+                    onForget = { viewModel.forget(com.example.viewmodel.TimelineSuggestionField.TITLE, it) },
+                    isError = uiState.titleError != null,
+                    errorText = uiState.titleError?.let { stringResource(it) }
+                )
+            }
+            item {
+                com.example.ui.components.SmartSuggestionField(
                     value = uiState.form.description,
                     onValueChange = { v -> viewModel.update { it.copy(description = v) } },
-                    label = { Text("Description") },
-                    singleLine = false,
-                    modifier = Modifier.fillMaxWidth()
+                    label = stringResource(R.string.timeline_event_edit_description),
+                    suggestions = descriptionSuggestions,
+                    suggestionsEnabled = suggestionsEnabled,
+                    onForget = { viewModel.forget(com.example.viewmodel.TimelineSuggestionField.DESCRIPTION, it) },
+                    singleLine = false
                 )
             }
             item {
@@ -124,25 +150,10 @@ fun TimelineEventEditScreen(
                     enabled = !uiState.isSaving,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (uiState.isSaving) "Saving..." else "Save event")
+                    Text(stringResource(if (uiState.isSaving) R.string.patient_edit_saving else R.string.timeline_event_save))
                 }
             }
         }
     }
 
-    if (showPicker) {
-        val state = rememberDatePickerState(initialSelectedDateMillis = uiState.form.eventDate)
-        DatePickerDialog(
-            onDismissRequest = { showPicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    state.selectedDateMillis?.let { millis -> viewModel.update { it.copy(eventDate = millis) } }
-                    showPicker = false
-                }) { Text("OK") }
-            },
-            dismissButton = { TextButton(onClick = { showPicker = false }) { Text("Cancel") } }
-        ) {
-            DatePicker(state = state)
-        }
-    }
 }

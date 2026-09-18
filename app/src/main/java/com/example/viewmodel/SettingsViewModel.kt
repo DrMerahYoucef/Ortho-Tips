@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-enum class DatabaseConfirmAction { REMOVE, REINITIALIZE }
+enum class DatabaseConfirmAction { REMOVE, REINITIALIZE, DELETE_PATIENTS }
 
 data class SettingsUiState(
     val userSettings: UserSettings = UserSettings(),
@@ -30,8 +30,23 @@ data class SettingsUiState(
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
     private val backupManager: BackupManager,
-    private val orthoRepository: OrthoRepository
+    private val orthoRepository: OrthoRepository,
+    private val patientRepository: com.example.data.repository.PatientRepository
 ) : ViewModel() {
+
+    /** Patients on this device, shown in the delete confirmation. */
+    private val _patientCount = MutableStateFlow(0)
+    val patientCount = _patientCount.asStateFlow()
+
+    fun refreshPatientCount() {
+        viewModelScope.launch { _patientCount.value = patientRepository.getPatientCount() }
+    }
+
+    fun requestDeleteAllPatients() {
+        _databaseActionMessage.value = null
+        refreshPatientCount()
+        _pendingDatabaseAction.value = DatabaseConfirmAction.DELETE_PATIENTS
+    }
 
     val settings: StateFlow<UserSettings> = settingsRepository.settingsFlow
         .stateIn(
@@ -94,6 +109,10 @@ class SettingsViewModel(
         }
     }
 
+    fun setAppLock(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setAppLock(enabled) }
+    }
+
     fun setSmartSuggestions(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setSmartSuggestions(enabled)
@@ -127,9 +146,9 @@ class SettingsViewModel(
         viewModelScope.launch {
             val res = backupManager.importDataJson(jsonString)
             if (res.isSuccess) {
-                _importMessage.value = "Successfully restored ${res.getOrNull()} items!"
+                _importMessage.value = "$MSG_RESTORED${res.getOrNull() ?: 0}"
             } else {
-                _importMessage.value = "Error restoring backup: ${res.exceptionOrNull()?.localizedMessage}"
+                _importMessage.value = "$MSG_RESTORE_ERROR${res.exceptionOrNull()?.localizedMessage.orEmpty()}"
             }
         }
     }
@@ -155,11 +174,17 @@ class SettingsViewModel(
             when (action) {
                 DatabaseConfirmAction.REMOVE -> {
                     orthoRepository.removeDatabase()
-                    _databaseActionMessage.value = "Clinical database removed."
+                    _databaseActionMessage.value = MSG_DB_REMOVED
                 }
                 DatabaseConfirmAction.REINITIALIZE -> {
                     orthoRepository.reinitializeDatabase()
-                    _databaseActionMessage.value = "Database reinitialized. Notes and bookmarks were cleared."
+                    _databaseActionMessage.value = MSG_DB_REINITIALIZED
+                }
+                DatabaseConfirmAction.DELETE_PATIENTS -> {
+                    val removed = patientRepository.getPatientCount()
+                    patientRepository.deleteAllPatients()
+                    _patientCount.value = 0
+                    _databaseActionMessage.value = "PATIENTS_DELETED:$removed"
                 }
             }
         }
@@ -170,14 +195,23 @@ class SettingsViewModel(
     }
 
     companion object {
+        // Message codes the screen turns into text in the app language, so the
+        // ViewModel never holds English sentences.
+        const val MSG_RESTORED = "RESTORED:"
+        const val MSG_RESTORE_ERROR = "RESTORE_ERROR:"
+        const val MSG_DB_REMOVED = "DB_REMOVED"
+        const val MSG_DB_REINITIALIZED = "DB_REINITIALIZED"
         fun provideFactory(
             settingsRepository: SettingsRepository,
             backupManager: BackupManager,
-            orthoRepository: OrthoRepository
+            orthoRepository: OrthoRepository,
+            patientRepository: com.example.data.repository.PatientRepository
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return SettingsViewModel(settingsRepository, backupManager, orthoRepository) as T
+                return SettingsViewModel(
+                    settingsRepository, backupManager, orthoRepository, patientRepository
+                ) as T
             }
         }
     }

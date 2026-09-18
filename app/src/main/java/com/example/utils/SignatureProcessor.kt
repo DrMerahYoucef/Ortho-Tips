@@ -4,6 +4,8 @@ import android.content.ContentResolver
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import androidx.annotation.StringRes
+import com.example.R
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.max
@@ -13,10 +15,10 @@ sealed class SignatureResult {
     data class Success(val file: File) : SignatureResult()
 
     /** Cleaned up and saved, but the source photo made it hard to be sure — still worth a look. */
-    data class Warning(val file: File, val message: String) : SignatureResult()
+    data class Warning(val file: File, @StringRes val messageRes: Int) : SignatureResult()
 
     /** Nothing usable was written. */
-    data class Failure(val message: String) : SignatureResult()
+    data class Failure(@StringRes val messageRes: Int) : SignatureResult()
 }
 
 /**
@@ -45,7 +47,7 @@ object SignatureProcessor {
 
     fun processFromUri(contentResolver: ContentResolver, uri: Uri, destination: File): SignatureResult {
         val source = runCatching { decodeBounded(contentResolver, uri) }.getOrNull()
-            ?: return SignatureResult.Failure("Couldn't read that image.")
+            ?: return SignatureResult.Failure(R.string.signature_error_unreadable)
         return processBitmap(source, destination)
     }
 
@@ -117,10 +119,7 @@ object SignatureProcessor {
 
         if (!hasInk || inkFraction < 0.0015) {
             bitmap.recycle()
-            return SignatureResult.Failure(
-                "Couldn't find a clear signature in that photo. Try again with the pen strokes " +
-                    "on a plain, well-lit, uncreased background."
-            )
+            return SignatureResult.Failure(R.string.signature_error_not_found)
         }
 
         val cropped = run {
@@ -150,8 +149,7 @@ object SignatureProcessor {
         return if (inkFraction > 0.35) {
             SignatureResult.Warning(
                 destination,
-                "The lighting made it hard to separate the signature from the page cleanly. " +
-                    "If it doesn't look right below, try retaking it in more even light on a plain background."
+                R.string.signature_warning_lighting
             )
         } else {
             SignatureResult.Success(destination)

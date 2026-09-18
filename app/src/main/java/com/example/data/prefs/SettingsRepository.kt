@@ -25,7 +25,9 @@ data class UserSettings(
     val highContrast: Boolean = false,
     val fontSize: FontSizePreference = FontSizePreference.STANDARD,
     val quickPearlsHome: Boolean = true,
-    val smartSuggestionsEnabled: Boolean = true // Learning autocomplete on patient/surgery medical fields
+    val smartSuggestionsEnabled: Boolean = true, // Learning autocomplete on patient/surgery medical fields
+    /** Ask for the phone's fingerprint/PIN when opening the app and before sensitive actions. */
+    val appLockEnabled: Boolean = true
 )
 
 class SettingsRepository(private val context: Context) {
@@ -38,6 +40,7 @@ class SettingsRepository(private val context: Context) {
         val FONT_SIZE = stringPreferencesKey("font_size")
         val QUICK_PEARLS = booleanPreferencesKey("quick_pearls")
         val SMART_SUGGESTIONS = booleanPreferencesKey("smart_suggestions_enabled")
+        val APP_LOCK = booleanPreferencesKey("app_lock_enabled")
     }
 
     val settingsFlow: Flow<UserSettings> = context.dataStore.data.map { preferences ->
@@ -62,7 +65,8 @@ class SettingsRepository(private val context: Context) {
             highContrast = preferences[PreferencesKeys.HIGH_CONTRAST] ?: false,
             fontSize = fontSize,
             quickPearlsHome = preferences[PreferencesKeys.QUICK_PEARLS] ?: true,
-            smartSuggestionsEnabled = preferences[PreferencesKeys.SMART_SUGGESTIONS] ?: true
+            smartSuggestionsEnabled = preferences[PreferencesKeys.SMART_SUGGESTIONS] ?: true,
+            appLockEnabled = preferences[PreferencesKeys.APP_LOCK] ?: true
         )
     }
 
@@ -100,6 +104,10 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.QUICK_PEARLS] = enabled
         }
+    }
+
+    suspend fun setAppLock(enabled: Boolean) {
+        context.dataStore.edit { it[PreferencesKeys.APP_LOCK] = enabled }
     }
 
     suspend fun setSmartSuggestions(enabled: Boolean) {

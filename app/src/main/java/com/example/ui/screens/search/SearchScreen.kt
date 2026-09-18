@@ -1,5 +1,12 @@
 package com.example.ui.screens.search
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.IconButton
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -50,27 +57,41 @@ import com.example.ui.components.OrthoSearchBar
 import com.example.ui.components.RegionBadge
 import com.example.viewmodel.SearchCategoryFilter
 import com.example.viewmodel.SearchViewModel
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     viewModel: SearchViewModel,
+    onNavigateBack: () -> Unit,
     onNavigateToBoneDetail: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val selectedFilter by viewModel.categoryFilter.collectAsStateWithLifecycle()
+    // Opening Search means you want to type: focus the field and raise the keyboard.
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = "Search Surgical Guides",
+                        text = stringResource(R.string.search_search_surgical_guides),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back)
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
@@ -90,8 +111,10 @@ fun SearchScreen(
                 onQueryChange = { viewModel.onQueryChange(it) },
                 onSearch = {},
                 onClear = { viewModel.clearQuery() },
-                placeholderText = "Search by fracture, approach, nerve, screw...",
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                placeholderText = stringResource(R.string.search_placeholder),
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .focusRequester(focusRequester)
             )
 
             LazyRow(
@@ -105,7 +128,7 @@ fun SearchScreen(
                         onClick = { viewModel.setCategoryFilter(filter) },
                         label = {
                             Text(
-                                text = filter.name.replace("_", " "),
+                                text = searchFilterLabel(filter),
                                 style = MaterialTheme.typography.labelSmall
                             )
                         },
@@ -132,11 +155,18 @@ fun SearchScreen(
                 ) {
                     CircularProgressIndicator()
                 }
+            } else if (query.isBlank() && uiState.results.isEmpty()) {
+                // Nothing typed yet: a prompt, not "no matches".
+                EmptyStateView(
+                    icon = Icons.Default.Search,
+                    title = stringResource(R.string.search_start_title),
+                    message = stringResource(R.string.search_start_message)
+                )
             } else if (uiState.results.isEmpty()) {
                 EmptyStateView(
                     icon = Icons.Default.SearchOff,
-                    title = "No Matches Found",
-                    message = "Try different keywords, e.g., 'TAD', 'FCR', 'radial nerve', 'Gartland', 'raft'."
+                    title = stringResource(R.string.search_no_matches_found),
+                    message = stringResource(R.string.search_try_different_keywords_e_g)
                 )
             } else {
                 LazyColumn(
@@ -203,7 +233,7 @@ private fun SearchResultCard(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "PEARL MATCH",
+                                text = stringResource(R.string.search_pearl_match),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 fontSize = 10.sp
@@ -262,7 +292,7 @@ private fun SearchResultCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Open Guide",
+                    text = stringResource(R.string.search_open_guide),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -276,3 +306,17 @@ private fun SearchResultCard(
         }
     }
 }
+
+@Composable
+private fun searchFilterLabel(filter: SearchCategoryFilter): String = stringResource(
+    when (filter) {
+        SearchCategoryFilter.ALL -> R.string.section_filter_all
+        SearchCategoryFilter.UPPER_LIMB -> R.string.search_filter_upper_limb
+        SearchCategoryFilter.LOWER_LIMB -> R.string.search_filter_lower_limb
+        SearchCategoryFilter.SPINE -> R.string.search_filter_spine
+        SearchCategoryFilter.PEDIATRIC -> R.string.search_filter_pediatric
+        SearchCategoryFilter.ARTHROPLASTY -> R.string.search_filter_arthroplasty
+        SearchCategoryFilter.SPORTS -> R.string.search_filter_sports
+        SearchCategoryFilter.PEARLS_ONLY -> R.string.search_filter_pearls_only
+    }
+)

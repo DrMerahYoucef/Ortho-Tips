@@ -115,7 +115,9 @@ object PatientZipExporter {
                             bundle.images.mapNotNull { image ->
                                 val sourceFile = File(image.filePath)
                                 if (!sourceFile.exists()) return@mapNotNull null
-                                val entryName = "images/${image.id}.jpg"
+                                // Videos keep their own extension so players still open them.
+                                val extension = sourceFile.extension.ifBlank { "jpg" }
+                                val entryName = "images/${image.id}.$extension"
                                 zip.writeFile(sourceFile, entryName)
                                 image.thumbnailPath?.let { thumbPath ->
                                     val thumbFile = File(thumbPath)
@@ -132,6 +134,8 @@ object PatientZipExporter {
                                     put("annotationsJson", image.annotationsJson)
                                     put("notes", image.notes)
                                     put("capturedAt", image.capturedAt)
+                                    put("mediaType", image.mediaType)
+                                    put("durationMs", image.durationMs)
                                 }
                             }
                         )

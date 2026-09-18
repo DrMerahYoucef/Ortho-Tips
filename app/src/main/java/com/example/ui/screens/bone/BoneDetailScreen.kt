@@ -1,5 +1,7 @@
 package com.example.ui.screens.bone
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,6 +50,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import com.example.ui.components.ConfirmDeleteDialog
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -66,8 +72,10 @@ import com.example.ui.components.RegionBadge
 import com.example.utils.MediaActions
 import com.example.viewmodel.BoneDetailViewModel
 import com.example.viewmodel.SectionFilter
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun BoneDetailScreen(
     viewModel: BoneDetailViewModel,
@@ -82,6 +90,18 @@ fun BoneDetailScreen(
     val noteToEdit by viewModel.noteToEdit.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
+    val keyPearlsLabel = stringResource(R.string.bone_detail_key_pearls)
+
+    // Deleting a note asks first; it used to go on a single tap of the trash icon.
+    var noteToDelete by rememberSaveable { mutableStateOf<String?>(null) }
+    noteToDelete?.let { id ->
+        ConfirmDeleteDialog(
+            title = stringResource(R.string.confirm_delete_note_title),
+            message = stringResource(R.string.action_cannot_be_undone),
+            onConfirm = { viewModel.deleteNote(id); noteToDelete = null },
+            onDismiss = { noteToDelete = null }
+        )
+    }
 
     val detail = uiState.detail
 
@@ -99,7 +119,7 @@ fun BoneDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = detail?.bone?.name ?: "Procedure Technique",
+                        text = detail?.bone?.name ?: stringResource(R.string.bone_detail_procedure_technique),
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1
                     )
@@ -111,7 +131,7 @@ fun BoneDetailScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                 },
@@ -119,7 +139,7 @@ fun BoneDetailScreen(
                     IconButton(
                         onClick = {
                             if (detail != null) {
-                                val summary = "${detail.bone.name}\n${detail.bone.subtitle}\n\nKey Pearls:\n" +
+                                val summary = "${detail.bone.name}\n${detail.bone.subtitle}\n\n$keyPearlsLabel\n" +
                                         detail.sections.joinToString("\n• ") { it.title + ": " + it.pearls.ifBlank { it.content.take(100) } }
                                 MediaActions.shareClinicalTip(context, detail.bone.name, summary)
                             }
@@ -128,7 +148,7 @@ fun BoneDetailScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
-                            contentDescription = "Share technique"
+                            contentDescription = stringResource(R.string.bone_detail_share_technique)
                         )
                     }
 
@@ -138,7 +158,7 @@ fun BoneDetailScreen(
                     ) {
                         Icon(
                             imageVector = if (detail?.isBookmarked == true) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                            contentDescription = "Bookmark",
+                            contentDescription = stringResource(R.string.bone_detail_bookmark),
                             tint = if (detail?.isBookmarked == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -159,7 +179,7 @@ fun BoneDetailScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Add Surgeon Note"
+                    contentDescription = stringResource(R.string.bone_detail_add_surgeon_note)
                 )
             }
         },
@@ -175,23 +195,26 @@ fun BoneDetailScreen(
                 CircularProgressIndicator()
             }
         } else {
-            val filteredSections = when (selectedFilter) {
-                SectionFilter.ALL -> detail.sections
-                SectionFilter.ANATOMY -> detail.sections.filter { it.sectionType.equals("ANATOMY", true) }
-                SectionFilter.APPROACH -> detail.sections.filter { it.sectionType.equals("APPROACH", true) }
-                SectionFilter.REDUCTION -> detail.sections.filter { it.sectionType.equals("REDUCTION", true) }
-                SectionFilter.FIXATION -> detail.sections.filter { it.sectionType.equals("FIXATION", true) }
-                SectionFilter.PEARLS -> detail.sections.filter { it.sectionType.equals("PEARLS", true) || it.pearls.isNotBlank() }
-                SectionFilter.COMPLICATIONS -> detail.sections.filter { it.sectionType.equals("COMPLICATIONS", true) || it.warnings.isNotBlank() }
-                SectionFilter.REHAB -> detail.sections.filter { it.sectionType.equals("REHAB", true) }
-            }
+            // Recomputed only when the sections, filter or query change.
+            val searchedSections = remember(detail.sections, selectedFilter, searchQuery) {
+                val filteredSections = when (selectedFilter) {
+                    SectionFilter.ALL -> detail.sections
+                    SectionFilter.ANATOMY -> detail.sections.filter { it.sectionType.equals("ANATOMY", true) }
+                    SectionFilter.APPROACH -> detail.sections.filter { it.sectionType.equals("APPROACH", true) }
+                    SectionFilter.REDUCTION -> detail.sections.filter { it.sectionType.equals("REDUCTION", true) }
+                    SectionFilter.FIXATION -> detail.sections.filter { it.sectionType.equals("FIXATION", true) }
+                    SectionFilter.PEARLS -> detail.sections.filter { it.sectionType.equals("PEARLS", true) || it.pearls.isNotBlank() }
+                    SectionFilter.COMPLICATIONS -> detail.sections.filter { it.sectionType.equals("COMPLICATIONS", true) || it.warnings.isNotBlank() }
+                    SectionFilter.REHAB -> detail.sections.filter { it.sectionType.equals("REHAB", true) }
+                }
 
-            val searchedSections = if (searchQuery.isBlank()) {
-                filteredSections
-            } else {
-                filteredSections.filter {
-                    it.title.contains(searchQuery, ignoreCase = true) ||
-                        it.content.contains(searchQuery, ignoreCase = true)
+                if (searchQuery.isBlank()) {
+                    filteredSections
+                } else {
+                    filteredSections.filter {
+                        it.title.contains(searchQuery, ignoreCase = true) ||
+                            it.content.contains(searchQuery, ignoreCase = true)
+                    }
                 }
             }
 
@@ -241,7 +264,7 @@ fun BoneDetailScreen(
                                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                             ) {
                                 Text(
-                                    text = "Classification: ${detail.bone.classificationSummary}",
+                                    text = stringResource(R.string.bone_detail_classification_prefix, detail.bone.classificationSummary),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
@@ -251,35 +274,38 @@ fun BoneDetailScreen(
                     }
                 }
 
-                item {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.padding(vertical = 6.dp)
-                    ) {
-                        items(SectionFilter.entries.toTypedArray()) { filter ->
-                            FilterChip(
-                                selected = selectedFilter == filter,
-                                onClick = { viewModel.setSectionFilter(filter) },
-                                label = {
-                                    Text(
-                                        text = filter.name.replace("_", " "),
-                                        style = MaterialTheme.typography.labelMedium
-                                    )
-                                },
-                                shape = RoundedCornerShape(50),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                    containerColor = MaterialTheme.colorScheme.surface
-                                ),
-                                border = FilterChipDefaults.filterChipBorder(
-                                    enabled = true,
+                // Pinned under the app bar, so the filters stay in reach while reading.
+                stickyHeader(key = "section_filters") {
+                    Surface(color = MaterialTheme.colorScheme.background) {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(vertical = 6.dp)
+                        ) {
+                            items(SectionFilter.entries.toTypedArray()) { filter ->
+                                FilterChip(
                                     selected = selectedFilter == filter,
-                                    borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
-                                    selectedBorderColor = MaterialTheme.colorScheme.primary
+                                    onClick = { viewModel.setSectionFilter(filter) },
+                                    label = {
+                                        Text(
+                                            text = sectionFilterLabel(filter),
+                                            style = MaterialTheme.typography.labelMedium
+                                        )
+                                    },
+                                    shape = RoundedCornerShape(50),
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                        containerColor = MaterialTheme.colorScheme.surface
+                                    ),
+                                    border = FilterChipDefaults.filterChipBorder(
+                                        enabled = true,
+                                        selected = selectedFilter == filter,
+                                        borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+                                        selectedBorderColor = MaterialTheme.colorScheme.primary
+                                    )
                                 )
-                            )
+                            }
                         }
                     }
                 }
@@ -288,7 +314,7 @@ fun BoneDetailScreen(
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { viewModel.setSearchQuery(it) },
-                        placeholder = { Text("Search this bone's content...") },
+                        placeholder = { Text(stringResource(R.string.bone_detail_search_this_bone_s_content)) },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Search,
@@ -301,7 +327,7 @@ fun BoneDetailScreen(
                                 IconButton(onClick = { viewModel.setSearchQuery("") }) {
                                     Icon(
                                         imageVector = Icons.Default.Close,
-                                        contentDescription = "Clear search",
+                                        contentDescription = stringResource(R.string.common_clear_search),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
@@ -329,7 +355,7 @@ fun BoneDetailScreen(
                 if (searchQuery.isNotBlank() && searchedSections.isEmpty()) {
                     item {
                         Text(
-                            text = "No matches for \"$searchQuery\" in this filter.",
+                            text = stringResource(R.string.bone_detail_no_matches, searchQuery),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
@@ -363,7 +389,7 @@ fun BoneDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "MY SURGICAL NOTES (${detail.notes.size})",
+                                    text = stringResource(R.string.bone_detail_my_notes_count, detail.notes.size),
                                     style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -375,7 +401,7 @@ fun BoneDetailScreen(
                                 CaseNoteCard(
                                     note = note,
                                     onEdit = { viewModel.openEditNoteDialog(note) },
-                                    onDelete = { viewModel.deleteNote(note.id) },
+                                    onDelete = { noteToDelete = note.id },
                                     modifier = Modifier.padding(vertical = 4.dp)
                                 )
                             }
@@ -451,7 +477,7 @@ private fun CaseNoteCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Edit,
-                    contentDescription = "Edit note",
+                    contentDescription = stringResource(R.string.bone_detail_edit_note),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp)
                 )
@@ -463,7 +489,7 @@ private fun CaseNoteCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete note",
+                    contentDescription = stringResource(R.string.bone_detail_delete_note),
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(16.dp)
                 )
@@ -471,3 +497,17 @@ private fun CaseNoteCard(
         }
     }
 }
+
+@Composable
+private fun sectionFilterLabel(filter: SectionFilter): String = stringResource(
+    when (filter) {
+        SectionFilter.ALL -> R.string.section_filter_all
+        SectionFilter.ANATOMY -> R.string.section_filter_anatomy
+        SectionFilter.APPROACH -> R.string.section_filter_approach
+        SectionFilter.REDUCTION -> R.string.section_filter_reduction
+        SectionFilter.FIXATION -> R.string.section_filter_fixation
+        SectionFilter.PEARLS -> R.string.section_filter_pearls
+        SectionFilter.COMPLICATIONS -> R.string.section_filter_complications
+        SectionFilter.REHAB -> R.string.section_filter_rehab
+    }
+)

@@ -1,14 +1,16 @@
 package com.example.viewmodel
 
+import com.example.R
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.data.crypto.CryptoKeys
+import com.example.data.crypto.PassphraseKeyBackup
 import com.example.data.local.entity.TransferDirection
 import com.example.data.local.entity.TransferQueueEntity
 import com.example.data.prefs.CachePolicy
-import com.example.data.prefs.SyncMode
+import com.example.data.prefs.SyncFrequency
 import com.example.data.prefs.TelegramDriveRepository
 import com.example.data.prefs.TelegramDriveSettings
 import com.example.data.storage.StorageBackend
@@ -94,6 +96,11 @@ data class SetupUiState(
     val manifestEntries: Int = 0,
     val initialSyncReport: SyncReport? = null,
     val existingDriveFound: Boolean = false,
+    /** The drive holds data encrypted with a key this phone does not have. */
+    val driveLocked: Boolean = false,
+    val lockedObjects: Int = 0,
+    val driveHasKeyBackup: Boolean = false,
+    val passphrase: PassphraseUi = PassphraseUi(),
     /** Automatic steps whose work has finished successfully. */
     val completedSteps: Set<SetupStep> = emptySet()
 ) {
@@ -109,6 +116,7 @@ data class SetupUiState(
                 apiId.toIntOrNull() != null && apiHash.length >= 16
 
             step == SetupStep.TELEGRAM_LOGIN -> authState == TelegramAuthState.Ready
+            step == SetupStep.MANIFEST -> step in completedSteps && !driveLocked
             step.isAutomatic -> step in completedSteps
             else -> true
         }
@@ -127,6 +135,10 @@ class TelegramSetupViewModel(
     private val appModule: AppModule,
     private val applicationContext: Context
 ) : ViewModel() {
+
+    /** Text in the app's chosen language (the application context alone ignores it below Android 13). */
+    private fun text(@androidx.annotation.StringRes id: Int, vararg args: Any): String =
+        com.example.util.AppLocale.wrap(applicationContext).getString(id, *args)
 
     private val _uiState = MutableStateFlow(SetupUiState())
     val uiState: StateFlow<SetupUiState> = _uiState.asStateFlow()
@@ -211,7 +223,7 @@ class TelegramSetupViewModel(
             }.getOrElse { error ->
                 DriveLog.e(TAG, "Setup step $step failed", error)
                 _uiState.value = _uiState.value.copy(
-                    error = error.message ?: "This step could not be completed"
+                    error = error.message ?: text(R.string.drive_err_step)
                 )
                 false
             }
@@ -241,7 +253,7 @@ class TelegramSetupViewModel(
             val ok = when (state.step) {
                 SetupStep.CREDENTIALS -> runCatching { startTelegram() }.getOrElse { error ->
                     _uiState.value = _uiState.value.copy(
-                        error = error.message ?: "Could not start Telegram"
+                        error = error.message ?: text(R.string.drive_err_start)
                     )
                     false
                 }
@@ -271,37 +283,37 @@ class TelegramSetupViewModel(
             apiHash = state.apiHash
         )
         drive.storeCredentials(credentials)
-        status("Starting Telegram…")
+        status(text(R.string.drive_st_starting))
         client.start(credentials)
         return true
     }
 
-    fun submitPhoneNumber() = runStep("Sending code…") {
+    fun submitPhoneNumber() = runStep(text(R.string.drive_st_sending_code)) {
         client.submitPhoneNumber(_uiState.value.phoneNumber.trim())
     }
 
-    fun submitCode() = runStep("Checking code…") { client.submitCode(_uiState.value.code) }
+    fun submitCode() = runStep(text(R.string.drive_st_checking_code)) { client.submitCode(_uiState.value.code) }
 
-    fun submitPassword() = runStep("Checking password…") {
+    fun submitPassword() = runStep(text(R.string.drive_st_checking_password)) {
         client.submitPassword(_uiState.value.password)
     }
 
-    fun submitEmail() = runStep("Sending email code…") {
+    fun submitEmail() = runStep(text(R.string.drive_st_sending_email)) {
         client.submitEmailAddress(_uiState.value.email)
     }
 
-    fun submitEmailCode() = runStep("Checking email code…") {
+    fun submitEmailCode() = runStep(text(R.string.drive_st_checking_email)) {
         client.submitEmailCode(_uiState.value.code)
     }
 
-    fun resendCode() = runStep("Resending…") { client.resendCode() }
+    fun resendCode() = runStep(text(R.string.drive_st_resending)) { client.resendCode() }
 
-    fun useQrLogin() = runStep("Preparing QR code…") { client.requestQrCodeAuthentication() }
+    fun useQrLogin() = runStep(text(R.string.drive_st_qr)) { client.requestQrCodeAuthentication() }
 
-    fun usePhoneLogin() = runStep("Restarting sign-in…") { client.restartAuthentication() }
+    fun usePhoneLogin() = runStep(text(R.string.drive_st_restart)) { client.restartAuthentication() }
 
     private suspend fun initialiseDrive(): Boolean {
-        status("Looking for an existing Ortho Tips Drive…")
+        status(text(R.string.drive_st_looking))
         val existing = runCatching { client.listStorageChannels() }.getOrDefault(emptyList())
         val chatId = client.ensureStorageChat(drive.chatId())
         drive.setChatId(chatId)
@@ -314,17 +326,17 @@ class TelegramSetupViewModel(
             chatId = chatId,
             existingDriveFound = existing.any { it.chatId == chatId }
         )
-        status("Drive ready")
+        status(text(R.string.drive_st_ready))
         return true
     }
 
     private suspend fun verifyStorage(): Boolean {
-        status("Checking available space…")
+        status(text(R.string.drive_st_space))
         val usage = appModule.storageRegistry.local.usage()
         _uiState.value = _uiState.value.copy(verifiedBytes = usage.availableBytes)
         if (usage.availableBytes < MIN_FREE_BYTES) {
             _uiState.value = _uiState.value.copy(
-                error = "Less than 200 MB free on this device. Free some space before syncing."
+                error = text(R.string.drive_err_space)
             )
             return false
         }
@@ -335,36 +347,49 @@ class TelegramSetupViewModel(
     }
 
     private suspend fun testConnection(): Boolean {
-        status("Checking the connection…")
+        status(text(R.string.drive_st_connection))
         val user = client.getCurrentUser()
         val limits = client.getLimits()
         status(
-            "Connected as ${user.displayName}. Up to " +
-                    "${limits.maxFileBytes / (1024 * 1024)} MB per file."
+            text(R.string.drive_st_connected_as, user.displayName, limits.maxFileBytes / (1024 * 1024))
         )
         return true
     }
 
     private suspend fun buildManifest(): Boolean {
-        status("Reading the drive manifest…")
+        status(text(R.string.drive_st_manifest))
         val entries = appModule.syncEngine.rebuildManifest()
-        _uiState.value = _uiState.value.copy(manifestEntries = entries)
+        val keys = runCatching { appModule.passphraseKeyBackup.inspectDrive() }.getOrNull()
+        _uiState.value = _uiState.value.copy(
+            manifestEntries = entries,
+            driveLocked = keys?.needsUnlock == true,
+            lockedObjects = keys?.lockedObjects ?: 0,
+            driveHasKeyBackup = keys?.hasBackup == true,
+            passphrase = PassphraseUi(checked = keys != null, hasBackup = keys?.hasBackup == true)
+        )
         status(
-            if (entries == 0) "New drive — nothing to restore."
-            else "Found $entries objects already in this drive."
+            if (entries == 0) text(R.string.drive_st_new_drive)
+            else text(R.string.drive_st_found_entries, entries)
         )
         return true
     }
 
     private suspend fun runInitialSync(): Boolean {
-        status("Running the first synchronisation…")
+        status(text(R.string.drive_st_first_sync))
         drive.setBackend(StorageBackend.TELEGRAM)
         drive.setSetupCompleted(true)
         // An existing drive means this is a second device or a reinstall, so the
         // records it already holds are pulled before anything local is pushed.
         if (_uiState.value.manifestEntries > 0) {
             runCatching { appModule.syncEngine.pullDatabaseSnapshot() }
-                .onFailure { DriveLog.w(TAG, "Snapshot restore skipped", it) }
+                .onSuccess { restored ->
+                    if (restored == null) {
+                        DriveLog.w(TAG, "Drive holds no snapshot with records")
+                    } else {
+                        status(text(R.string.drive_st_restored, restored.rowCount))
+                    }
+                }
+                .onFailure { DriveLog.e(TAG, "Snapshot restore failed", it) }
         }
         val report = appModule.syncEngine.sync(SyncScope.FULL, ConflictPolicy.NEWEST_WINS)
         _uiState.value = _uiState.value.copy(initialSyncReport = report)
@@ -375,6 +400,55 @@ class TelegramSetupViewModel(
     private suspend fun finish(): Boolean {
         SyncScheduler(applicationContext).applyPreferences()
         return true
+    }
+
+    /** Opens a drive created on another phone (or before a reinstall). */
+    fun unlockDrive(passphrase: String) {
+        val backup = appModule.passphraseKeyBackup
+        setPassphraseUi { it.copy(working = true, outcome = null) }
+        viewModelScope.launch {
+            val outcome = runCatching {
+                when (val result = backup.unlock(passphrase)) {
+                    PassphraseKeyBackup.UnlockResult.NoBackup -> PassphraseOutcome.NO_BACKUP
+                    PassphraseKeyBackup.UnlockResult.WrongPassphrase -> PassphraseOutcome.WRONG
+                    is PassphraseKeyBackup.UnlockResult.Unlocked -> {
+                        val entries = appModule.syncEngine.rebuildManifest()
+                        val keys = runCatching { backup.inspectDrive() }.getOrNull()
+                        _uiState.value = _uiState.value.copy(
+                            manifestEntries = entries,
+                            driveLocked = keys?.needsUnlock == true,
+                            lockedObjects = keys?.lockedObjects ?: 0,
+                            driveHasKeyBackup = true
+                        )
+                        PassphraseOutcome.UNLOCKED
+                    }
+                }
+            }.getOrElse { error ->
+                DriveLog.e(TAG, "Unlock failed", error)
+                PassphraseOutcome.FAILED
+            }
+            setPassphraseUi { it.copy(working = false, outcome = outcome, hasBackup = _uiState.value.driveHasKeyBackup) }
+        }
+    }
+
+    /** Continues without the old data; it stays in the drive, unreadable here. */
+    fun skipUnlock() {
+        _uiState.value = _uiState.value.copy(driveLocked = false)
+    }
+
+    fun savePassphrase(passphrase: String) {
+        setPassphraseUi { it.copy(working = true, outcome = null) }
+        viewModelScope.launch {
+            val outcome = savePassphraseOutcome(appModule, passphrase)
+            if (outcome == PassphraseOutcome.SAVED) {
+                _uiState.value = _uiState.value.copy(driveHasKeyBackup = true)
+            }
+            setPassphraseUi { it.copy(working = false, outcome = outcome, hasBackup = _uiState.value.driveHasKeyBackup) }
+        }
+    }
+
+    private fun setPassphraseUi(change: (PassphraseUi) -> PassphraseUi) {
+        _uiState.value = _uiState.value.copy(passphrase = change(_uiState.value.passphrase))
     }
 
     /** Abandons setup, leaving the backend on LOCAL and no data touched. */
@@ -390,7 +464,7 @@ class TelegramSetupViewModel(
             setBusy(true)
             status(message)
             runCatching { block() }.onFailure { error ->
-                _uiState.value = _uiState.value.copy(error = error.message ?: "Request failed")
+                _uiState.value = _uiState.value.copy(error = error.message ?: text(R.string.drive_err_request))
             }
             setBusy(false)
         }
@@ -437,13 +511,18 @@ data class DriveSettingsUiState(
     val busyLabel: String? = null,
     val message: String? = null,
     val lastReport: SyncReport? = null,
-    val integrity: IntegrityReport? = null
+    val integrity: IntegrityReport? = null,
+    val passphrase: PassphraseUi = PassphraseUi()
 )
 
 class TelegramDriveSettingsViewModel(
     private val appModule: AppModule,
     private val applicationContext: Context
 ) : ViewModel() {
+
+    /** Text in the app's chosen language (the application context alone ignores it below Android 13). */
+    private fun text(@androidx.annotation.StringRes id: Int, vararg args: Any): String =
+        com.example.util.AppLocale.wrap(applicationContext).getString(id, *args)
 
     private val drive: TelegramDriveRepository get() = appModule.telegramDriveRepository
     private val queueDao get() = appModule.database.transferQueueDao()
@@ -495,6 +574,82 @@ class TelegramDriveSettingsViewModel(
         _uiState.value = _uiState.value.copy(
             keyFingerprint = appModule.wrappedKeyRepository.fingerprint(CryptoKeys.CONTENT)
         )
+        viewModelScope.launch {
+            if (drive.current().setupCompleted) refreshPassphrase()
+        }
+    }
+
+    // ---- Encryption passphrase -----------------------------------------------
+
+    fun refreshPassphrase() {
+        viewModelScope.launch {
+            val keys = kotlinx.coroutines.withTimeoutOrNull(90_000) {
+                runCatching { appModule.passphraseKeyBackup.inspectDrive() }.getOrNull()
+            } ?: return@launch
+            setPassphraseUi {
+                it.copy(
+                    checked = true,
+                    hasBackup = keys.hasBackup,
+                    needsUnlock = keys.needsUnlock,
+                    lockedObjects = keys.lockedObjects
+                )
+            }
+        }
+    }
+
+    fun savePassphrase(passphrase: String) {
+        setPassphraseUi { it.copy(working = true, outcome = null) }
+        viewModelScope.launch {
+            val outcome = savePassphraseOutcome(appModule, passphrase)
+            setPassphraseUi {
+                it.copy(
+                    working = false,
+                    outcome = outcome,
+                    hasBackup = it.hasBackup || outcome == PassphraseOutcome.SAVED,
+                    needsUnlock = it.needsUnlock || outcome == PassphraseOutcome.LOCKED_DRIVE
+                )
+            }
+        }
+    }
+
+    /**
+     * Installs the drive's key from its passphrase, then rebuilds the index and
+     * brings the patients and their media back.
+     */
+    fun unlockDrive(passphrase: String) {
+        setPassphraseUi { it.copy(working = true, outcome = null) }
+        viewModelScope.launch {
+            val outcome = runCatching {
+                when (appModule.passphraseKeyBackup.unlock(passphrase)) {
+                    PassphraseKeyBackup.UnlockResult.NoBackup -> PassphraseOutcome.NO_BACKUP
+                    PassphraseKeyBackup.UnlockResult.WrongPassphrase -> PassphraseOutcome.WRONG
+                    is PassphraseKeyBackup.UnlockResult.Unlocked -> {
+                        appModule.syncEngine.rebuildManifest()
+                        runCatching { appModule.syncEngine.pullDatabaseSnapshot() }
+                            .onFailure { DriveLog.e(TAG, "Restore after unlock failed", it) }
+                        val report = appModule.syncEngine.sync(SyncScope.FULL, ConflictPolicy.PREFER_REMOTE)
+                        _uiState.value = _uiState.value.copy(
+                            lastReport = report,
+                            keyFingerprint = appModule.wrappedKeyRepository.fingerprint(CryptoKeys.CONTENT)
+                        )
+                        val settings = drive.current()
+                        scheduler.kickTransfers(settings.syncOnWifiOnly, settings.syncWhileChargingOnly)
+                        PassphraseOutcome.UNLOCKED
+                    }
+                }
+            }.getOrElse { error ->
+                DriveLog.e(TAG, "Unlock failed", error)
+                PassphraseOutcome.FAILED
+            }
+            setPassphraseUi { it.copy(working = false, outcome = outcome) }
+            if (outcome == PassphraseOutcome.UNLOCKED) refreshPassphrase()
+        }
+    }
+
+    fun clearPassphraseOutcome() = setPassphraseUi { it.copy(outcome = null) }
+
+    private fun setPassphraseUi(change: (PassphraseUi) -> PassphraseUi) {
+        _uiState.value = _uiState.value.copy(passphrase = change(_uiState.value.passphrase))
     }
 
     // ---- Backend -------------------------------------------------------------
@@ -503,27 +658,33 @@ class TelegramDriveSettingsViewModel(
      * Switching backends is metadata only. Both stores keep every byte they hold;
      * moving content between them is the separate, explicit migration action.
      */
-    fun selectBackend(backend: StorageBackend) = launchWith("Switching storage…") {
+    fun selectBackend(backend: StorageBackend) = launchWith(text(R.string.drive_busy_switching)) {
         if (backend == StorageBackend.TELEGRAM && !drive.current().setupCompleted) {
-            message("Run Telegram Drive setup first.")
+            message(text(R.string.drive_msg_setup_first))
             return@launchWith
         }
         drive.setBackend(backend)
         scheduler.applyPreferences()
         message(
             if (backend == StorageBackend.LOCAL) {
-                "Now using local storage. Nothing was deleted from your drive."
+                text(R.string.drive_msg_now_local)
             } else {
-                "Now using Telegram Drive. Your local files were left in place."
+                text(R.string.drive_msg_now_drive)
             }
         )
     }
 
     // ---- Sync preferences ----------------------------------------------------
 
-    fun setSyncMode(mode: SyncMode) = launchWith(null) {
-        drive.setSyncMode(mode)
+    fun setSyncFrequency(frequency: SyncFrequency) = launchWith(null) {
+        drive.setSyncFrequency(frequency)
         scheduler.applyPreferences()
+        if (frequency == SyncFrequency.ON_CHANGE) {
+            // Anything saved while the drive was on a slower schedule is still
+            // waiting locally, so catch it up rather than making the surgeon
+            // wonder why the switch changed nothing.
+            syncNow(full = false)
+        }
     }
 
     fun setWifiOnly(enabled: Boolean) = launchWith(null) {
@@ -548,8 +709,8 @@ class TelegramDriveSettingsViewModel(
     fun setEncryptUploads(enabled: Boolean) = launchWith(null) {
         drive.setEncryptUploads(enabled)
         message(
-            if (enabled) "New uploads will be encrypted."
-            else "New uploads will not be encrypted. Existing encrypted files stay readable."
+            if (enabled) text(R.string.drive_msg_encrypt_on)
+            else text(R.string.drive_msg_encrypt_off)
         )
     }
 
@@ -563,7 +724,7 @@ class TelegramDriveSettingsViewModel(
 
     // ---- Actions -------------------------------------------------------------
 
-    fun syncNow(full: Boolean = false) = launchWith("Synchronising…") {
+    fun syncNow(full: Boolean = false) = launchWith(text(R.string.drive_busy_sync)) {
         val report = appModule.syncEngine.sync(
             if (full) SyncScope.FULL else SyncScope.INCREMENTAL
         )
@@ -574,76 +735,84 @@ class TelegramDriveSettingsViewModel(
         }
         message(
             if (report.succeeded) {
-                "Queued ${report.uploadsQueued} uploads and ${report.downloadsQueued} downloads."
+                text(R.string.drive_msg_queued_both, report.uploadsQueued, report.downloadsQueued)
             } else {
                 report.errors.first()
             }
         )
     }
 
-    fun retryFailedTransfers() = launchWith("Retrying…") {
+    fun retryFailedTransfers() = launchWith(text(R.string.drive_busy_retry)) {
         queueDao.retryAllFailed(System.currentTimeMillis())
         val settings = drive.current()
         scheduler.kickTransfers(settings.syncOnWifiOnly, settings.syncWhileChargingOnly)
-        message("Failed transfers were requeued.")
+        message(text(R.string.drive_msg_requeued))
     }
 
-    fun reconnect() = launchWith("Reconnecting…") {
+    fun reconnect() = launchWith(text(R.string.drive_busy_reconnect)) {
         val credentials = drive.credentials()
         if (credentials == null) {
-            message("No stored Telegram credentials. Run setup again.")
+            message(text(R.string.drive_msg_no_credentials))
             return@launchWith
         }
         appModule.telegramClient.start(credentials)
-        message("Reconnecting to Telegram.")
+        message(text(R.string.drive_msg_reconnecting))
     }
 
     /**
      * Signs out of Telegram and reverts to local storage. Nothing is deleted:
      * local files stay, and the drive channel stays in the user's account.
      */
-    fun logout() = launchWith("Signing out…") {
+    fun logout() = launchWith(text(R.string.drive_busy_signout)) {
         runCatching { appModule.telegramClient.logout() }
         scheduler.cancelAll()
         drive.clearAccountState()
-        message("Signed out. Local storage is active and no data was removed.")
+        message(text(R.string.drive_msg_signed_out))
     }
 
-    fun rebuildManifest() = launchWith("Rebuilding manifest…") {
+    fun rebuildManifest() = launchWith(text(R.string.drive_busy_rebuild)) {
         val entries = appModule.syncEngine.rebuildManifest()
-        message("Manifest rebuilt from $entries drive entries.")
+        message(text(R.string.drive_msg_rebuilt, entries))
     }
 
-    fun verifyIntegrity() = launchWith("Verifying…") {
+    fun verifyIntegrity() = launchWith(text(R.string.drive_busy_verify)) {
         val report = appModule.syncEngine.verifyIntegrity()
         _uiState.value = _uiState.value.copy(integrity = report)
         message(
-            if (report.healthy) "All ${report.checked} objects verified."
-            else "${report.missingRemotely.size} missing, ${report.hashMismatches.size} mismatched."
+            if (report.healthy) text(R.string.drive_msg_verified, report.checked)
+            else text(R.string.drive_msg_integrity_issues, report.missingRemotely.size, report.hashMismatches.size)
         )
     }
 
-    fun clearCache() = launchWith("Clearing cache…") {
+    fun clearCache() = launchWith(text(R.string.drive_busy_cache)) {
         val freed = appModule.telegramStorageProvider.clearCache()
         refreshUsage()
-        message("Freed ${freed / (1024 * 1024)} MB of cache. No stored data was removed.")
+        message(text(R.string.drive_msg_cache_freed, freed / (1024 * 1024)))
     }
 
-    fun migrateLocalToDrive() = launchWith("Copying local content to the drive…") {
+    fun migrateLocalToDrive() = launchWith(text(R.string.drive_busy_copy)) {
         val report = appModule.syncEngine.sync(SyncScope.FULL, ConflictPolicy.PREFER_LOCAL)
         _uiState.value = _uiState.value.copy(lastReport = report)
         val settings = drive.current()
         scheduler.kickTransfers(settings.syncOnWifiOnly, settings.syncWhileChargingOnly)
-        message("Queued ${report.uploadsQueued} objects for upload. Local copies are kept.")
+        message(text(R.string.drive_msg_queued_uploads, report.uploadsQueued))
     }
 
-    fun migrateDriveToLocal() = launchWith("Restoring drive content to this device…") {
-        runCatching { appModule.syncEngine.pullDatabaseSnapshot() }
+    fun migrateDriveToLocal() = launchWith(text(R.string.drive_busy_restore)) {
+        // Not runCatching: a failed record restore is the whole point of this
+        // action, and swallowing it made an empty database look like success.
+        val restored = appModule.syncEngine.pullDatabaseSnapshot()
         val report = appModule.syncEngine.sync(SyncScope.FULL, ConflictPolicy.PREFER_REMOTE)
         _uiState.value = _uiState.value.copy(lastReport = report)
         val settings = drive.current()
         scheduler.kickTransfers(settings.syncOnWifiOnly, settings.syncWhileChargingOnly)
-        message("Queued ${report.downloadsQueued} objects for download.")
+        message(
+            if (restored == null) {
+                text(R.string.drive_msg_no_records, report.downloadsQueued)
+            } else {
+                text(R.string.drive_msg_restored_queued, restored.rowCount, report.downloadsQueued)
+            }
+        )
     }
 
     fun clearLogs() {
@@ -669,7 +838,7 @@ class TelegramDriveSettingsViewModel(
             _uiState.value = _uiState.value.copy(busyLabel = label)
             runCatching { block() }.onFailure { error ->
                 DriveLog.e(TAG, "Settings action failed", error)
-                message(error.message ?: "Action failed")
+                message(error.message ?: text(R.string.drive_err_action))
             }
             _uiState.value = _uiState.value.copy(busyLabel = null)
         }
@@ -688,4 +857,19 @@ class TelegramDriveSettingsViewModel(
                 TelegramDriveSettingsViewModel(appModule, applicationContext) as T
         }
     }
+}
+
+/** Shared by setup and settings: seals the key with [passphrase] and maps the result. */
+internal suspend fun savePassphraseOutcome(appModule: AppModule, passphrase: String): PassphraseOutcome {
+    if (passphrase.trim().length < PassphraseKeyBackup.MIN_LENGTH) return PassphraseOutcome.TOO_SHORT
+    return runCatching { appModule.passphraseKeyBackup.setPassphrase(passphrase) }
+        .fold(
+            onSuccess = { PassphraseOutcome.SAVED },
+            onFailure = { error ->
+                DriveLog.e("Passphrase", "Saving passphrase failed", error)
+                if (error is PassphraseKeyBackup.PassphraseException &&
+                    error.message?.contains("another key") == true
+                ) PassphraseOutcome.LOCKED_DRIVE else PassphraseOutcome.FAILED
+            }
+        )
 }

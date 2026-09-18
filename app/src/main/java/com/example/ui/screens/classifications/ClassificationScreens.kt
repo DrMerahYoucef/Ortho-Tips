@@ -1,5 +1,6 @@
 package com.example.ui.screens.classifications
 
+import com.example.ui.components.PatientValueLabels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -65,6 +66,8 @@ import com.example.data.local.model.ClassificationEntry
 import com.example.data.repository.ClassificationRepository
 import com.example.ui.components.OrthoSearchBar
 import com.example.viewmodel.ClassificationViewModel
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 /**
  * Level 1: list of classification chapters, read from assets/classifications/index.json.
@@ -104,7 +107,7 @@ fun ClassificationChaptersScreen(
                         onQueryChange = { searchQuery = it },
                         onSearch = { searchQuery = it },
                         onClear = { searchQuery = "" },
-                        placeholderText = "Search classifications...",
+                        placeholderText = stringResource(R.string.classif_search_placeholder),
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
                     LazyColumn(
@@ -165,7 +168,8 @@ private fun ChapterRefCard(chapter: ChapterRef, onClick: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "${chapter.classificationCount} classifications • ${chapter.sectionCount} sections",
+                    text = PatientValueLabels.plural(R.plurals.classification_count, chapter.classificationCount) +
+                        " • " + PatientValueLabels.plural(R.plurals.home_sections_count, chapter.sectionCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -211,7 +215,7 @@ fun ClassificationChapterDetailRoute(
                         onClick = onNavigateBack,
                         modifier = Modifier.testTag("classification_detail_back_button")
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
@@ -267,7 +271,7 @@ fun ClassificationChapterDetailScreen(
                 onQueryChange = { searchQuery = it },
                 onSearch = { searchQuery = it },
                 onClear = { searchQuery = "" },
-                placeholderText = "Search in this chapter...",
+                placeholderText = stringResource(R.string.classif_search_chapter_placeholder),
                 modifier = Modifier.padding(bottom = 8.dp)
             )
         }
@@ -476,7 +480,7 @@ private fun ClassificationImage(
                     onClick = { showViewer = false },
                     modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
                 ) {
-                    Icon(Icons.Default.Close, contentDescription = "Fermer", tint = androidx.compose.ui.graphics.Color.White)
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.classifications_fermer), tint = androidx.compose.ui.graphics.Color.White)
                 }
             }
         }

@@ -1,5 +1,6 @@
 package com.example.ui.screens.patients
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import android.Manifest
 import android.content.ContentValues
 import android.content.pm.PackageManager
@@ -24,13 +25,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Camera
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -56,12 +59,16 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun PatientCameraCaptureScreen(
     onNavigateBack: () -> Unit,
     onPhotoCaptured: (Uri, ImageCategory) -> Unit,
     onOpenScanner: () -> Unit,
+    onMediaPicked: (List<Uri>, ImageCategory) -> Unit,
+    onVideoRecorded: (Uri, ImageCategory) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -88,6 +95,30 @@ fun PatientCameraCaptureScreen(
         if (!hasCameraPermission) permissionLauncher.launch(Manifest.permission.CAMERA)
     }
 
+    // Recording uses the phone's own camera app: it handles focus, zoom, audio and
+    // long clips better than anything worth rebuilding here.
+    var pendingVideo by remember { mutableStateOf<Uri?>(null) }
+    val recordLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CaptureVideo()) { saved ->
+        val uri = pendingVideo
+        pendingVideo = null
+        if (saved && uri != null) onVideoRecorded(uri, selectedCategory)
+    }
+    val pickLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(20)
+    ) { uris ->
+        if (uris.isNotEmpty()) onMediaPicked(uris, selectedCategory)
+    }
+
+    fun startRecording() {
+        val file = java.io.File(context.cacheDir, "captures").also { it.mkdirs() }
+            .let { java.io.File(it, "video_${System.currentTimeMillis()}.mp4") }
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            context, "${context.packageName}.fileprovider", file
+        )
+        pendingVideo = uri
+        recordLauncher.launch(uri)
+    }
+
     val imageCapture = remember { ImageCapture.Builder().build() }
     val cameraExecutor: ExecutorService = remember { Executors.newSingleThreadExecutor() }
 
@@ -99,6 +130,19 @@ fun PatientCameraCaptureScreen(
         modifier = modifier,
         floatingActionButton = {
             if (hasCameraPermission) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    SmallFloatingActionButton(onClick = { pickLauncher.launch(
+                        androidx.activity.result.PickVisualMediaRequest(
+                            ActivityResultContracts.PickVisualMedia.ImageAndVideo
+                        )
+                    ) }) {
+                        Icon(Icons.Default.PhotoLibrary, contentDescription = stringResource(R.string.media_import_from_gallery))
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    SmallFloatingActionButton(onClick = { startRecording() }) {
+                        Icon(Icons.Default.Videocam, contentDescription = stringResource(R.string.media_record_video))
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
                 FloatingActionButton(
                     onClick = {
                         if (!isCapturing) {
@@ -113,8 +157,9 @@ fun PatientCameraCaptureScreen(
                     if (isCapturing) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp))
                     } else {
-                        Icon(Icons.Default.Camera, contentDescription = "Capture")
+                        Icon(Icons.Default.Camera, contentDescription = stringResource(R.string.patient_camera_capture_capture))
                     }
+                }
                 }
             }
         }
@@ -156,7 +201,7 @@ fun PatientCameraCaptureScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "Camera access is needed to take a photo.",
+                        text = stringResource(R.string.patient_camera_capture_camera_access_is_needed_to),
                         color = Color.White,
                         style = MaterialTheme.typography.bodyLarge
                     )
@@ -183,7 +228,7 @@ fun PatientCameraCaptureScreen(
                         onClick = onOpenScanner,
                         colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
                     ) {
-                        Text("Scan a document instead")
+                        Text(stringResource(R.string.patient_camera_capture_scan_a_document_instead))
                     }
                 }
             }
@@ -194,7 +239,7 @@ fun PatientCameraCaptureScreen(
                     .align(Alignment.TopStart)
                     .padding(12.dp)
             ) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back), tint = Color.White)
             }
 
             if (hasCameraPermission) {
@@ -229,7 +274,7 @@ fun PatientCameraCaptureScreen(
                         onClick = onOpenScanner,
                         colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
                     ) {
-                        Text("Scan a document instead")
+                        Text(stringResource(R.string.patient_camera_capture_scan_a_document_instead))
                     }
                 }
             }

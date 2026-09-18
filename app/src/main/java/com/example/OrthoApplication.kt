@@ -3,6 +3,7 @@ package com.example
 import android.app.Application
 import coil.ImageLoader
 import coil.ImageLoaderFactory
+import com.example.data.local.ContentLocale
 import com.example.data.storage.DriveMediaInterceptor
 import com.example.data.storage.StorageBackend
 import com.example.data.telegram.DriveLog
@@ -23,6 +24,9 @@ class OrthoApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         appModule = AppModule(this)
+        // Resolved once per process: the language only changes with an activity
+        // recreate, so every read below sees a stable value.
+        ContentLocale.refresh(this)
         restoreTelegramDriveSession()
     }
 

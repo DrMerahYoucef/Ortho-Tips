@@ -47,6 +47,7 @@ mlkitTextRecognition = "16.0.1"
 mlkitBarcodeScanning = "17.3.0"
 zxingCore = "3.5.3"
 exifinterface = "1.3.7"
+biometric = "1.1.0"
 # --- Telegram Drive backend -------------------------------------------------
 tdlib = "1.8.56"
 workManager = "2.9.1"
@@ -115,6 +116,7 @@ mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition"
 mlkit-barcode-scanning = { group = "com.google.mlkit", name = "barcode-scanning", version.ref = "mlkitBarcodeScanning" }
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxingCore" }
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
+androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
 
 # --- Telegram Drive backend -------------------------------------------------
 # TDLib Android bindings + prebuilt native libraries, published on JitPack.

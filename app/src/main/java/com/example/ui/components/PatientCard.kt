@@ -1,10 +1,13 @@
 package com.example.ui.components
 
-import androidx.compose.foundation.BorderStroke
+import com.example.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,7 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -33,9 +35,23 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.data.local.model.PatientSummary
 
+/**
+ * A row in the patient list.
+ *
+ * The previous version emphasised everything at once: a filled avatar, a tinted
+ * ID pill, the diagnosis inside a coloured box, then region and side as two more
+ * pills, all on a card with a border *and* elevation *and* a fill. Four competing
+ * accent colours per row meant nothing led the eye, and the diagnosis — the thing
+ * a surgeon actually scans for — was styled as secondary metadata while the
+ * record number got a badge.
+ *
+ * This version has one hierarchy: name, then diagnosis as plain readable text,
+ * then everything else in a single muted line. One accent survives, for
+ * laterality, because operating on the wrong side is a never-event and "Right"
+ * should not be buried in a grey run-on line.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PatientCard(
@@ -46,7 +62,6 @@ fun PatientCard(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Generate initials for avatar badge
     val initials = patient.fullName
         .split(" ")
         .filter { it.isNotBlank() }
@@ -56,150 +71,156 @@ fun PatientCard(
         .ifBlank { "PT" }
 
     Card(
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
             } else {
-                MaterialTheme.colorScheme.surface
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
             }
         ),
-        border = BorderStroke(
-            1.dp,
-            if (isSelected) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 3.dp else 1.dp),
+        // Flat. A long list of shadowed, outlined cards reads as noise; the tint
+        // alone is enough to separate rows from the background.
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            // Clipped first so the ripple follows the rounded corners.
+            .clip(RoundedCornerShape(16.dp))
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick,
+                onLongClickLabel = stringResource(R.string.patient_card_select_action)
+            )
+            .semantics { if (isSelectionMode) selected = isSelected }
             .testTag("patient_card_${patient.id}")
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (isSelectionMode) {
                 Icon(
                     imageVector = if (isSelected) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
                     contentDescription = null,
-                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                    tint = if (isSelected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outline
+                    },
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
             } else {
-                // Patient Avatar with Initials
                 Box(
                     modifier = Modifier
-                        .size(46.dp)
+                        .size(42.dp)
                         .background(
-                            color = MaterialTheme.colorScheme.primaryContainer,
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
                             shape = CircleShape
                         ),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = initials,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
-                Spacer(modifier = Modifier.width(14.dp))
+                Spacer(modifier = Modifier.width(12.dp))
             }
 
             Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = patient.fullName,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
-
-                    Spacer(modifier = Modifier.width(6.dp))
-
-                    PatientIdBadge(patientCode = patient.patientCode)
-                }
-
-                Spacer(modifier = Modifier.height(3.dp))
-
-                val ageGenderLine = buildString {
-                    patient.age?.let { append("$it yrs") }
-                    if (patient.gender.isNotBlank()) {
-                        if (isNotEmpty()) append(" • ")
-                        append(patient.gender)
-                    }
-                }
-                if (ageGenderLine.isNotBlank()) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    // Plain muted text, not a badge. The record number is for
+                    // confirming you have the right chart, not for scanning.
                     Text(
-                        text = ageGenderLine,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = patient.patientCode,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        maxLines = 1
                     )
                 }
 
                 if (patient.diagnosis.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
-                    ) {
-                        Text(
-                            text = patient.diagnosis,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = patient.diagnosis,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
 
-                if (patient.bodyRegion.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        RegionBadge(region = patient.bodyRegion)
-                        if (patient.side.isNotBlank() && patient.side != "NOT_APPLICABLE") {
-                            RegionBadge(region = patient.side)
+                val metaLine = buildList {
+                    patient.age?.let { add("$it yrs") }
+                    if (patient.gender.isNotBlank()) add(patient.gender)
+                    if (patient.bodyRegion.isNotBlank()) add(patient.bodyRegion)
+                }.joinToString("  ·  ")
+
+                if (metaLine.isNotBlank() || patient.hasSide()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (metaLine.isNotBlank()) {
+                            Text(
+                                text = metaLine,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                        }
+                        if (patient.hasSide()) {
+                            if (metaLine.isNotBlank()) Spacer(Modifier.width(8.dp))
+                            SideMarker(side = patient.side)
                         }
                     }
                 }
-            }
-
-            if (!isSelectionMode) {
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.outlineVariant,
-                    modifier = Modifier.size(20.dp)
-                )
             }
         }
     }
 }
 
+private fun PatientSummary.hasSide(): Boolean =
+    side.isNotBlank() && side != "NOT_APPLICABLE"
+
+/**
+ * The one accent left on the card.
+ *
+ * Laterality earns emphasis that a body region does not: wrong-side surgery is a
+ * never-event, and "Right" reading the same as "34 yrs" in a grey line is how it
+ * gets missed. Abbreviated to L/R so it stays a glance rather than a read.
+ */
 @Composable
-private fun PatientIdBadge(patientCode: String) {
+private fun SideMarker(side: String) {
+    val label = when (side.uppercase()) {
+        "LEFT", "L" -> "L"
+        "RIGHT", "R" -> "R"
+        "BILATERAL" -> "L+R"
+        else -> side.take(3).uppercase()
+    }
     Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
+        shape = RoundedCornerShape(6.dp),
+        color = MaterialTheme.colorScheme.tertiaryContainer
     ) {
         Text(
-            text = patientCode,
+            text = label,
             style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onTertiaryContainer,
-            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
         )
     }
 }

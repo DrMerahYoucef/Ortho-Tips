@@ -49,11 +49,15 @@ data class PatientEditUiState(
     val form: PatientFormState = PatientFormState(),
     val isEditMode: Boolean = false,
     val isLoading: Boolean = true,
-    val nameError: String? = null,
-    val patientCodeError: String? = null,
+    @androidx.annotation.StringRes val nameError: Int? = null,
+    @androidx.annotation.StringRes val patientCodeError: Int? = null,
     val isSaving: Boolean = false,
-    val savedPatientId: String? = null
-)
+    val savedPatientId: String? = null,
+    /** The form as it was loaded or last saved; what "unsaved changes" compares against. */
+    val savedForm: PatientFormState = PatientFormState()
+) {
+    val hasUnsavedChanges: Boolean get() = form != savedForm
+}
 
 /** Every patient field wired to smart suggestions, in the order the form learns from on save. */
 private val SUGGESTION_FIELDS = listOf(
@@ -93,18 +97,14 @@ class PatientEditViewModel(
         if (existingPatientId != null) {
             viewModelScope.launch {
                 val patient = repository.getPatient(existingPatientId)
-                _uiState.value = _uiState.value.copy(
-                    form = patient?.toFormState() ?: PatientFormState(),
-                    isLoading = false
-                )
+                val loaded = patient?.toFormState() ?: PatientFormState()
+                _uiState.value = _uiState.value.copy(form = loaded, savedForm = loaded, isLoading = false)
             }
         } else {
             viewModelScope.launch {
                 val suggested = "P-" + (repository.getPatientCount() + 1).toString().padStart(4, '0')
-                _uiState.value = _uiState.value.copy(
-                    form = PatientFormState(patientCode = suggested),
-                    isLoading = false
-                )
+                val blank = PatientFormState(patientCode = suggested)
+                _uiState.value = _uiState.value.copy(form = blank, savedForm = blank, isLoading = false)
             }
         }
     }
@@ -121,16 +121,21 @@ class PatientEditViewModel(
         viewModelScope.launch { suggestionRepository.setEnabled(enabled) }
     }
 
+    /** Removes a learned value after the surgeon long-presses it. */
+    fun forget(fieldKey: String, value: String) {
+        viewModelScope.launch { suggestionRepository.forget(fieldKey, value) }
+    }
+
     fun save() {
         val state = _uiState.value
         val form = state.form
 
         if (form.fullName.isBlank()) {
-            _uiState.value = state.copy(nameError = "Full name is required")
+            _uiState.value = state.copy(nameError = com.example.R.string.patient_edit_error_name_required)
             return
         }
         if (form.patientCode.isBlank()) {
-            _uiState.value = state.copy(patientCodeError = "Patient ID is required")
+            _uiState.value = state.copy(patientCodeError = com.example.R.string.patient_edit_error_id_required)
             return
         }
 
@@ -144,7 +149,7 @@ class PatientEditViewModel(
             if (!codeAvailable) {
                 _uiState.value = _uiState.value.copy(
                     isSaving = false,
-                    patientCodeError = "This patient ID is already in use"
+                    patientCodeError = com.example.R.string.patient_edit_error_id_in_use
                 )
                 return@launch
             }
@@ -155,22 +160,29 @@ class PatientEditViewModel(
 
             repository.savePatient(entity)
             learnFromForm(form)
-            _uiState.value = _uiState.value.copy(isSaving = false, savedPatientId = id)
+            _uiState.value = _uiState.value.copy(isSaving = false, savedPatientId = id, savedForm = form)
         }
     }
 
     private suspend fun learnFromForm(form: PatientFormState) {
-        suggestionRepository.learn(SuggestionField.MEDICAL_HISTORY, form.medicalHistory)
-        suggestionRepository.learn(SuggestionField.ALLERGIES, form.allergies)
-        suggestionRepository.learn(SuggestionField.CHRONIC_DISEASES, form.chronicDiseases)
-        suggestionRepository.learn(SuggestionField.PREVIOUS_SURGERIES, form.previousSurgeries)
-        suggestionRepository.learn(SuggestionField.MEDICATIONS, form.medications)
-        suggestionRepository.learn(SuggestionField.DIAGNOSIS, form.diagnosis)
-        suggestionRepository.learn(SuggestionField.BODY_REGION, form.bodyRegion)
-        suggestionRepository.learn(SuggestionField.TRAUMA_MECHANISM, form.traumaMechanism)
-        suggestionRepository.learn(SuggestionField.FRACTURE_CLASSIFICATION, form.fractureClassification)
-        suggestionRepository.learn(SuggestionField.IMAGING_FINDINGS, form.imagingFindings)
-        suggestionRepository.learn(SuggestionField.TREATMENT_PLAN, form.treatmentPlan)
+        // One call instead of one per field: learnRecord also records which
+        // values appeared together, which is what lets the patient form predict
+        // the next field from the one before it.
+        suggestionRepository.learnRecord(
+            mapOf(
+                SuggestionField.MEDICAL_HISTORY to form.medicalHistory,
+                SuggestionField.ALLERGIES to form.allergies,
+                SuggestionField.CHRONIC_DISEASES to form.chronicDiseases,
+                SuggestionField.PREVIOUS_SURGERIES to form.previousSurgeries,
+                SuggestionField.MEDICATIONS to form.medications,
+                SuggestionField.DIAGNOSIS to form.diagnosis,
+                SuggestionField.BODY_REGION to form.bodyRegion,
+                SuggestionField.TRAUMA_MECHANISM to form.traumaMechanism,
+                SuggestionField.FRACTURE_CLASSIFICATION to form.fractureClassification,
+                SuggestionField.IMAGING_FINDINGS to form.imagingFindings,
+                SuggestionField.TREATMENT_PLAN to form.treatmentPlan
+            )
+        )
     }
 
     companion object {

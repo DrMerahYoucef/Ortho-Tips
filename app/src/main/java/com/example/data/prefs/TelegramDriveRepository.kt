@@ -30,13 +30,34 @@ import kotlinx.coroutines.flow.map
  */
 val Context.telegramDriveDataStore by preferencesDataStore(name = "ortho_telegram_drive")
 
-/** How aggressively content is mirrored once Telegram Drive is on. */
-enum class SyncMode {
-    /** Nothing leaves the device until the surgeon taps Sync now. */
-    MANUAL,
+/**
+ * When the drive is brought up to date.
+ *
+ * The device is always the working copy — patients, surgeries and media are
+ * written locally first and remain readable offline. This only controls how often
+ * the backup runs.
+ */
+enum class SyncFrequency(val periodHours: Long?) {
+    /** Only when the surgeon taps Sync now. */
+    MANUAL(null),
 
-    /** Queue work as content changes, run it when constraints allow. */
-    AUTOMATIC
+    /** Upload as soon as anything is saved. Safest, uses the most data. */
+    ON_CHANGE(null),
+
+    DAILY(24),
+    WEEKLY(24 * 7),
+    MONTHLY(24 * 30);
+
+    val isScheduled: Boolean get() = periodHours != null
+
+    val label: String
+        get() = when (this) {
+            MANUAL -> "Manual only"
+            ON_CHANGE -> "On every change"
+            DAILY -> "Daily"
+            WEEKLY -> "Weekly"
+            MONTHLY -> "Monthly"
+        }
 }
 
 /** What is kept on the device once an object is safely in the drive. */
@@ -57,7 +78,7 @@ data class TelegramDriveSettings(
     val chatId: Long? = null,
     val accountName: String = "",
     val accountPhoneSuffix: String = "",
-    val syncMode: SyncMode = SyncMode.AUTOMATIC,
+    val syncFrequency: SyncFrequency = SyncFrequency.ON_CHANGE,
     val syncOnWifiOnly: Boolean = true,
     val syncWhileChargingOnly: Boolean = false,
     val backgroundSyncEnabled: Boolean = true,
@@ -66,7 +87,13 @@ data class TelegramDriveSettings(
     val cachePolicy: CachePolicy = CachePolicy.HYBRID,
     val cacheBudgetMb: Int = 512,
     val lastSyncAt: Long = 0,
-    val lastSyncError: String = ""
+    val lastSyncError: String = "",
+    /** When a record table last changed locally. */
+    val recordsDirtyAt: Long = 0,
+    /** Creation time of the newest snapshot this device uploaded. */
+    val snapshotPushedAt: Long = 0,
+    /** Creation time of the newest snapshot this device merged in. */
+    val snapshotImportedAt: Long = 0
 )
 
 class TelegramDriveRepository(
@@ -82,7 +109,7 @@ class TelegramDriveRepository(
         val ACCOUNT_PHONE_SUFFIX = stringPreferencesKey("account_phone_suffix")
         val API_ID = stringPreferencesKey("sealed_api_id")
         val API_HASH = stringPreferencesKey("sealed_api_hash")
-        val SYNC_MODE = stringPreferencesKey("sync_mode")
+        val SYNC_FREQUENCY = stringPreferencesKey("sync_frequency")
         val WIFI_ONLY = booleanPreferencesKey("sync_wifi_only")
         val CHARGING_ONLY = booleanPreferencesKey("sync_charging_only")
         val BACKGROUND_SYNC = booleanPreferencesKey("background_sync")
@@ -91,6 +118,9 @@ class TelegramDriveRepository(
         val CACHE_POLICY = stringPreferencesKey("cache_policy")
         val CACHE_BUDGET_MB = intPreferencesKey("cache_budget_mb")
         val LAST_SYNC_AT = longPreferencesKey("last_sync_at")
+        val RECORDS_DIRTY_AT = longPreferencesKey("records_dirty_at")
+        val SNAPSHOT_PUSHED_AT = longPreferencesKey("snapshot_pushed_at")
+        val SNAPSHOT_IMPORTED_AT = longPreferencesKey("snapshot_imported_at")
         val LAST_SYNC_ERROR = stringPreferencesKey("last_sync_error")
     }
 
@@ -101,8 +131,9 @@ class TelegramDriveRepository(
             chatId = prefs[Keys.CHAT_ID]?.takeIf { it != 0L },
             accountName = prefs[Keys.ACCOUNT_NAME].orEmpty(),
             accountPhoneSuffix = prefs[Keys.ACCOUNT_PHONE_SUFFIX].orEmpty(),
-            syncMode = runCatching { SyncMode.valueOf(prefs[Keys.SYNC_MODE].orEmpty()) }
-                .getOrDefault(SyncMode.AUTOMATIC),
+            syncFrequency = runCatching {
+                SyncFrequency.valueOf(prefs[Keys.SYNC_FREQUENCY].orEmpty())
+            }.getOrDefault(SyncFrequency.ON_CHANGE),
             syncOnWifiOnly = prefs[Keys.WIFI_ONLY] ?: true,
             syncWhileChargingOnly = prefs[Keys.CHARGING_ONLY] ?: false,
             backgroundSyncEnabled = prefs[Keys.BACKGROUND_SYNC] ?: true,
@@ -112,7 +143,10 @@ class TelegramDriveRepository(
                 .getOrDefault(CachePolicy.HYBRID),
             cacheBudgetMb = prefs[Keys.CACHE_BUDGET_MB] ?: 512,
             lastSyncAt = prefs[Keys.LAST_SYNC_AT] ?: 0,
-            lastSyncError = prefs[Keys.LAST_SYNC_ERROR].orEmpty()
+            lastSyncError = prefs[Keys.LAST_SYNC_ERROR].orEmpty(),
+            recordsDirtyAt = prefs[Keys.RECORDS_DIRTY_AT] ?: 0,
+            snapshotPushedAt = prefs[Keys.SNAPSHOT_PUSHED_AT] ?: 0,
+            snapshotImportedAt = prefs[Keys.SNAPSHOT_IMPORTED_AT] ?: 0
         )
     }
 
@@ -148,7 +182,10 @@ class TelegramDriveRepository(
         prefs[Keys.ACCOUNT_PHONE_SUFFIX] = phoneNumber.takeLast(4)
     }
 
-    suspend fun setSyncMode(mode: SyncMode) = edit { it[Keys.SYNC_MODE] = mode.name }
+    suspend fun setSyncFrequency(frequency: SyncFrequency) =
+        edit { it[Keys.SYNC_FREQUENCY] = frequency.name }
+
+    suspend fun syncFrequency(): SyncFrequency = current().syncFrequency
 
     suspend fun setSyncOnWifiOnly(enabled: Boolean) = edit { it[Keys.WIFI_ONLY] = enabled }
 
@@ -174,6 +211,35 @@ class TelegramDriveRepository(
     }
 
     suspend fun recordSyncFailure(message: String) = edit { it[Keys.LAST_SYNC_ERROR] = message }
+
+    // ---- Record snapshot bookkeeping ----------------------------------------
+
+    suspend fun markRecordsDirty(at: Long = System.currentTimeMillis()) =
+        edit { it[Keys.RECORDS_DIRTY_AT] = at }
+
+    suspend fun markSnapshotPushed(createdAt: Long) = edit { prefs ->
+        prefs[Keys.SNAPSHOT_PUSHED_AT] = createdAt
+        // Anything edited before this snapshot was taken is now safely up.
+        prefs[Keys.RECORDS_DIRTY_AT] = 0
+    }
+
+    suspend fun markSnapshotImported(createdAt: Long) =
+        edit { it[Keys.SNAPSHOT_IMPORTED_AT] = createdAt }
+
+    /** True when local record edits have not reached the drive yet. */
+    suspend fun hasUnpushedRecords(): Boolean {
+        val settings = current()
+        return settings.recordsDirtyAt > settings.snapshotPushedAt
+    }
+
+    /**
+     * The point past which a remote snapshot is genuinely newer than anything
+     * this device has seen. Importing an older one would overwrite good rows.
+     */
+    suspend fun snapshotWatermark(): Long {
+        val settings = current()
+        return maxOf(settings.snapshotPushedAt, settings.snapshotImportedAt)
+    }
 
     // ---- Credentials ---------------------------------------------------------
 

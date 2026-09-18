@@ -47,6 +47,8 @@ import androidx.compose.ui.unit.sp
 import com.example.data.local.model.ClassificationGrade
 import com.example.data.local.model.ClinicalClassification
 import com.example.data.local.model.ClinicalStudy
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun ClinicalStudyCard(
@@ -196,7 +198,7 @@ fun ClinicalStudyCard(
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text(
-                            text = "OPERATIVE IMPLICATION",
+                            text = stringResource(R.string.clinical_study_card_operative_implication),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.primary,
@@ -226,29 +228,29 @@ fun ClinicalStudyCard(
                     )
 
                     StudyDetailSection(
-                        title = "Clinical Question",
+                        title = stringResource(R.string.clinical_study_card_clinical_question),
                         content = study.clinicalQuestion
                     )
 
                     StudyDetailSection(
-                        title = "Study Design",
+                        title = stringResource(R.string.clinical_study_card_study_design),
                         content = study.studyDesign
                     )
 
                     StudyDetailSection(
-                        title = "Primary Outcome",
+                        title = stringResource(R.string.clinical_study_card_primary_outcome),
                         content = study.primaryOutcome
                     )
 
                     StudyDetailSection(
-                        title = "Key Findings",
+                        title = stringResource(R.string.clinical_study_card_key_findings),
                         content = study.keyFindings
                     )
 
                     if (study.clinicalPearls.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "SURGICAL PEARLS & NUANCES",
+                            text = stringResource(R.string.clinical_study_card_surgical_pearls_nuances),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.secondary,
@@ -421,7 +423,7 @@ fun ClassificationCard(
                     )
 
                     Text(
-                        text = "CLASSIFICATION GRADES & MANAGEMENT",
+                        text = stringResource(R.string.clinical_study_card_classification_grades_management),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -460,7 +462,7 @@ private fun ClassificationGradeRow(grade: ClassificationGrade) {
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Management: ${grade.managementTakeaway}",
+                text = stringResource(R.string.classification_management_prefix, grade.managementTakeaway),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.Medium

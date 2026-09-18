@@ -3,8 +3,10 @@ package com.example.navigation
 import android.net.Uri
 
 object OrthoDestinations {
-    const val SPLASH = "splash"
     const val MAIN = "main"
+    const val SEARCH = "search"
+    const val SAVED = "saved"
+    const val SETTINGS = "settings"
     const val CHAPTER_BONES = "chapter/{chapterId}/{chapterTitle}"
     const val BONE_DETAIL = "bone/{boneId}"
     const val IMAGE_VIEWER = "image/{imageId}"
@@ -22,6 +24,7 @@ object OrthoDestinations {
     const val PATIENT_DATA_IMPORT_EXPORT = "patient_data_transfer"
     const val MEDIA_CAPTURE = "patient/{patientId}/capture"
     const val IMAGE_ANNOTATE = "image_annotate/{imageId}"
+    const val VIDEO_PLAYER = "video/{mediaId}"
     const val QR_SCANNER = "qr_scanner"
 
     // Optional Telegram Drive storage backend
@@ -68,4 +71,6 @@ object OrthoDestinations {
     fun mediaCapture(patientId: String): String = "patient/${Uri.encode(patientId)}/capture"
 
     fun imageAnnotate(imageId: String): String = "image_annotate/${Uri.encode(imageId)}"
+
+    fun videoPlayer(mediaId: String): String = "video/${Uri.encode(mediaId)}"
 }

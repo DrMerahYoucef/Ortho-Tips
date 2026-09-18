@@ -1,5 +1,6 @@
 package com.example.ui.screens.favorites
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +40,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import com.example.ui.components.ConfirmDeleteDialog
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,17 +60,31 @@ import com.example.viewmodel.SavedViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesScreen(
     viewModel: SavedViewModel,
+    onNavigateBack: () -> Unit,
     onNavigateToBoneDetail: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isAddNoteDialogOpen = uiState.isAddNoteDialogOpen
     val noteToEdit = uiState.noteToEdit
+
+    // Deleting a note asks first; it used to go on a single tap of the trash icon.
+    var noteToDelete by rememberSaveable { mutableStateOf<String?>(null) }
+    noteToDelete?.let { id ->
+        ConfirmDeleteDialog(
+            title = stringResource(R.string.confirm_delete_note_title),
+            message = stringResource(R.string.action_cannot_be_undone),
+            onConfirm = { viewModel.deleteNote(id); noteToDelete = null },
+            onDismiss = { noteToDelete = null }
+        )
+    }
 
     if (isAddNoteDialogOpen) {
         NoteDialog(
@@ -80,11 +99,19 @@ fun FavoritesScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Saved & Clinical Notes",
+                        text = stringResource(R.string.favorites_saved_clinical_notes),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         letterSpacing = (-0.3).sp
                     )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back)
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
@@ -103,7 +130,7 @@ fun FavoritesScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = "New Case Note"
+                        contentDescription = stringResource(R.string.favorites_new_case_note)
                     )
                 }
             }
@@ -124,12 +151,12 @@ fun FavoritesScreen(
                 Tab(
                     selected = uiState.currentTab == SavedTab.BOOKMARKS,
                     onClick = { viewModel.selectTab(SavedTab.BOOKMARKS) },
-                    text = { Text(text = "Bookmarks (${uiState.bookmarks.size})") }
+                    text = { Text(text = stringResource(R.string.favorites_tab_bookmarks, uiState.bookmarks.size)) }
                 )
                 Tab(
                     selected = uiState.currentTab == SavedTab.NOTES,
                     onClick = { viewModel.selectTab(SavedTab.NOTES) },
-                    text = { Text(text = "Clinical Notes (${uiState.notes.size})") }
+                    text = { Text(text = stringResource(R.string.favorites_tab_notes, uiState.notes.size)) }
                 )
             }
 
@@ -138,8 +165,8 @@ fun FavoritesScreen(
                     if (uiState.bookmarks.isEmpty()) {
                         EmptyStateView(
                             icon = Icons.Default.BookmarkBorder,
-                            title = "No Bookmarks Yet",
-                            message = "Save high-yield fracture guides and surgical approaches for fast reference during rounds or in the OR."
+                            title = stringResource(R.string.favorites_no_bookmarks_yet),
+                            message = stringResource(R.string.favorites_save_high_yield_fracture_guides)
                         )
                     } else {
                         LazyColumn(
@@ -163,8 +190,8 @@ fun FavoritesScreen(
                     if (uiState.notes.isEmpty()) {
                         EmptyStateView(
                             icon = Icons.Default.Description,
-                            title = "No Case Notes Recorded",
-                            message = "Tap the + button below to log operative notes, construct sizes, or clinical reminders."
+                            title = stringResource(R.string.favorites_no_case_notes_recorded),
+                            message = stringResource(R.string.favorites_tap_the_button_below_to)
                         )
                     } else {
                         LazyColumn(
@@ -178,7 +205,7 @@ fun FavoritesScreen(
                                 NoteListItem(
                                     note = note,
                                     onEdit = { viewModel.openEditNoteDialog(note) },
-                                    onDelete = { viewModel.deleteNote(note.id) },
+                                    onDelete = { noteToDelete = note.id },
                                     onBoneClick = { boneId ->
                                         if (boneId != null) onNavigateToBoneDetail(boneId)
                                     }
@@ -252,7 +279,7 @@ private fun NoteListItem(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit note",
+                            contentDescription = stringResource(R.string.bone_detail_edit_note),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
                         )
@@ -264,7 +291,7 @@ private fun NoteListItem(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete note",
+                            contentDescription = stringResource(R.string.bone_detail_delete_note),
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(16.dp)
                         )
@@ -303,7 +330,7 @@ private fun NoteListItem(
                         modifier = Modifier.clickable { onBoneClick(note.boneId) }
                     ) {
                         Text(
-                            text = "Linked Procedure",
+                            text = stringResource(R.string.favorites_linked_procedure),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),

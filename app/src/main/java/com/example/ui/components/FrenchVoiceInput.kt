@@ -16,6 +16,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun FrenchVoiceInputButton(onTextRecognized: (String) -> Unit) {
@@ -39,7 +41,7 @@ fun FrenchVoiceInputButton(onTextRecognized: (String) -> Unit) {
     IconButton(
         onClick = {
             if (!SpeechRecognizer.isRecognitionAvailable(context)) {
-                Toast.makeText(context, "French speech recognition is unavailable", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.voice_unavailable), Toast.LENGTH_SHORT).show()
             } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
                 PackageManager.PERMISSION_GRANTED
             ) {
@@ -49,7 +51,7 @@ fun FrenchVoiceInputButton(onTextRecognized: (String) -> Unit) {
             }
         }
     ) {
-        Icon(Icons.Default.Mic, contentDescription = "Dictate in French")
+        Icon(Icons.Default.Mic, contentDescription = stringResource(R.string.french_voice_input_dictate_in_french))
     }
 }
 

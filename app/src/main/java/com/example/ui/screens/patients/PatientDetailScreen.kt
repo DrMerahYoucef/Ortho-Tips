@@ -1,5 +1,6 @@
 package com.example.ui.screens.patients
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,7 +24,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -49,6 +49,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -61,16 +66,36 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.local.model.PatientDetail
+import com.example.ui.components.InfoAction
+import com.example.ui.components.InfoItem
+import com.example.ui.components.PatientInfoGrid
+import com.example.ui.components.PatientDriveStatusCard
 import com.example.ui.components.EmptyStateView
+import com.example.ui.components.ConfirmDeleteDialog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.example.ui.components.RegionBadge
 import com.example.ui.components.SurgeryRow
 import com.example.ui.components.TimelineEventRow
 import com.example.utils.DateFormat
 import com.example.viewmodel.PatientDetailViewModel
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
+import com.example.R
+import com.example.data.local.entity.MediaType
+import com.example.utils.MediaMetadata
+import com.example.ui.components.PatientValueLabels
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.MedicalInformation
+import androidx.compose.material.icons.filled.Accessibility
+import androidx.compose.ui.res.stringResource
 
 private enum class DetailTab { INFO, TIMELINE, SURGERIES, MEDIA }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun PatientDetailScreen(
     viewModel: PatientDetailViewModel,
@@ -82,6 +107,7 @@ fun PatientDetailScreen(
     onNavigateToEditSurgery: (String) -> Unit,
     onNavigateToCapture: () -> Unit,
     onNavigateToAnnotate: (String) -> Unit,
+    onNavigateToVideo: (String) -> Unit,
     onGenerateProtocol: (String, com.example.utils.ProtocolLanguage, Boolean, com.example.utils.SurgeryPdfOptions) -> Unit,
     onGenerateChartPdf: (Boolean, com.example.utils.PatientChartPdfOptions) -> Unit,
     savedSurgeryPdfOptions: com.example.utils.SurgeryPdfOptions = com.example.utils.SurgeryPdfOptions(),
@@ -89,49 +115,57 @@ fun PatientDetailScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var selectedTab by rememberSaveable { mutableIntStateOf(DetailTab.INFO.ordinal) }
+    // Swipe between tabs as well as tapping them; the page survives rotation.
+    val pagerState = rememberPagerState { DetailTab.entries.size }
+    val pagerScope = rememberCoroutineScope()
     var menuExpanded by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var protocolSurgeryId by remember { mutableStateOf<String?>(null) }
     var showChartOptions by remember { mutableStateOf(false) }
+    // Saveable ids, so a pending confirmation survives rotation.
+    var eventToDelete by rememberSaveable { mutableStateOf<String?>(null) }
+    var surgeryToDelete by rememberSaveable { mutableStateOf<String?>(null) }
 
-    if (uiState.wasDeleted && !uiState.isLoading) {
-        onNavigateBack()
-        return
+    // Navigating from inside composition ran on every recomposition and could pop
+    // the back stack twice, leaving a blank screen. Once, from an effect.
+    val wasDeleted = uiState.wasDeleted && !uiState.isLoading
+    LaunchedEffect(wasDeleted) {
+        if (wasDeleted) onNavigateBack()
     }
+    if (wasDeleted) return
 
     val detail = uiState.detail
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(detail?.patient?.fullName ?: "Patient", fontWeight = FontWeight.Bold) },
+                title = { Text(detail?.patient?.fullName ?: stringResource(R.string.patient_detail_default_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { menuExpanded = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.patient_detail_more_options))
                     }
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                         DropdownMenuItem(
-                            text = { Text("Edit patient") },
+                            text = { Text(stringResource(R.string.patient_detail_edit_patient)) },
                             onClick = { menuExpanded = false; onNavigateToEdit() }
                         )
                         DropdownMenuItem(
-                            text = { Text("Export PDF...") },
+                            text = { Text(stringResource(R.string.patient_detail_export_pdf)) },
                             onClick = { menuExpanded = false; showChartOptions = true }
                         )
                         DropdownMenuItem(
-                            text = { Text(if (detail?.patient?.isArchived == true) "Unarchive" else "Archive") },
+                            text = { Text(stringResource(if (detail?.patient?.isArchived == true) R.string.patient_detail_unarchive else R.string.patient_detail_archive)) },
                             onClick = {
                                 menuExpanded = false
                                 if (detail?.patient?.isArchived == true) viewModel.unarchive() else viewModel.archive()
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Delete patient") },
+                            text = { Text(stringResource(R.string.patient_detail_delete_patient)) },
                             onClick = { menuExpanded = false; showDeleteConfirm = true }
                         )
                     }
@@ -140,12 +174,12 @@ fun PatientDetailScreen(
             )
         },
         floatingActionButton = {
-            when (DetailTab.entries[selectedTab]) {
+            when (DetailTab.entries[pagerState.currentPage]) {
                 DetailTab.TIMELINE -> FloatingActionButton(onClick = onNavigateToAddTimelineEvent) {
-                    Icon(Icons.Default.Add, contentDescription = "Add event")
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.patient_detail_add_event))
                 }
                 DetailTab.SURGERIES -> FloatingActionButton(onClick = onNavigateToAddSurgery) {
-                    Icon(Icons.Default.Add, contentDescription = "Add surgery")
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.patient_detail_add_surgery))
                 }
                 else -> {}
             }
@@ -162,32 +196,50 @@ fun PatientDetailScreen(
         Column(modifier = Modifier.padding(paddingValues)) {
             PatientHeader(detail)
 
-            PrimaryTabRow(selectedTabIndex = selectedTab) {
-                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Info") })
-                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Timeline") })
-                Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }, text = { Text("Surgeries") })
-                Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }, text = { Text("Media") })
+            val tabLabels = listOf(
+                stringResource(R.string.patient_detail_info),
+                stringResource(R.string.patient_detail_timeline),
+                stringResource(R.string.patient_detail_surgeries),
+                stringResource(R.string.patient_detail_media)
+            )
+            PrimaryTabRow(selectedTabIndex = pagerState.currentPage) {
+                tabLabels.forEachIndexed { index, label ->
+                    Tab(
+                        selected = pagerState.currentPage == index,
+                        onClick = { pagerScope.launch { pagerState.animateScrollToPage(index) } },
+                        text = { TabLabel(label) }
+                    )
+                }
             }
 
-            when (DetailTab.entries[selectedTab]) {
-                DetailTab.INFO -> InfoTab(detail)
-                DetailTab.TIMELINE -> TimelineTab(
-                    detail = detail,
-                    onEventClick = onNavigateToEditTimelineEvent,
-                    onEventDelete = { viewModel.deleteTimelineEvent(it) },
-                )
-                DetailTab.SURGERIES -> SurgeriesTab(
-                    detail = detail,
-                    onSurgeryClick = onNavigateToEditSurgery,
-                    onSurgeryDelete = { viewModel.deleteSurgery(it) },
-                    onGenerateProtocol = { surgeryId -> protocolSurgeryId = surgeryId },
-                )
-                DetailTab.MEDIA -> MediaTab(
-                    detail = detail,
-                    viewModel = viewModel,
-                    onAddMedia = onNavigateToCapture,
-                    onImageClick = onNavigateToAnnotate
-                )
+            HorizontalPager(
+                state = pagerState,
+                // Each page keeps its own scroll; neighbours are not pre-built.
+                beyondViewportPageCount = 0,
+                key = { DetailTab.entries[it].name },
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                when (DetailTab.entries[page]) {
+                    DetailTab.INFO -> InfoTab(detail)
+                    DetailTab.TIMELINE -> TimelineTab(
+                        detail = detail,
+                        onEventClick = onNavigateToEditTimelineEvent,
+                        onEventDelete = { eventToDelete = it },
+                    )
+                    DetailTab.SURGERIES -> SurgeriesTab(
+                        detail = detail,
+                        onSurgeryClick = onNavigateToEditSurgery,
+                        onSurgeryDelete = { surgeryToDelete = it },
+                        onGenerateProtocol = { surgeryId -> protocolSurgeryId = surgeryId },
+                    )
+                    DetailTab.MEDIA -> MediaTab(
+                        detail = detail,
+                        viewModel = viewModel,
+                        onAddMedia = onNavigateToCapture,
+                        onImageClick = onNavigateToAnnotate,
+                        onVideoClick = onNavigateToVideo
+                    )
+                }
             }
         }
     }
@@ -195,15 +247,15 @@ fun PatientDetailScreen(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Delete patient?") },
-            text = { Text("This permanently deletes ${detail?.patient?.fullName ?: "this patient"}, their timeline, surgeries, and all attached media. This cannot be undone.") },
+            title = { Text(stringResource(R.string.patient_detail_delete_patient_2)) },
+            text = { Text(stringResource(R.string.patient_detail_delete_confirm_message, detail?.patient?.fullName ?: stringResource(R.string.patient_detail_this_patient))) },
             confirmButton = {
                 TextButton(onClick = { showDeleteConfirm = false; viewModel.delete() }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.patient_detail_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.action_cancel)) }
             }
         )
     }
@@ -216,6 +268,24 @@ fun PatientDetailScreen(
                 onGenerateProtocol(surgeryId, language, anonymize, options)
                 protocolSurgeryId = null
             }
+        )
+    }
+
+    eventToDelete?.let { id ->
+        ConfirmDeleteDialog(
+            title = stringResource(R.string.confirm_delete_event_title),
+            message = stringResource(R.string.confirm_delete_event_message),
+            onConfirm = { viewModel.deleteTimelineEvent(id); eventToDelete = null },
+            onDismiss = { eventToDelete = null }
+        )
+    }
+
+    surgeryToDelete?.let { id ->
+        ConfirmDeleteDialog(
+            title = stringResource(R.string.confirm_delete_surgery_title),
+            message = stringResource(R.string.confirm_delete_surgery_message),
+            onConfirm = { viewModel.deleteSurgery(id); surgeryToDelete = null },
+            onDismiss = { surgeryToDelete = null }
         )
     }
 
@@ -237,7 +307,13 @@ private fun ProtocolLanguageDialog(
     onDismiss: () -> Unit,
     onConfirm: (com.example.utils.ProtocolLanguage, Boolean, com.example.utils.SurgeryPdfOptions) -> Unit
 ) {
-    var language by remember { mutableStateOf(com.example.utils.ProtocolLanguage.FRENCH) }
+    // Starts in the app's language rather than always French.
+    var language by remember {
+        mutableStateOf(
+            if (com.example.data.local.ContentLocale.isFrench) com.example.utils.ProtocolLanguage.FRENCH
+            else com.example.utils.ProtocolLanguage.ENGLISH
+        )
+    }
     var anonymize by remember { mutableStateOf(false) }
     var includeHospital by remember { mutableStateOf(initialOptions.includeHospital) }
     var includeSurgeon by remember { mutableStateOf(initialOptions.includeSurgeon) }
@@ -254,7 +330,7 @@ private fun ProtocolLanguageDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Generate operative protocol") },
+        title = { Text(stringResource(R.string.patient_detail_rows_generate_operative_protocol)) },
         text = {
             Column(
                 modifier = Modifier
@@ -262,17 +338,17 @@ private fun ProtocolLanguageDialog(
                     .heightIn(max = 420.dp)
                     .verticalScroll(androidx.compose.foundation.rememberScrollState())
             ) {
-                Text("Language", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.language_title), style = MaterialTheme.typography.labelMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
                     androidx.compose.material3.FilterChip(
                         selected = language == com.example.utils.ProtocolLanguage.FRENCH,
                         onClick = { language = com.example.utils.ProtocolLanguage.FRENCH },
-                        label = { Text("Français") }
+                        label = { Text(stringResource(R.string.patient_detail_fran_ais)) }
                     )
                     androidx.compose.material3.FilterChip(
                         selected = language == com.example.utils.ProtocolLanguage.ENGLISH,
                         onClick = { language = com.example.utils.ProtocolLanguage.ENGLISH },
-                        label = { Text("English") }
+                        label = { Text(stringResource(R.string.patient_detail_english)) }
                     )
                 }
                 Row(
@@ -280,23 +356,26 @@ private fun ProtocolLanguageDialog(
                     modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
                 ) {
                     androidx.compose.material3.Checkbox(checked = anonymize, onCheckedChange = { anonymize = it })
-                    Text("Anonymize patient name and surgeon")
+                    Text(
+                        stringResource(R.string.patient_detail_anonymize_patient_name_and_surgeon),
+                        modifier = Modifier.clickable { anonymize = !anonymize }
+                    )
                 }
 
                 androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                Text("Include in PDF", style = MaterialTheme.typography.labelMedium)
-                PdfOptionRow("Hospital / clinic", includeHospital) { includeHospital = it }
-                PdfOptionRow("Surgeon", includeSurgeon, enabled = !anonymize) { includeSurgeon = it }
-                PdfOptionRow("Assistants", includeAssistants) { includeAssistants = it }
-                PdfOptionRow("Anesthesia", includeAnesthesia) { includeAnesthesia = it }
-                PdfOptionRow("Diagnosis", includeDiagnosis) { includeDiagnosis = it }
-                PdfOptionRow("Procedure", includeProcedure) { includeProcedure = it }
-                PdfOptionRow("Operative steps", includeOperativeSteps) { includeOperativeSteps = it }
-                PdfOptionRow("Materials used", includeMaterials) { includeMaterials = it }
-                PdfOptionRow("Complications", includeComplications) { includeComplications = it }
-                PdfOptionRow("Postoperative instructions", includePostOp) { includePostOp = it }
-                PdfOptionRow("Signature", includeSignature) { includeSignature = it }
-                PdfOptionRow("QR code (patient lookup)", includeQrCode, enabled = !anonymize) { includeQrCode = it }
+                Text(stringResource(R.string.patient_detail_include_in_pdf), style = MaterialTheme.typography.labelMedium)
+                PdfOptionRow(stringResource(R.string.pdf_option_hospital), includeHospital) { includeHospital = it }
+                PdfOptionRow(stringResource(R.string.pdf_option_surgeon), includeSurgeon, enabled = !anonymize) { includeSurgeon = it }
+                PdfOptionRow(stringResource(R.string.pdf_option_assistants), includeAssistants) { includeAssistants = it }
+                PdfOptionRow(stringResource(R.string.pdf_option_anesthesia), includeAnesthesia) { includeAnesthesia = it }
+                PdfOptionRow(stringResource(R.string.patient_edit_diagnosis), includeDiagnosis) { includeDiagnosis = it }
+                PdfOptionRow(stringResource(R.string.pdf_option_procedure), includeProcedure) { includeProcedure = it }
+                PdfOptionRow(stringResource(R.string.pdf_option_operative_steps), includeOperativeSteps) { includeOperativeSteps = it }
+                PdfOptionRow(stringResource(R.string.pdf_option_materials), includeMaterials) { includeMaterials = it }
+                PdfOptionRow(stringResource(R.string.pdf_option_complications), includeComplications) { includeComplications = it }
+                PdfOptionRow(stringResource(R.string.pdf_option_postop), includePostOp) { includePostOp = it }
+                PdfOptionRow(stringResource(R.string.surgeon_profile_signature), includeSignature) { includeSignature = it }
+                PdfOptionRow(stringResource(R.string.pdf_option_qr_code), includeQrCode, enabled = !anonymize) { includeQrCode = it }
             }
         },
         confirmButton = {
@@ -319,10 +398,10 @@ private fun ProtocolLanguageDialog(
                         includeQrCode = includeQrCode
                     )
                 )
-            }) { Text("Generate") }
+            }) { Text(stringResource(R.string.patient_detail_generate)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
     )
 }
@@ -349,7 +428,7 @@ private fun PatientChartOptionsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Export patient chart") },
+        title = { Text(stringResource(R.string.patient_detail_export_patient_chart)) },
         text = {
             Column(
                 modifier = Modifier
@@ -362,23 +441,26 @@ private fun PatientChartOptionsDialog(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
                 ) {
                     androidx.compose.material3.Checkbox(checked = anonymize, onCheckedChange = { anonymize = it })
-                    Text("Anonymize patient name, contact & insurance")
+                    Text(
+                        stringResource(R.string.patient_detail_anonymize_patient_name_contact_insurance),
+                        modifier = Modifier.clickable { anonymize = !anonymize }
+                    )
                 }
 
                 androidx.compose.material3.HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                Text("Include in PDF", style = MaterialTheme.typography.labelMedium)
-                PdfOptionRow("Contact info", includeContact, enabled = !anonymize) { includeContact = it }
-                PdfOptionRow("Insurance", includeInsurance, enabled = !anonymize) { includeInsurance = it }
-                PdfOptionRow("Medical history", includeMedicalHistory) { includeMedicalHistory = it }
-                PdfOptionRow("Allergies", includeAllergies) { includeAllergies = it }
-                PdfOptionRow("Chronic diseases", includeChronicDiseases) { includeChronicDiseases = it }
-                PdfOptionRow("Previous surgeries (history)", includePreviousSurgeries) { includePreviousSurgeries = it }
-                PdfOptionRow("Medications", includeMedications) { includeMedications = it }
-                PdfOptionRow("Notes", includeNotes) { includeNotes = it }
-                PdfOptionRow("Orthopedic information", includeOrthopedicInfo) { includeOrthopedicInfo = it }
-                PdfOptionRow("Timeline", includeTimeline) { includeTimeline = it }
-                PdfOptionRow("Surgeries", includeSurgeries) { includeSurgeries = it }
-                PdfOptionRow("QR code (patient lookup)", includeQrCode, enabled = !anonymize) { includeQrCode = it }
+                Text(stringResource(R.string.patient_detail_include_in_pdf), style = MaterialTheme.typography.labelMedium)
+                PdfOptionRow(stringResource(R.string.pdf_option_contact), includeContact, enabled = !anonymize) { includeContact = it }
+                PdfOptionRow(stringResource(R.string.patient_detail_insurance), includeInsurance, enabled = !anonymize) { includeInsurance = it }
+                PdfOptionRow(stringResource(R.string.patient_detail_medical_history), includeMedicalHistory) { includeMedicalHistory = it }
+                PdfOptionRow(stringResource(R.string.patient_edit_allergies), includeAllergies) { includeAllergies = it }
+                PdfOptionRow(stringResource(R.string.patient_edit_chronic_diseases), includeChronicDiseases) { includeChronicDiseases = it }
+                PdfOptionRow(stringResource(R.string.patient_edit_previous_surgeries), includePreviousSurgeries) { includePreviousSurgeries = it }
+                PdfOptionRow(stringResource(R.string.patient_edit_medications), includeMedications) { includeMedications = it }
+                PdfOptionRow(stringResource(R.string.patient_edit_notes), includeNotes) { includeNotes = it }
+                PdfOptionRow(stringResource(R.string.patient_edit_section_orthopedic), includeOrthopedicInfo) { includeOrthopedicInfo = it }
+                PdfOptionRow(stringResource(R.string.patient_detail_timeline), includeTimeline) { includeTimeline = it }
+                PdfOptionRow(stringResource(R.string.patient_detail_surgeries), includeSurgeries) { includeSurgeries = it }
+                PdfOptionRow(stringResource(R.string.pdf_option_qr_code), includeQrCode, enabled = !anonymize) { includeQrCode = it }
             }
         },
         confirmButton = {
@@ -400,21 +482,29 @@ private fun PatientChartOptionsDialog(
                         includeQrCode = includeQrCode
                     )
                 )
-            }) { Text("Generate") }
+            }) { Text(stringResource(R.string.patient_detail_generate)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
     )
 }
 
 @Composable
 private fun PdfOptionRow(label: String, checked: Boolean, enabled: Boolean = true, onCheckedChange: (Boolean) -> Unit) {
+    // The whole row is the target (and one TalkBack item), not just the small box.
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(
+                value = checked && enabled,
+                enabled = enabled,
+                role = androidx.compose.ui.semantics.Role.Checkbox,
+                onValueChange = onCheckedChange
+            )
     ) {
-        androidx.compose.material3.Checkbox(checked = checked && enabled, onCheckedChange = onCheckedChange, enabled = enabled)
+        androidx.compose.material3.Checkbox(checked = checked && enabled, onCheckedChange = null, enabled = enabled)
         Text(
             text = label,
             color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
@@ -432,13 +522,9 @@ private fun PatientHeader(detail: PatientDetail) {
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold
             )
-            val ageGender = buildString {
-                detail.age?.let { append("$it yrs") }
-                if (detail.patient.gender.isNotBlank()) {
-                    if (isNotEmpty()) append(" • ")
-                    append(detail.patient.gender)
-                }
-            }
+            val ageText = detail.age?.let { stringResource(R.string.patient_age_years, it) }
+            val genderText = PatientValueLabels.gender(detail.patient.gender)
+            val ageGender = listOfNotNull(ageText, genderText.takeIf { it.isNotBlank() }).joinToString(" • ")
             if (ageGender.isNotBlank()) {
                 Text(text = ageGender, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -450,9 +536,9 @@ private fun PatientHeader(detail: PatientDetail) {
         if (detail.patient.bodyRegion.isNotBlank()) {
             Spacer(modifier = Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                RegionBadge(region = detail.patient.bodyRegion)
+                RegionBadge(region = PatientValueLabels.bodyRegion(detail.patient.bodyRegion))
                 if (detail.patient.side.isNotBlank() && detail.patient.side != "NOT_APPLICABLE") {
-                    RegionBadge(region = detail.patient.side)
+                    RegionBadge(region = PatientValueLabels.side(detail.patient.side))
                 }
             }
         }
@@ -467,84 +553,62 @@ private fun InfoTab(detail: PatientDetail) {
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize()
     ) {
+        // Renders nothing unless Telegram Drive is set up, so this screen is
+        // unchanged for anyone not using it.
+        item { PatientDriveStatusCard(patientId = p.id) }
         item {
-            InfoSection(
-                title = "Contact",
-                rows = listOf(
-                    "Date of birth" to DateFormat.formatDate(p.dateOfBirth),
-                    "Phone" to p.phone,
-                    "Email" to p.email,
-                    "Address" to p.address,
-                    "Emergency contact" to listOf(p.emergencyContactName, p.emergencyContactPhone).filter { it.isNotBlank() }.joinToString(" — ")
-                ),
-            )
-        }
-        item {
-            InfoSection(
-                title = "Insurance",
-                rows = listOf(
-                    "Provider" to p.insuranceProvider,
-                    "Policy number" to p.insuranceNumber
-                ),
-            )
-        }
-        item {
-            InfoSection(
-                title = "Medical history",
-                rows = listOf(
-                    "History" to p.medicalHistory,
-                    "Allergies" to p.allergies,
-                    "Chronic diseases" to p.chronicDiseases,
-                    "Previous surgeries" to p.previousSurgeries,
-                    "Medications" to p.medications,
-                    "Notes" to p.generalNotes
-                ),
-            )
-        }
-        item {
-            InfoSection(
-                title = "Orthopedic",
-                rows = listOf(
-                    "Diagnosis" to p.diagnosis,
-                    "Body region" to p.bodyRegion,
-                    "Side" to p.side,
-                    "Injury date" to DateFormat.formatDate(p.injuryDate),
-                    "Trauma mechanism" to p.traumaMechanism,
-                    "Fracture classification" to p.fractureClassification,
-                    "Imaging findings" to p.imagingFindings,
-                    "Treatment plan" to p.treatmentPlan
-                ),
-            )
-        }
-    }
-}
-
-@Composable
-private fun InfoSection(title: String, rows: List<Pair<String, String>>) {
-    val visibleRows = rows.filter { it.second.isNotBlank() && it.second != "—" }
-    if (visibleRows.isEmpty()) return
-
-    Column {
-        Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        visibleRows.forEach { (label, value) ->
-            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(0.4f)
+            PatientInfoGrid(
+                title = stringResource(R.string.patient_detail_contact),
+                icon = Icons.Default.Person,
+                items = listOf(
+                    InfoItem(stringResource(R.string.patient_edit_date_of_birth), DateFormat.formatDate(p.dateOfBirth)),
+                    InfoItem(stringResource(R.string.patient_edit_phone), p.phone, InfoAction.PHONE),
+                    InfoItem(stringResource(R.string.patient_edit_email), p.email, InfoAction.EMAIL),
+                    InfoItem(stringResource(R.string.patient_edit_address), p.address, InfoAction.ADDRESS, fullWidth = true),
+                    InfoItem(stringResource(R.string.patient_edit_emergency_contact_name), p.emergencyContactName),
+                    InfoItem(stringResource(R.string.patient_edit_emergency_contact_phone), p.emergencyContactPhone, InfoAction.PHONE)
                 )
-                Text(
-                    text = value,
-                    modifier = Modifier.weight(0.6f)
+            )
+        }
+        item {
+            PatientInfoGrid(
+                title = stringResource(R.string.patient_detail_insurance),
+                icon = Icons.Default.Shield,
+                items = listOf(
+                    InfoItem(stringResource(R.string.patient_edit_insurance_provider), p.insuranceProvider),
+                    InfoItem(stringResource(R.string.patient_edit_policy_number), p.insuranceNumber)
                 )
-            }
+            )
+        }
+        item {
+            PatientInfoGrid(
+                title = stringResource(R.string.patient_detail_medical_history),
+                icon = Icons.Default.MedicalInformation,
+                items = listOf(
+                    InfoItem(stringResource(R.string.patient_edit_allergies), p.allergies),
+                    InfoItem(stringResource(R.string.patient_edit_chronic_diseases), p.chronicDiseases),
+                    InfoItem(stringResource(R.string.patient_edit_medications), p.medications),
+                    InfoItem(stringResource(R.string.patient_edit_previous_surgeries), p.previousSurgeries),
+                    InfoItem(stringResource(R.string.patient_edit_medical_history), p.medicalHistory, fullWidth = true),
+                    InfoItem(stringResource(R.string.patient_edit_notes), p.generalNotes, fullWidth = true)
+                )
+            )
+        }
+        item {
+            PatientInfoGrid(
+                title = stringResource(R.string.patient_detail_orthopedic),
+                icon = Icons.Default.Accessibility,
+                items = listOf(
+                    InfoItem(stringResource(R.string.patient_edit_diagnosis), p.diagnosis, fullWidth = true),
+                    InfoItem(stringResource(R.string.patient_edit_body_region), PatientValueLabels.bodyRegion(p.bodyRegion)),
+                    InfoItem(stringResource(R.string.patient_edit_side), if (p.side == "NOT_APPLICABLE") "" else PatientValueLabels.side(p.side)),
+                    InfoItem(stringResource(R.string.patient_edit_injury_date), DateFormat.formatDate(p.injuryDate)),
+                    InfoItem(stringResource(R.string.patient_edit_trauma_mechanism), p.traumaMechanism),
+                    InfoItem(stringResource(R.string.patient_edit_fracture_classification), p.fractureClassification, fullWidth = true),
+                    InfoItem(stringResource(R.string.patient_edit_imaging_findings), p.imagingFindings, fullWidth = true),
+                    InfoItem(stringResource(R.string.patient_edit_treatment_plan), p.treatmentPlan, fullWidth = true)
+                )
+            )
         }
     }
 }
@@ -559,8 +623,8 @@ private fun TimelineTab(
     if (timeline.all.isEmpty()) {
         EmptyStateView(
             icon = Icons.Default.Add,
-            title = "No timeline events",
-            message = "Tap + to log a consultation, imaging, or a planned follow-up.",
+            title = stringResource(R.string.patient_detail_no_timeline_events),
+            message = stringResource(R.string.patient_detail_tap_to_log_a_consultation),
             modifier = Modifier.fillMaxSize()
         )
         return
@@ -572,15 +636,15 @@ private fun TimelineTab(
         modifier = Modifier.fillMaxSize()
     ) {
         if (timeline.future.isNotEmpty()) {
-            item { TimelineSectionLabel("Upcoming") }
+            item { TimelineSectionLabel(stringResource(R.string.patient_detail_timeline_upcoming)) }
             items(timeline.future, key = { it.id }) { TimelineEventRow(it, onClick = { onEventClick(it.id) }, onDelete = { onEventDelete(it.id) }) }
         }
         if (timeline.current.isNotEmpty()) {
-            item { TimelineSectionLabel("Today") }
+            item { TimelineSectionLabel(stringResource(R.string.patient_detail_timeline_today)) }
             items(timeline.current, key = { it.id }) { TimelineEventRow(it, onClick = { onEventClick(it.id) }, onDelete = { onEventDelete(it.id) }) }
         }
         if (timeline.past.isNotEmpty()) {
-            item { TimelineSectionLabel("Previous") }
+            item { TimelineSectionLabel(stringResource(R.string.patient_detail_timeline_previous)) }
             items(timeline.past, key = { it.id }) { TimelineEventRow(it, onClick = { onEventClick(it.id) }, onDelete = { onEventDelete(it.id) }) }
         }
     }
@@ -607,8 +671,8 @@ private fun SurgeriesTab(
     if (detail.surgeries.isEmpty()) {
         EmptyStateView(
             icon = Icons.Default.Add,
-            title = "No surgeries recorded",
-            message = "Tap + to add a surgery record for this patient.",
+            title = stringResource(R.string.patient_detail_no_surgeries_recorded),
+            message = stringResource(R.string.patient_detail_tap_to_add_a_surgery),
             modifier = Modifier.fillMaxSize()
         )
         return
@@ -636,10 +700,19 @@ private fun MediaTab(
     detail: PatientDetail,
     viewModel: PatientDetailViewModel,
     onAddMedia: () -> Unit,
-    onImageClick: (String) -> Unit
+    onImageClick: (String) -> Unit,
+    onVideoClick: (String) -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    var selectedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    val scope = rememberCoroutineScope()
+    var selectedIds by rememberSaveable(
+        saver = androidx.compose.runtime.saveable.listSaver<androidx.compose.runtime.MutableState<Set<String>>, String>(
+            save = { it.value.toList() },
+            restore = { mutableStateOf(it.toSet()) }
+        )
+    ) { mutableStateOf<Set<String>>(emptySet()) }
+    // Back clears a media selection before it leaves the patient.
+    androidx.activity.compose.BackHandler(enabled = selectedIds.isNotEmpty()) { selectedIds = emptySet() }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showMoveMenu by remember { mutableStateOf(false) }
     var pendingGallerySaveIds by remember { mutableStateOf<Set<String>?>(null) }
@@ -650,7 +723,7 @@ private fun MediaTab(
         val ids = pendingGallerySaveIds
         pendingGallerySaveIds = null
         if (granted && ids != null) {
-            saveImagesToGallery(context, detail, ids)
+            scope.launch { saveImagesToGallery(context, detail, ids) }
         }
     }
 
@@ -662,27 +735,33 @@ private fun MediaTab(
             pendingGallerySaveIds = ids
             permissionLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
         } else {
-            saveImagesToGallery(context, detail, ids)
+            scope.launch { saveImagesToGallery(context, detail, ids) }
         }
     }
 
-    val sections = remember(detail.images) {
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    val radiologyLabel = stringResource(R.string.media_category_radiology)
+    val clinicalLabel = stringResource(R.string.media_category_clinical)
+    val otherLabel = stringResource(R.string.media_category_other)
+    val shareTitle = stringResource(R.string.patient_detail_share)
+    // Filtered and sorted once per change, not on every recomposition of the grid.
+    val sections = remember(detail.images, radiologyLabel) {
         listOf(
-            "Radiology" to detail.images.filter { it.category == com.example.data.local.entity.ImageCategory.RADIOLOGY.name },
-            "Clinical" to detail.images.filter { it.category == com.example.data.local.entity.ImageCategory.CLINICAL_PHOTO.name },
-            "Other" to detail.images.filter {
+            radiologyLabel to detail.images.filter { it.category == com.example.data.local.entity.ImageCategory.RADIOLOGY.name },
+            clinicalLabel to detail.images.filter { it.category == com.example.data.local.entity.ImageCategory.CLINICAL_PHOTO.name },
+            otherLabel to detail.images.filter {
                 it.category != com.example.data.local.entity.ImageCategory.RADIOLOGY.name &&
                     it.category != com.example.data.local.entity.ImageCategory.CLINICAL_PHOTO.name
             }
-        )
+        ).map { (label, images) -> label to images.sortedBy { it.capturedAt } }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (detail.images.isEmpty() && detail.documents.isEmpty()) {
             EmptyStateView(
                 icon = Icons.Default.Image,
-                title = "No media yet",
-                message = "Tap + to capture a photo, take a radiology shot, or scan a document.",
+                title = stringResource(R.string.patient_detail_no_media),
+                message = stringResource(R.string.patient_detail_no_media_message),
                 modifier = Modifier.fillMaxSize()
             )
         } else {
@@ -692,8 +771,20 @@ private fun MediaTab(
                         count = selectedIds.size,
                         onClose = { selectedIds = emptySet() },
                         onShare = {
-                            val files = detail.images.filter { it.id in selectedIds }.map { java.io.File(it.filePath) }
-                            com.example.utils.ShareHelper.shareFiles(context, files, "image/jpeg", "Share images")
+                            val chosen = detail.images.filter { it.id in selectedIds }
+                            val hasVideo = chosen.any { it.mediaType == MediaType.VIDEO.name }
+                            val hasImage = chosen.any { it.mediaType != MediaType.VIDEO.name }
+                            val mime = when {
+                                hasVideo && hasImage -> "*/*"
+                                hasVideo -> "video/*"
+                                else -> "image/*"
+                            }
+                            com.example.utils.ShareHelper.shareFiles(
+                                context,
+                                chosen.map { java.io.File(it.filePath) },
+                                mime,
+                                shareTitle
+                            )
                         },
                         onSave = { requestSaveToGallery(selectedIds) },
                         onMove = { showMoveMenu = true },
@@ -721,6 +812,8 @@ private fun MediaTab(
                             }
                             gridItems(images, key = { it.id }) { image ->
                                 val isSelected = image.id in selectedIds
+                                val isVideo = image.mediaType == MediaType.VIDEO.name
+                                Column {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -737,6 +830,9 @@ private fun MediaTab(
                                             onClick = {
                                                 if (selectedIds.isNotEmpty()) {
                                                     selectedIds = if (isSelected) selectedIds - image.id else selectedIds + image.id
+                                                } else if (isVideo) {
+                                                    // Annotating a video makes no sense; play it instead.
+                                                    onVideoClick(image.id)
                                                 } else {
                                                     onImageClick(image.id)
                                                 }
@@ -752,6 +848,32 @@ private fun MediaTab(
                                         contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                                         modifier = Modifier.fillMaxSize()
                                     )
+                                    if (isVideo) {
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.Center)
+                                                .background(Color.Black.copy(alpha = 0.45f), androidx.compose.foundation.shape.CircleShape)
+                                                .padding(6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.PlayArrow,
+                                                contentDescription = stringResource(R.string.media_video),
+                                                tint = Color.White
+                                            )
+                                        }
+                                        if (image.durationMs > 0) {
+                                            Text(
+                                                text = formatDuration(image.durationMs),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = Color.White,
+                                                modifier = Modifier
+                                                    .align(Alignment.BottomEnd)
+                                                    .padding(4.dp)
+                                                    .background(Color.Black.copy(alpha = 0.5f), androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                                                    .padding(horizontal = 4.dp)
+                                            )
+                                        }
+                                    }
                                     if (isSelected) {
                                         Box(
                                             modifier = Modifier
@@ -760,11 +882,20 @@ private fun MediaTab(
                                         )
                                         Icon(
                                             imageVector = Icons.Default.CheckCircle,
-                                            contentDescription = "Selected",
+                                            contentDescription = stringResource(R.string.media_selected),
                                             tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
                                         )
                                     }
+                                }
+                                // When it was taken, from the file's own metadata.
+                                Text(
+                                    text = MediaMetadata.formatDate(image.capturedAt, locale),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(top = 3.dp, start = 2.dp)
+                                )
                                 }
                             }
                         }
@@ -778,7 +909,7 @@ private fun MediaTab(
                 onClick = onAddMedia,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add media")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.patient_detail_add_media))
             }
         }
     }
@@ -786,29 +917,29 @@ private fun MediaTab(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Delete ${selectedIds.size} item${if (selectedIds.size == 1) "" else "s"}?") },
-            text = { Text("This cannot be undone.") },
+            title = { Text(PatientValueLabels.plural(R.plurals.media_delete_items_title, selectedIds.size)) },
+            text = { Text(stringResource(R.string.action_cannot_be_undone)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteImages(selectedIds)
                     selectedIds = emptySet()
                     showDeleteConfirm = false
-                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.patient_detail_delete), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.action_cancel)) } }
         )
     }
 
     if (showMoveMenu) {
         AlertDialog(
             onDismissRequest = { showMoveMenu = false },
-            title = { Text("Move to section") },
+            title = { Text(stringResource(R.string.patient_detail_move_to_section)) },
             text = {
                 Column {
                     listOf(
-                        "Radiology" to com.example.data.local.entity.ImageCategory.RADIOLOGY,
-                        "Clinical" to com.example.data.local.entity.ImageCategory.CLINICAL_PHOTO,
-                        "Other" to com.example.data.local.entity.ImageCategory.OTHER
+                        radiologyLabel to com.example.data.local.entity.ImageCategory.RADIOLOGY,
+                        clinicalLabel to com.example.data.local.entity.ImageCategory.CLINICAL_PHOTO,
+                        otherLabel to com.example.data.local.entity.ImageCategory.OTHER
                     ).forEach { (label, category) ->
                         Text(
                             text = label,
@@ -826,7 +957,7 @@ private fun MediaTab(
                 }
             },
             confirmButton = {},
-            dismissButton = { TextButton(onClick = { showMoveMenu = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showMoveMenu = false }) { Text(stringResource(R.string.action_cancel)) } }
         )
     }
 }
@@ -847,31 +978,48 @@ private fun MediaSelectionBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onClose) {
-            Icon(Icons.Default.Close, contentDescription = "Clear selection")
+            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.patient_detail_clear_selection))
         }
         Text(
-            text = "$count selected",
+            text = PatientValueLabels.plural(R.plurals.media_selected_count, count),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.weight(1f)
         )
-        IconButton(onClick = onShare) { Icon(Icons.Default.Share, contentDescription = "Share") }
-        IconButton(onClick = onSave) { Icon(Icons.Default.Download, contentDescription = "Save to gallery") }
-        IconButton(onClick = onMove) { Icon(Icons.Default.DriveFileMove, contentDescription = "Move to section") }
-        IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error) }
+        IconButton(onClick = onShare) { Icon(Icons.Default.Share, contentDescription = stringResource(R.string.patient_detail_share)) }
+        IconButton(onClick = onSave) { Icon(Icons.Default.Download, contentDescription = stringResource(R.string.patient_detail_save_to_gallery)) }
+        IconButton(onClick = onMove) { Icon(Icons.Default.DriveFileMove, contentDescription = stringResource(R.string.patient_detail_move_to_section)) }
+        IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.patient_detail_delete), tint = MaterialTheme.colorScheme.error) }
     }
 }
 
-private fun saveImagesToGallery(context: android.content.Context, detail: PatientDetail, ids: Set<String>) {
+/** Tab labels stay on one line: a long translation used to wrap to a stray letter. */
+@Composable
+private fun TabLabel(text: String) {
+    Text(
+        text = text,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Ellipsis
+    )
+}
+
+private fun formatDuration(ms: Long): String {
+    val totalSeconds = ms / 1000
+    return "%d:%02d".format(totalSeconds / 60, totalSeconds % 60)
+}
+
+/** Copies run on the IO dispatcher: several full-size images froze the UI on the main thread. */
+private suspend fun saveImagesToGallery(context: android.content.Context, detail: PatientDetail, ids: Set<String>) {
     val images = detail.images.filter { it.id in ids }
-    var successCount = 0
-    images.forEach { image ->
-        val result = com.example.utils.GallerySaver.saveToGallery(context, java.io.File(image.filePath), "IMG_${image.id}.jpg")
-        if (result is com.example.utils.GallerySaver.Result.Success) successCount++
+    val successCount = withContext(Dispatchers.IO) {
+        images.count { image ->
+            com.example.utils.GallerySaver.saveToGallery(context, java.io.File(image.filePath), "IMG_${image.id}.jpg") is com.example.utils.GallerySaver.Result.Success
+        }
     }
     val message = if (successCount == images.size) {
-        "Saved $successCount photo${if (successCount == 1) "" else "s"} to gallery"
+        context.resources.getQuantityString(R.plurals.media_saved_to_gallery, successCount, successCount)
     } else {
-        "Saved $successCount of ${images.size} photos to gallery"
+        context.getString(R.string.media_saved_partial_to_gallery, successCount, images.size)
     }
     android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
 }

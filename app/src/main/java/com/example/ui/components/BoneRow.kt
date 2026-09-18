@@ -34,6 +34,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.model.BoneSummary
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun BoneRow(
@@ -159,7 +161,7 @@ fun BoneRow(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "View technique",
+                        text = stringResource(R.string.bone_row_view_technique),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )

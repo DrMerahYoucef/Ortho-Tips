@@ -15,7 +15,7 @@ import com.example.OrthoApplication
 import com.example.data.local.entity.TransferDirection
 import com.example.data.local.entity.TransferQueueEntity
 import com.example.data.local.entity.TransferState
-import com.example.data.prefs.SyncMode
+import com.example.data.prefs.SyncFrequency
 import com.example.data.storage.StorageKey
 import com.example.data.storage.StorageObjectKind
 import com.example.data.storage.TransferProgress
@@ -240,21 +240,23 @@ class SyncScheduler(private val context: Context) {
 
     suspend fun applyPreferences() {
         val settings = context.appModule().telegramDriveRepository.settings.first()
-        if (!settings.setupCompleted || !settings.backgroundSyncEnabled ||
-            settings.syncMode == SyncMode.MANUAL
-        ) {
+        val period = settings.syncFrequency.periodHours
+        if (!settings.setupCompleted || !settings.backgroundSyncEnabled || period == null) {
+            // MANUAL and ON_CHANGE need no periodic worker: the first waits for the
+            // surgeon, the second is driven by saves as they happen.
             cancelPeriodic()
             return
         }
         schedulePeriodic(
+            periodHours = period,
             wifiOnly = settings.syncOnWifiOnly,
             chargingOnly = settings.syncWhileChargingOnly
         )
     }
 
-    fun schedulePeriodic(wifiOnly: Boolean, chargingOnly: Boolean) {
+    fun schedulePeriodic(periodHours: Long, wifiOnly: Boolean, chargingOnly: Boolean) {
         val request = PeriodicWorkRequestBuilder<SyncWorker>(
-            PERIODIC_INTERVAL_HOURS, TimeUnit.HOURS
+            periodHours.coerceAtLeast(MIN_INTERVAL_HOURS), TimeUnit.HOURS
         )
             .setConstraints(constraints(wifiOnly, chargingOnly))
             .build()
@@ -279,6 +281,28 @@ class SyncScheduler(private val context: Context) {
             .build()
         workManager.enqueueUniqueWork(
             SyncWorker.UNIQUE_ONE_SHOT,
+            ExistingWorkPolicy.REPLACE,
+            request
+        )
+    }
+
+    /**
+     * Pushes a record snapshot shortly after the database changes.
+     *
+     * Delayed and REPLACE-policy on purpose: typing a patient's details fires a
+     * save per field, and without the debounce that would upload a snapshot per
+     * keystroke. Each new call pushes the timer out, so a burst of edits settles
+     * into one upload.
+     */
+    fun scheduleRecordSnapshot() {
+        val request = OneTimeWorkRequestBuilder<SyncWorker>()
+            .setConstraints(
+                Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+            )
+            .setInitialDelay(RECORD_DEBOUNCE_SECONDS, TimeUnit.SECONDS)
+            .build()
+        workManager.enqueueUniqueWork(
+            UNIQUE_RECORD_SNAPSHOT,
             ExistingWorkPolicy.REPLACE,
             request
         )
@@ -312,6 +336,7 @@ class SyncScheduler(private val context: Context) {
         workManager.cancelUniqueWork(SyncWorker.UNIQUE_PERIODIC)
         workManager.cancelUniqueWork(SyncWorker.UNIQUE_ONE_SHOT)
         workManager.cancelUniqueWork(TransferQueueWorker.UNIQUE_NAME)
+        workManager.cancelUniqueWork(UNIQUE_RECORD_SNAPSHOT)
     }
 
     private fun constraints(wifiOnly: Boolean, chargingOnly: Boolean): Constraints =
@@ -324,6 +349,9 @@ class SyncScheduler(private val context: Context) {
             .build()
 
     companion object {
-        private const val PERIODIC_INTERVAL_HOURS = 6L
+        /** WorkManager's floor for a periodic request. */
+        private const val MIN_INTERVAL_HOURS = 1L
+        private const val UNIQUE_RECORD_SNAPSHOT = "ortho_drive_record_snapshot"
+        private const val RECORD_DEBOUNCE_SECONDS = 20L
     }
 }

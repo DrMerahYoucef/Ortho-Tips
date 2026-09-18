@@ -1,5 +1,6 @@
 package com.example.ui.screens.storage
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.VerifiedUser
@@ -32,6 +32,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.telegram.DriveLog
 import com.example.utils.MediaActions
 import com.example.viewmodel.TelegramDriveSettingsViewModel
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 /**
  * Developer diagnostics.
@@ -55,20 +57,20 @@ fun StorageDiagnosticsScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Drive diagnostics") },
+                title = { Text(stringResource(R.string.storage_diagnostics_drive_diagnostics)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = {
                         MediaActions.copyToClipboard(context, "Ortho Tips drive log", DriveLog.dump())
                     }) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = "Copy logs")
+                        Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.storage_diagnostics_copy_logs))
                     }
                     IconButton(onClick = viewModel::clearLogs) {
-                        Icon(Icons.Default.DeleteSweep, contentDescription = "Clear logs")
+                        Icon(Icons.Default.DeleteSweep, contentDescription = stringResource(R.string.storage_diagnostics_clear_logs))
                     }
                 }
             )
@@ -128,8 +130,8 @@ fun StorageDiagnosticsScreen(
                     if (report == null) {
                         DriveActionRow(
                             icon = Icons.Default.VerifiedUser,
-                            title = "Run an integrity check",
-                            subtitle = "Verifies every indexed object against the drive",
+                            title = stringResource(R.string.storage_diagnostics_run_an_integrity_check),
+                            subtitle = stringResource(R.string.storage_diagnostics_verifies_every_indexed_object_against),
                             onClick = viewModel::verifyIntegrity
                         )
                     } else {
@@ -149,8 +151,8 @@ fun StorageDiagnosticsScreen(
                         DriveInfoRow("Orphaned transfers", report.orphanedTransfers.toString())
                         DriveActionRow(
                             icon = Icons.Default.VerifiedUser,
-                            title = "Run again",
-                            subtitle = "Re-checks every object",
+                            title = stringResource(R.string.storage_diagnostics_run_again),
+                            subtitle = stringResource(R.string.storage_diagnostics_re_checks_every_object),
                             onClick = viewModel::verifyIntegrity
                         )
                     }
@@ -163,6 +165,13 @@ fun StorageDiagnosticsScreen(
                         DriveInfoRow("Scope", report.scope.name)
                         DriveInfoRow("Duration", "${report.durationMillis} ms")
                         DriveInfoRow("Manifest entries seen", report.manifestRowsSeen.toString())
+                        if (report.unreadableObjects > 0) {
+                            DriveInfoRow(
+                                "Unreadable in the drive",
+                                "${report.unreadableObjects} objects sealed with a key that " +
+                                        "is not on this device"
+                            )
+                        }
                         DriveInfoRow("Queued", "${report.uploadsQueued} up / ${report.downloadsQueued} down")
                         DriveInfoRow("Deletions propagated", report.tombstonesPropagated.toString())
                         DriveInfoRow("Record snapshot pushed", report.snapshotPushed.toString())

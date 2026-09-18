@@ -56,6 +56,8 @@ import com.example.ui.components.ZoomableImage
 import com.example.utils.MediaActions
 import com.example.viewmodel.ViewerViewModel
 import kotlinx.coroutines.launch
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,7 +92,7 @@ fun ImageViewerScreen(
                 .background(Color.Black),
             contentAlignment = Alignment.Center
         ) {
-            Text(text = "Figure not found", color = Color.White)
+            Text(text = stringResource(R.string.image_viewer_figure_not_found), color = Color.White)
         }
         return
     }
@@ -132,7 +134,7 @@ fun ImageViewerScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
+                                contentDescription = stringResource(R.string.action_back),
                                 tint = Color.White
                             )
                         }
@@ -149,7 +151,7 @@ fun ImageViewerScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Share,
-                                contentDescription = "Share figure info",
+                                contentDescription = stringResource(R.string.image_viewer_share_figure_info),
                                 tint = Color.White
                             )
                         }
@@ -216,7 +218,7 @@ fun ImageViewerScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.ChevronLeft,
-                            contentDescription = "Previous figure",
+                            contentDescription = stringResource(R.string.image_viewer_previous_figure),
                             tint = Color.White,
                             modifier = Modifier
                                 .size(40.dp)
@@ -244,7 +246,7 @@ fun ImageViewerScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.ChevronRight,
-                            contentDescription = "Next figure",
+                            contentDescription = stringResource(R.string.image_viewer_next_figure),
                             tint = Color.White,
                             modifier = Modifier
                                 .size(40.dp)

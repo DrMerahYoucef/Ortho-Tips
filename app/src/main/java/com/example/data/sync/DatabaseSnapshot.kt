@@ -37,13 +37,18 @@ class DatabaseSnapshot(private val database: OrthoDatabase) {
     )
 
     suspend fun export(destination: File): SnapshotSummary = withContext(Dispatchers.IO) {
-        val db = database.openHelper.readableDatabase
+        // Reads go through Room's own connection rather than openHelper's, so an
+        // export always sees what the DAOs just wrote. Reading straight off
+        // openHelper can hand back a connection Room is not writing through.
+        val db = database.openHelper.writableDatabase
+        DriveLog.d(TAG, "Exporting from ${db.path}")
         val root = JSONObject()
         root.put("format", FORMAT_VERSION)
         root.put("createdAt", System.currentTimeMillis())
 
         val tables = JSONObject()
         var totalRows = 0
+        val perTable = mutableListOf<String>()
         for (table in tableNames()) {
             val rows = JSONArray()
             db.query("SELECT * FROM `$table`").use { cursor ->
@@ -61,8 +66,14 @@ class DatabaseSnapshot(private val database: OrthoDatabase) {
                 }
             }
             tables.put(table, rows)
+            if (rows.length() > 0) perTable += "$table=${rows.length()}"
         }
         root.put("tables", tables)
+        DriveLog.d(
+            TAG,
+            if (perTable.isEmpty()) "Every table read back empty"
+            else "Row counts: ${perTable.joinToString(", ")}"
+        )
 
         destination.parentFile?.mkdirs()
         destination.writeText(root.toString())
@@ -91,14 +102,20 @@ class DatabaseSnapshot(private val database: OrthoDatabase) {
         val tables = root.optJSONObject("tables") ?: JSONObject()
         val known = tableNames().toSet()
         val db = database.openHelper.writableDatabase
+        DriveLog.d(TAG, "Importing into ${db.path}; schema has ${known.size} tables")
 
         var totalRows = 0
         var importedTables = 0
         db.beginTransaction()
         try {
-            val names = tables.keys()
-            while (names.hasNext()) {
-                val table = names.next()
+            // Children are inserted before their parents unless the order is
+            // fixed, and Room enforces foreign keys, so the first patient_images
+            // row would fail and roll the whole import back. Deferring the checks
+            // to commit time makes insertion order irrelevant; the ordering below
+            // is belt and braces for anything the pragma does not cover.
+            db.execSQL("PRAGMA defer_foreign_keys = TRUE")
+
+            for (table in insertionOrder(tables.keys().asSequence().toList())) {
                 if (table !in known) {
                     DriveLog.w(TAG, "Snapshot table '$table' is not in this schema; skipped")
                     continue
@@ -115,11 +132,19 @@ class DatabaseSnapshot(private val database: OrthoDatabase) {
                     val values = columns.map { column ->
                         if (row.isNull(column)) null else row.getString(column)
                     }.toTypedArray()
-                    db.execSQL(
-                        "INSERT OR REPLACE INTO `$table` ($columnList) VALUES ($placeholders)",
-                        values
-                    )
-                    totalRows++
+                    try {
+                        db.execSQL(
+                            "INSERT OR REPLACE INTO `$table` ($columnList) VALUES ($placeholders)",
+                            values
+                        )
+                        totalRows++
+                    } catch (e: Exception) {
+                        // Naming the table matters: a silent rollback here is what
+                        // made this look like an empty database rather than a
+                        // failed import.
+                        DriveLog.e(TAG, "Row $i of '$table' could not be imported", e)
+                        throw e
+                    }
                 }
             }
             db.setTransactionSuccessful()
@@ -128,6 +153,13 @@ class DatabaseSnapshot(private val database: OrthoDatabase) {
         }
 
         DriveLog.i(TAG, "Snapshot imported: $totalRows rows into $importedTables tables")
+        // Immediately read one row back. If this says 0 after a non-zero import,
+        // the write is not reaching the connection the rest of the app reads from.
+        runCatching {
+            db.query("SELECT COUNT(*) FROM `patients`").use { c ->
+                if (c.moveToFirst()) DriveLog.i(TAG, "patients now holds ${c.getInt(0)} rows")
+            }
+        }
         SnapshotSummary(
             tableCount = importedTables,
             rowCount = totalRows,
@@ -152,8 +184,34 @@ class DatabaseSnapshot(private val database: OrthoDatabase) {
         }.getOrNull()
     }
 
+    /**
+     * Orders tables so a parent is always written before anything that points at
+     * it. `tableNames()` is alphabetical, which puts `patient_documents` and
+     * `patient_images` ahead of `patients` — the exact order that made every
+     * import fail on a foreign key and roll back silently.
+     *
+     * Tables not named here keep their relative order and go last; they are
+     * either standalone or covered by the deferred-key pragma.
+     */
+    private fun insertionOrder(tables: List<String>): List<String> {
+        val parentsFirst = listOf(
+            "chapters",
+            "bones",
+            "sections",
+            "images",
+            "patients",
+            "timeline_events",
+            "surgeries",
+            "patient_images",
+            "patient_documents"
+        )
+        val ranked = tables.filter { it in parentsFirst }.sortedBy { parentsFirst.indexOf(it) }
+        val rest = tables.filterNot { it in parentsFirst }
+        return ranked + rest
+    }
+
     private fun tableNames(): List<String> {
-        val db = database.openHelper.readableDatabase
+        val db = database.openHelper.writableDatabase
         val names = mutableListOf<String>()
         db.query(
             "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' " +

@@ -110,6 +110,12 @@ class BoneDatabaseImporter(
                 )
             }
 
+            // Parsed defensively: a malformed or missing translation must never
+            // fail an import that would otherwise succeed in English.
+            val frenchBones: JSONObject? = findFrenchBonesJson(stagingDir)
+                ?.let { file -> runCatching { JSONObject(file.readText()) }.getOrNull() }
+                ?.optJSONObject("bones")
+
             val bonesObj = root.optJSONObject("bones")
                 ?: return@withContext Result.failure(
                     IllegalArgumentException("Invalid database file: missing required \"bones\" object.")
@@ -130,6 +136,10 @@ class BoneDatabaseImporter(
             while (boneKeys.hasNext()) {
                 val key = boneKeys.next()
                 val boneObj = bonesObj.optJSONObject(key) ?: continue
+                // The two files share keys and structure, so the same key is the
+                // whole of the matching logic.
+                val frenchObj = frenchBones?.optJSONObject(key)
+                val frenchSections = frenchObj?.optJSONArray("sections")
                 boneIndex++
 
                 val boneId = slug(boneObj.optString("id", key).ifBlank { key })
@@ -144,15 +154,26 @@ class BoneDatabaseImporter(
                 val sectionsArray = boneObj.optJSONArray("sections")
                 val fallbackBody = boneObj.optString("body", "") // legacy archives without "sections"
 
-                val chapter = chaptersBySection.getOrPut(sectionLabel) {
+                // Same rule as the English label: "section", or the region when there is none.
+                val frenchSectionLabel = frenchObj?.optString("section")?.takeIf { it.isNotBlank() }
+                    ?: frenchObj?.optString("region")?.takeIf { it.isNotBlank() }
+                var chapter = chaptersBySection.getOrPut(sectionLabel) {
                     ChapterEntity(
                         id = slug("chap_$sectionLabel"),
                         title = sectionLabel,
                         description = "Imported clinical reference data",
                         icon = "medical_services",
-                        orderIndex = chaptersBySection.size + 1
+                        orderIndex = chaptersBySection.size + 1,
+                        titleFr = frenchSectionLabel,
+                        descriptionFr = "Données de référence cliniques importées"
                     )
                 }
+                // The first bone of a chapter may lack a translation while a later one has it.
+                if (chapter.titleFr == null && frenchSectionLabel != null) {
+                    chapter = chapter.copy(titleFr = frenchSectionLabel)
+                    chaptersBySection[sectionLabel] = chapter
+                }
+                val boneNameFr = frenchObj?.optString("name")?.takeIf { it.isNotBlank() }
 
                 bones.add(
                     BoneEntity(
@@ -163,6 +184,11 @@ class BoneDatabaseImporter(
                         region = region,
                         traumaType = "",
                         classificationSummary = notes,
+                        nameFr = boneNameFr,
+                        subtitleFr = frenchObj?.optString("notes")?.takeIf { it.isNotBlank() },
+                        regionFr = frenchObj?.optString("region")?.takeIf { it.isNotBlank() },
+                        classificationSummaryFr = frenchObj?.optString("notes")
+                            ?.takeIf { it.isNotBlank() },
                         orderIndex = boneIndex,
                         isHighYield = false
                     )
@@ -179,6 +205,12 @@ class BoneDatabaseImporter(
                         val text = secObj.optString("text", "")
                         if (text.isBlank()) continue
 
+                        // Sections are matched by index: the files are stated to
+                        // share structure, so entry s in one is entry s in the
+                        // other. A shorter French array simply leaves the tail
+                        // untranslated rather than mispairing.
+                        val frenchSec = frenchSections?.optJSONObject(s)
+
                         sections.add(
                             SectionEntity(
                                 id = "${boneId}_sec_$s",
@@ -188,6 +220,10 @@ class BoneDatabaseImporter(
                                 content = text,
                                 pearls = "",
                                 warnings = "",
+                                titleFr = frenchSec?.optString("heading")
+                                    ?.takeIf { it.isNotBlank() },
+                                contentFr = frenchSec?.optString("text")
+                                    ?.takeIf { it.isNotBlank() },
                                 orderIndex = s + 1
                             )
                         )
@@ -243,6 +279,7 @@ class BoneDatabaseImporter(
                                 sectionId = null,
                                 title = label,
                                 description = "$boneName • Fig $label",
+                                descriptionFr = "${boneNameFr ?: boneName} • Fig. $label",
                                 drawableResName = "",
                                 imagePath = destFile.absolutePath,
                                 figureNumber = label
@@ -306,18 +343,29 @@ class BoneDatabaseImporter(
         }
     }
 
-    private fun findBonesJson(root: File): File? {
+    private fun findBonesJson(root: File): File? = findJson(root) { it == "bones.json" }
+
+    /**
+     * The French companion file, if the archive ships one.
+     *
+     * Several spellings are accepted because the file is maintained by hand and
+     * "bonesFR.json", "bones_fr.json" and "bones-fr.json" are all plausible.
+     * Absent is not an error: an English-only archive imports exactly as before.
+     */
+    private fun findFrenchBonesJson(root: File): File? = findJson(root) { name ->
+        name in setOf("bonesfr.json", "bones_fr.json", "bones-fr.json", "bones.fr.json")
+    }
+
+    private fun findJson(root: File, matches: (String) -> Boolean): File? {
         if (!root.exists()) return null
-        root.listFiles()?.firstOrNull {
-            it.isFile && it.name.equals("bones.json", ignoreCase = true)
-        }?.let { return it }
+        root.listFiles()?.firstOrNull { it.isFile && matches(it.name.lowercase()) }
+            ?.let { return it }
 
         // Fallback in case the archive nests everything under a single top-level folder.
         root.listFiles()?.forEach { dir ->
             if (dir.isDirectory) {
-                dir.listFiles()?.firstOrNull {
-                    it.isFile && it.name.equals("bones.json", ignoreCase = true)
-                }?.let { return it }
+                dir.listFiles()?.firstOrNull { it.isFile && matches(it.name.lowercase()) }
+                    ?.let { return it }
             }
         }
         return null

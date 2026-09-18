@@ -1,5 +1,8 @@
 package com.example.viewmodel
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
+import com.example.ui.components.PatientValueLabels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -21,7 +24,9 @@ data class PatientListUiState(
     val patients: List<PatientSummary> = emptyList(),
     val tab: PatientListTab = PatientListTab.ACTIVE,
     val searchQuery: String = "",
-    val regionFilter: String = "All",
+    val regionFilter: String = ALL_REGIONS,
+    /** Body regions present on any patient, in the app language, for the filter chips. */
+    val regions: List<String> = emptyList(),
     val selectedIds: Set<String> = emptySet(),
     val activeCount: Int = 0,
     val archivedCount: Int = 0,
@@ -29,15 +34,18 @@ data class PatientListUiState(
 ) {
     val isSelectionMode: Boolean get() = selectedIds.isNotEmpty()
 
-    val filteredPatients: List<PatientSummary> get() {
-        if (regionFilter == "All") return patients
-        return patients.filter { patient ->
-            patient.bodyRegion.contains(regionFilter, ignoreCase = true) ||
-            patient.diagnosis.contains(regionFilter, ignoreCase = true)
-        }
+    // Computed once per state, not on every read during recomposition.
+    val filteredPatients: List<PatientSummary> by lazy {
+        if (regionFilter == ALL_REGIONS) patients
+        else patients.filter { PatientValueLabels.bodyRegion(it.bodyRegion).equals(regionFilter, ignoreCase = true) }
     }
 
     val isEmpty: Boolean get() = !isLoading && filteredPatients.isEmpty()
+
+    companion object {
+        /** Internal "no filter" value; the chip shows a translated label. */
+        const val ALL_REGIONS = "All"
+    }
 }
 
 class PatientListViewModel(
@@ -46,16 +54,19 @@ class PatientListViewModel(
 
     private val _tab = MutableStateFlow(PatientListTab.ACTIVE)
     private val _searchQuery = MutableStateFlow("")
-    private val _regionFilter = MutableStateFlow("All")
+    private val _regionFilter = MutableStateFlow(PatientListUiState.ALL_REGIONS)
     private val _selectedIds = MutableStateFlow<Set<String>>(emptySet())
 
-    val uiState: StateFlow<PatientListUiState> = combine(
+    // One five-way combine instead of a chain of Pair/Triple/Tuple wrappers.
+    private val inputs = combine(
         repository.getActivePatientSummaries(),
-        repository.getArchivedPatientSummaries()
-    ) { active, archived -> Pair(active, archived) }
-        .combine(_tab) { (active, archived), tab -> Triple(active, archived, tab) }
-        .combine(_searchQuery) { (active, archived, tab), query -> Tuple4(active, archived, tab, query) }
-        .combine(_regionFilter) { (active, archived, tab, query), region -> Tuple5(active, archived, tab, query, region) }
+        repository.getArchivedPatientSummaries(),
+        _tab,
+        _searchQuery,
+        _regionFilter
+    ) { active, archived, tab, query, region -> ListInputs(active, archived, tab, query, region) }
+
+    val uiState: StateFlow<PatientListUiState> = inputs
         .combine(_selectedIds) { (active, archived, tab, query, region), selected ->
             val baseList = if (tab == PatientListTab.ACTIVE) active else archived
             val searchedList = if (query.isNotBlank()) {
@@ -74,12 +85,20 @@ class PatientListViewModel(
                 tab = tab,
                 searchQuery = query,
                 regionFilter = region,
+                regions = (active + archived)
+                    .map { PatientValueLabels.bodyRegion(it.bodyRegion).trim() }
+                    .filter { it.isNotEmpty() }
+                    .distinctBy { it.lowercase() }
+                    .sortedBy { it.lowercase() },
                 selectedIds = selected,
                 activeCount = active.size,
                 archivedCount = archived.size,
                 isLoading = false
             )
-        }.stateIn(
+        }
+        // Searching and grouping a large list happens off the main thread.
+        .flowOn(Dispatchers.Default)
+        .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = PatientListUiState(isLoading = true)
@@ -139,5 +158,10 @@ class PatientListViewModel(
     }
 }
 
-private data class Tuple4<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
-private data class Tuple5<A, B, C, D, E>(val a: A, val b: B, val c: C, val d: D, val e: E)
+private data class ListInputs(
+    val active: List<PatientSummary>,
+    val archived: List<PatientSummary>,
+    val tab: PatientListTab,
+    val query: String,
+    val region: String
+)

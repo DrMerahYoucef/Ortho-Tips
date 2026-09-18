@@ -43,6 +43,9 @@ interface PatientDao {
     )
     fun searchPatients(query: String): Flow<List<PatientEntity>>
 
+    @Query("SELECT id FROM patients")
+    suspend fun getAllPatientIds(): List<String>
+
     @Query("SELECT COUNT(*) FROM patients")
     suspend fun getPatientCount(): Int
 
@@ -55,8 +58,9 @@ interface PatientDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPatients(patients: List<PatientEntity>)
 
+    /** Returns how many rows changed, so callers know whether to insert instead. */
     @Update
-    suspend fun updatePatient(patient: PatientEntity)
+    suspend fun updatePatient(patient: PatientEntity): Int
 
     @Query("UPDATE patients SET isArchived = :archived, updatedAt = :timestamp WHERE id = :id")
     suspend fun setArchived(id: String, archived: Boolean, timestamp: Long = System.currentTimeMillis())

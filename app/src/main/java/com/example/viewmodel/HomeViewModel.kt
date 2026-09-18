@@ -13,9 +13,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-enum class ClinicalStudiesTab(val label: String) {
-    OPERATIVE_GUIDES("Operative Guides"),
-    CLASSIFICATIONS("Classifications")
+enum class ClinicalStudiesTab(@androidx.annotation.StringRes val labelRes: Int) {
+    OPERATIVE_GUIDES(com.example.R.string.home_tab_operative_guides),
+    CLASSIFICATIONS(com.example.R.string.home_tab_classifications)
 }
 
 data class HomeUiState(

@@ -32,6 +32,8 @@ import com.example.ui.components.BoneRow
 import com.example.ui.components.EmptyStateView
 import com.example.ui.components.OrthoSearchBar
 import kotlinx.coroutines.launch
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,7 +74,7 @@ fun BoneListScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                 },
@@ -94,15 +96,15 @@ fun BoneListScreen(
                 onQueryChange = { searchQuery = it },
                 onSearch = {},
                 onClear = { searchQuery = "" },
-                placeholderText = "Filter in this chapter...",
+                placeholderText = stringResource(R.string.bone_list_filter_in_chapter),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
             if (filteredBones.isEmpty()) {
                 EmptyStateView(
                     icon = Icons.Default.MedicalServices,
-                    title = "No Procedures Found",
-                    message = "No matching procedures or fracture patterns found in this chapter."
+                    title = stringResource(R.string.bone_list_no_procedures_found),
+                    message = stringResource(R.string.bone_list_no_matching_procedures_or_fracture)
                 )
             } else {
                 LazyColumn(

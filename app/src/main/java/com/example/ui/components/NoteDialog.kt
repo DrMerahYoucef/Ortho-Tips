@@ -31,6 +31,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.data.local.entity.NoteEntity
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun NoteDialog(
@@ -64,7 +66,7 @@ fun NoteDialog(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Note title / case name") },
+                    label = { Text(stringResource(R.string.note_note_title_case_name)) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
@@ -77,7 +79,7 @@ fun NoteDialog(
                 OutlinedTextField(
                     value = content,
                     onValueChange = { content = it },
-                    label = { Text("Clinical observations, instrument sizes, screw lengths...") },
+                    label = { Text(stringResource(R.string.note_clinical_observations_instrument_sizes_screw)) },
                     minLines = 4,
                     maxLines = 8,
                     shape = RoundedCornerShape(12.dp),
@@ -89,7 +91,7 @@ fun NoteDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Note tag color",
+                    text = stringResource(R.string.note_note_tag_color),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -145,7 +147,7 @@ fun NoteDialog(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.testTag("save_note_button")
             ) {
-                Text("Save Note")
+                Text(stringResource(R.string.note_save_note))
             }
         },
         dismissButton = {
@@ -153,7 +155,7 @@ fun NoteDialog(
                 onClick = onDismiss,
                 modifier = Modifier.testTag("cancel_note_button")
             ) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )

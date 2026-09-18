@@ -67,3 +67,23 @@ interface StorageProvider {
     /** Drops cached bytes that can be re-fetched. Never affects canonical data. */
     suspend fun clearCache(): Long
 }
+
+/**
+ * Waits for a transfer flow's terminal event and returns it.
+ *
+ * Deliberately not `first { it is Completed || it is Failed }`. `first` stops
+ * collection by throwing `AbortFlowException`, which lands in the provider's own
+ * `catch (e: Exception)` and makes it emit after the flow has been torn down —
+ * an illegal emission that kotlinx rejects as a flow-transparency violation.
+ * These flows end on their own right after the terminal event, so ordinary
+ * collection is both correct and cheaper than an abort.
+ */
+suspend fun Flow<TransferProgress>.awaitTerminal(): TransferProgress? {
+    var terminal: TransferProgress? = null
+    collect { progress ->
+        if (progress is TransferProgress.Completed || progress is TransferProgress.Failed) {
+            terminal = progress
+        }
+    }
+    return terminal
+}

@@ -40,6 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.data.local.entity.ImageEntity
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun FigureStrip(
@@ -62,7 +64,7 @@ fun FigureStrip(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "SURGICAL DIAGRAMS & FIGURES (${images.size})",
+                text = stringResource(R.string.figures_header_count, images.size),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -172,7 +174,7 @@ fun FigureCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.ZoomIn,
-                        contentDescription = "Zoom",
+                        contentDescription = stringResource(R.string.figure_strip_zoom),
                         tint = Color.White,
                         modifier = Modifier
                             .padding(4.dp)

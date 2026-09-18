@@ -15,12 +15,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Badge
@@ -64,10 +66,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilledTonalIconToggleButton
+import com.example.viewmodel.PatientListUiState
+import com.example.ui.components.ConfirmDeleteDialog
+import com.example.ui.components.LibraryDriveSpaceBanner
 import com.example.ui.components.OrthoSearchBar
 import com.example.ui.components.PatientCard
 import com.example.viewmodel.PatientListTab
 import com.example.viewmodel.PatientListViewModel
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,11 +88,37 @@ fun PatientListScreen(
     onNavigateToSurgeonProfile: () -> Unit,
     onNavigateToDataTransfer: () -> Unit,
     onNavigateToQrScanner: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     onExportSelected: (List<String>) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Local to the screen: a filter row that hides itself is a view preference,
+    // not something the ViewModel or a saved state needs to know about.
+    var showRegionFilters by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(false)
+    }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val regionFilters = listOf("All", "Trauma", "Femur", "Tibia", "Radius", "Spine", "Ankle", "Humerus")
+    var showBulkDeleteConfirm by androidx.compose.runtime.saveable.rememberSaveable {
+        androidx.compose.runtime.mutableStateOf(false)
+    }
+
+    // Back leaves selection mode first instead of leaving the app mid-selection.
+    androidx.activity.compose.BackHandler(enabled = uiState.isSelectionMode) {
+        viewModel.clearSelection()
+    }
+
+    if (showBulkDeleteConfirm && uiState.isSelectionMode) {
+        val count = uiState.selectedIds.size
+        ConfirmDeleteDialog(
+            title = com.example.ui.components.PatientValueLabels.plural(R.plurals.confirm_delete_patients_title, count),
+            message = stringResource(R.string.confirm_delete_patients_message),
+            onConfirm = {
+                showBulkDeleteConfirm = false
+                viewModel.deleteSelected()
+            },
+            onDismiss = { showBulkDeleteConfirm = false }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -90,7 +126,7 @@ fun PatientListScreen(
                 title = {
                     if (uiState.isSelectionMode) {
                         Text(
-                            text = "${uiState.selectedIds.size} selected",
+                            text = stringResource(R.string.patient_list_selected_count, uiState.selectedIds.size),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -113,13 +149,13 @@ fun PatientListScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
-                                    text = "Patients & Cases",
+                                    text = stringResource(R.string.patient_list_patients_cases),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.ExtraBold,
                                     letterSpacing = (-0.2).sp
                                 )
                                 Text(
-                                    text = "Clinical Records & Surgical Logs",
+                                    text = stringResource(R.string.patient_list_clinical_records_surgical_logs),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.Medium
@@ -131,7 +167,7 @@ fun PatientListScreen(
                 navigationIcon = {
                     if (uiState.isSelectionMode) {
                         IconButton(onClick = { viewModel.clearSelection() }) {
-                            Icon(Icons.Default.Close, contentDescription = "Cancel selection")
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.patient_list_cancel_selection))
                         }
                     }
                 },
@@ -141,26 +177,32 @@ fun PatientListScreen(
                             onExportSelected(uiState.selectedIds.toList())
                             viewModel.clearSelection()
                         }) {
-                            Icon(Icons.Default.CloudUpload, contentDescription = "Export selected")
+                            Icon(Icons.Default.CloudUpload, contentDescription = stringResource(R.string.patient_list_export_selected))
                         }
                         if (uiState.tab == PatientListTab.ACTIVE) {
                             IconButton(onClick = { viewModel.archiveSelected() }) {
-                                Icon(Icons.Default.Archive, contentDescription = "Archive")
+                                Icon(Icons.Default.Archive, contentDescription = stringResource(R.string.patient_list_archive))
                             }
                         } else {
                             IconButton(onClick = { viewModel.unarchiveSelected() }) {
-                                Icon(Icons.Default.Unarchive, contentDescription = "Unarchive")
+                                Icon(Icons.Default.Unarchive, contentDescription = stringResource(R.string.patient_list_unarchive))
                             }
                         }
-                        IconButton(onClick = { viewModel.deleteSelected() }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete")
+                        IconButton(onClick = { showBulkDeleteConfirm = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.patient_detail_delete))
                         }
                     } else {
                         IconButton(onClick = onNavigateToSurgeonProfile) {
-                            Icon(Icons.Default.Badge, contentDescription = "Surgeon Profile")
+                            Icon(Icons.Default.Badge, contentDescription = stringResource(R.string.patient_list_surgeon_profile))
                         }
                         IconButton(onClick = onNavigateToDataTransfer) {
-                            Icon(Icons.Default.ImportExport, contentDescription = "Import / Export Data")
+                            Icon(Icons.Default.ImportExport, contentDescription = stringResource(R.string.patient_list_import_export_data))
+                        }
+                        IconButton(onClick = onNavigateToSettings) {
+                            Icon(
+                                Icons.Outlined.Settings,
+                                contentDescription = stringResource(R.string.nav_settings)
+                            )
                         }
                     }
                 },
@@ -177,7 +219,7 @@ fun PatientListScreen(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text("New Patient", fontWeight = FontWeight.Bold) },
+                    text = { Text(stringResource(R.string.patient_list_new_patient), fontWeight = FontWeight.Bold) },
                     modifier = Modifier.testTag("add_patient_fab")
                 )
             }
@@ -190,14 +232,8 @@ fun PatientListScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Summary KPI banner
-            PatientDashboardKpiBanner(
-                activeCount = uiState.activeCount,
-                archivedCount = uiState.archivedCount,
-                onAddPatient = onNavigateToAddPatient,
-                onScanQr = onNavigateToQrScanner
-            )
-
+            // The KPI card that used to sit here repeated the tab counts and duplicated
+            // the FAB and the QR button; removing it brings the first patient up.
             // Cohort switcher tabs
             PrimaryTabRow(
                 selectedTabIndex = uiState.tab.ordinal,
@@ -210,7 +246,7 @@ fun PatientListScreen(
                     onClick = { viewModel.setTab(PatientListTab.ACTIVE) },
                     text = {
                         Text(
-                            text = "Active Cohort (${uiState.activeCount})",
+                            text = stringResource(R.string.patient_list_tab_active, uiState.activeCount),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (uiState.tab == PatientListTab.ACTIVE) FontWeight.Bold else FontWeight.Medium
                         )
@@ -222,7 +258,7 @@ fun PatientListScreen(
                     onClick = { viewModel.setTab(PatientListTab.ARCHIVED) },
                     text = {
                         Text(
-                            text = "Archived (${uiState.archivedCount})",
+                            text = stringResource(R.string.patient_list_tab_archived, uiState.archivedCount),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (uiState.tab == PatientListTab.ARCHIVED) FontWeight.Bold else FontWeight.Medium
                         )
@@ -247,47 +283,62 @@ fun PatientListScreen(
                             onQueryChange = { viewModel.setSearchQuery(it) },
                             onSearch = { viewModel.setSearchQuery(it) },
                             onClear = { viewModel.setSearchQuery("") },
-                            placeholderText = "Search by name, ID, diagnosis..."
+                            placeholderText = stringResource(R.string.patient_list_search_placeholder)
                         )
                     }
 
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.8f),
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clickable(onClick = onNavigateToQrScanner)
-                            .testTag("qr_scanner_button")
+                    FilledTonalIconToggleButton(
+                        checked = showRegionFilters,
+                        onCheckedChange = { showRegionFilters = it },
+                        modifier = Modifier.testTag("region_filter_toggle")
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.QrCodeScanner,
-                                contentDescription = "Scan QR",
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = stringResource(R.string.patient_filter_region)
+                        )
+                    }
+                    FilledTonalIconButton(
+                        onClick = onNavigateToQrScanner,
+                        modifier = Modifier.testTag("qr_scanner_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.QrCodeScanner,
+                            contentDescription = stringResource(R.string.patient_list_scan_qr)
+                        )
                     }
                 }
 
-                // Region filter chips
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 10.dp)
+                // Region filters stay collapsed until asked for. A permanently
+                // visible scrolling chip row cost a band of vertical space on
+                // every visit to show a control used occasionally, and it was the
+                // fourth stacked strip of chrome above the first patient.
+                val hasActiveRegionFilter = uiState.regionFilter != PatientListUiState.ALL_REGIONS
+
+                // Chips come from the regions actually recorded on patients, shown in the
+                // app language, instead of a fixed English list that matched little.
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = (showRegionFilters || hasActiveRegionFilter) && uiState.regions.isNotEmpty()
                 ) {
-                    items(regionFilters) { region ->
-                        val isSelected = uiState.regionFilter.equals(region, ignoreCase = true)
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { viewModel.setRegionFilter(region) },
-                            label = { Text(region, style = MaterialTheme.typography.labelSmall) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                    ) {
+                        item(key = "all") {
+                            FilterChip(
+                                selected = !hasActiveRegionFilter,
+                                onClick = { viewModel.setRegionFilter(PatientListUiState.ALL_REGIONS) },
+                                label = { Text(stringResource(R.string.patient_list_filter_all)) }
                             )
-                        )
+                        }
+                        items(uiState.regions, key = { it }) { region ->
+                            FilterChip(
+                                selected = uiState.regionFilter.equals(region, ignoreCase = true),
+                                onClick = { viewModel.setRegionFilter(region) },
+                                label = { Text(region) }
+                            )
+                        }
                     }
                 }
             }
@@ -301,9 +352,10 @@ fun PatientListScreen(
 
                 uiState.isEmpty -> {
                     ModernPatientEmptyState(
-                        isSearching = uiState.searchQuery.isNotBlank(),
+                        isSearching = uiState.searchQuery.isNotBlank() ||
+                            uiState.regionFilter != PatientListUiState.ALL_REGIONS,
                         isArchivedTab = uiState.tab == PatientListTab.ARCHIVED,
-                        searchQuery = uiState.searchQuery,
+                        searchQuery = uiState.searchQuery.ifBlank { uiState.regionFilter },
                         onAddPatient = onNavigateToAddPatient
                     )
                 }
@@ -321,6 +373,9 @@ fun PatientListScreen(
                             .fillMaxSize()
                             .testTag("patients_scroll_container")
                     ) {
+                        // Renders nothing unless the drive is on and something is
+                        // reclaimable, so the list is untouched otherwise.
+                        item { LibraryDriveSpaceBanner() }
                         items(uiState.filteredPatients, key = { it.id }) { patient ->
                             PatientCard(
                                 patient = patient,
@@ -336,122 +391,6 @@ fun PatientListScreen(
                                 onLongClick = { viewModel.toggleSelection(patient.id) }
                             )
                         }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PatientDashboardKpiBanner(
-    activeCount: Int,
-    archivedCount: Int,
-    onAddPatient: () -> Unit,
-    onScanQr: () -> Unit
-) {
-    Card(
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Column {
-                    Text(
-                        text = "$activeCount",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = "Active Cohort",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(34.dp)
-                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                )
-
-                Column {
-                    Text(
-                        text = "$archivedCount",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                    Text(
-                        text = "Archived Cases",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clickable(onClick = onAddPatient)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PersonAdd,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Add",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.clickable(onClick = onScanQr)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.QrCodeScanner,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Scan",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
                     }
                 }
             }
@@ -490,13 +429,13 @@ private fun ModernPatientEmptyState(
             }
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "No Patients Found",
+                text = stringResource(R.string.patient_list_no_patients_found),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "No patient matches \"$searchQuery\". Try checking the spelling or removing filters.",
+                text = stringResource(R.string.patient_list_no_match, searchQuery),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -529,13 +468,13 @@ private fun ModernPatientEmptyState(
             }
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "No Archived Patients",
+                text = stringResource(R.string.patient_list_no_archived_patients),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "Patients you mark as archived after recovery will appear here for long-term records.",
+                text = stringResource(R.string.patient_list_patients_you_mark_as_archived),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -571,7 +510,7 @@ private fun ModernPatientEmptyState(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Clinical Patient Management",
+                text = stringResource(R.string.patient_list_clinical_patient_management),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -580,7 +519,7 @@ private fun ModernPatientEmptyState(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "Organize surgical cases, operative protocols, pre/post-op imaging, and patient timelines in one secure place.",
+                text = stringResource(R.string.patient_list_organize_surgical_cases_operative_protocols),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -607,7 +546,7 @@ private fun ModernPatientEmptyState(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Register First Patient",
+                        text = stringResource(R.string.patient_list_register_first_patient),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimary
@@ -634,7 +573,7 @@ private fun ModernPatientEmptyState(
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Text(
-                        text = "HOW PATIENT MANAGEMENT WORKS",
+                        text = stringResource(R.string.patient_list_how_patient_management_works),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -643,29 +582,29 @@ private fun ModernPatientEmptyState(
 
                     WorkflowStep(
                         step = "1",
-                        title = "Demographics & Orthopedic Diagnosis",
-                        description = "Record patient identifiers, body region, fracture pattern, and medical history.",
+                        title = stringResource(R.string.patient_list_demographics_orthopedic_diagnosis),
+                        description = stringResource(R.string.patient_list_step1_description),
                         icon = Icons.Default.PersonAdd
                     )
 
                     WorkflowStep(
                         step = "2",
-                        title = "Surgical Procedures & Implant Logs",
-                        description = "Log operative dates, hardware, anesthesia type, and surgical assistants.",
+                        title = stringResource(R.string.patient_list_surgical_procedures_implant_logs),
+                        description = stringResource(R.string.patient_list_step2_description),
                         icon = Icons.Default.MedicalServices
                     )
 
                     WorkflowStep(
                         step = "3",
-                        title = "Imaging, Photos & Annotations",
-                        description = "Attach fluoroscopy, X-rays, clinical wounds, or scan documents with the camera.",
+                        title = stringResource(R.string.patient_list_imaging_photos_annotations),
+                        description = stringResource(R.string.patient_list_step3_description),
                         icon = Icons.Default.CameraAlt
                     )
 
                     WorkflowStep(
                         step = "4",
-                        title = "PDF Protocols & Anonymized Charts",
-                        description = "Generate multilingual PDF operative reports and print patient charts on demand.",
+                        title = stringResource(R.string.patient_list_pdf_protocols_anonymized_charts),
+                        description = stringResource(R.string.patient_list_step4_description),
                         icon = Icons.Default.Description
                     )
                 }

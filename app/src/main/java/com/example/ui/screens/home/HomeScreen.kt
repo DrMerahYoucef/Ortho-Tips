@@ -1,5 +1,7 @@
 package com.example.ui.screens.home
 
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.example.ui.components.PatientValueLabels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,10 +33,13 @@ import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SportsKabaddi
 import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
@@ -63,6 +68,9 @@ import com.example.ui.screens.classifications.ClassificationChaptersScreen
 import com.example.viewmodel.ClassificationViewModel
 import com.example.viewmodel.ClinicalStudiesTab
 import com.example.viewmodel.HomeViewModel
+import com.example.data.local.displayDescription
+import com.example.data.local.displayTitle
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,8 +80,10 @@ fun HomeScreen(
     onNavigateToChapter: (String, String) -> Unit,
     onNavigateToBoneDetail: (String) -> Unit,
     onNavigateToSearch: () -> Unit,
+    onNavigateToSaved: () -> Unit,
     onNavigateToImport: () -> Unit,
     onNavigateToClassificationChapter: (String) -> Unit,
+    onNavigateToSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -104,14 +114,14 @@ fun HomeScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
-                                    text = "Clinical Studies",
+                                    text = stringResource(R.string.home_clinical_studies),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     letterSpacing = (-0.3).sp
                                 )
                                 Text(
-                                    text = "Evidence-Based Orthopedics & Techniques",
+                                    text = stringResource(R.string.home_evidence_based_orthopedics_techniques),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.Medium
@@ -119,23 +129,20 @@ fun HomeScreen(
                             }
                         }
 
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clickable(onClick = onNavigateToImport)
-                                .testTag("home_import_top_button")
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.UploadFile,
-                                    contentDescription = "Import Database",
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
+                    }
+                },
+                // Search, saved items and settings as standard app-bar actions. The
+                // strip of three buttons under the title is gone: shifts moved to
+                // Agenda, and importing a database lives in Settings.
+                actions = {
+                    IconButton(onClick = onNavigateToSearch, modifier = Modifier.testTag("home_search_action")) {
+                        Icon(Icons.Default.Search, contentDescription = stringResource(R.string.common_search))
+                    }
+                    IconButton(onClick = onNavigateToSaved, modifier = Modifier.testTag("home_saved_top_button")) {
+                        Icon(Icons.Outlined.BookmarkBorder, contentDescription = stringResource(R.string.home_saved_and_case_notes))
+                    }
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.nav_settings))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -166,7 +173,7 @@ fun HomeScreen(
                         onClick = { viewModel.setActiveTab(tab) },
                         text = {
                             Text(
-                                text = tab.label,
+                                text = stringResource(tab.labelRes),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                             )
@@ -227,28 +234,27 @@ private fun OperativeGuidesView(
             .testTag("home_scroll_container"),
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
+        // A search entry in place of the large decorative banner: the one action it
+        // offered, without a third of the screen.
         item {
-            HomeHeroBanner(
-                totalProcedures = uiState.totalProceduresCount,
-                totalBookmarks = uiState.bookmarkedCount,
-                totalNotes = uiState.noteCount,
-                onSearchClick = onNavigateToSearch
+            SearchEntry(
+                onClick = onNavigateToSearch,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp)
             )
         }
 
         item {
             SectionHeader(
-                title = "ANATOMIC CHAPTERS",
-                trailing = "${uiState.chapters.size} sections"
+                title = stringResource(R.string.home_anatomic_chapters),
+                trailing = PatientValueLabels.plural(R.plurals.home_sections_count, uiState.chapters.size)
             )
         }
 
-        items(uiState.chapters, key = { it.chapter.id }) { item ->
-            val index = uiState.chapters.indexOf(item)
+        itemsIndexed(uiState.chapters, key = { _, item -> item.chapter.id }) { index, item ->
             ChapterCard(
                 chapterWithCount = item,
                 index = index,
-                onClick = { onNavigateToChapter(item.chapter.id, item.chapter.title) },
+                onClick = { onNavigateToChapter(item.chapter.id, item.chapter.displayTitle) },
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.dp)
             )
         }
@@ -268,7 +274,7 @@ private fun OperativeGuidesView(
                     ) {}
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "HIGH-YIELD OPERATIVE GUIDES",
+                        text = stringResource(R.string.home_high_yield_operative_guides),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -309,128 +315,35 @@ private fun SectionHeader(title: String, trailing: String) {
     }
 }
 
+/** Looks like a search field; opens the search screen. */
 @Composable
-private fun HomeHeroBanner(
-    totalProcedures: Int,
-    totalBookmarks: Int,
-    totalNotes: Int,
-    onSearchClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+private fun SearchEntry(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .height(56.dp)
             .testTag("home_hero_card")
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
-                        )
-                    )
-                )
-                .padding(22.dp)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 16.dp)
         ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(50),
-                        color = Color.White.copy(alpha = 0.20f)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Psychology,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier
-                                    .padding(start = 10.dp)
-                                    .size(13.dp)
-                            )
-                            Text(
-                                text = "OPERATIVE PEARL",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
-                                modifier = Modifier.padding(start = 6.dp, end = 10.dp, top = 5.dp, bottom = 5.dp)
-                            )
-                        }
-                    }
-
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clickable(onClick = onSearchClick)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Search",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Text(
-                    text = "Evidence-Based Fixation Principles",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    lineHeight = 26.sp
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = "Always align reduction vectors perpendicular to fracture lines before locking screw compression.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.90f)
-                )
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        StatPill(count = "$totalProcedures", label = "Procedures")
-                        StatPill(count = "$totalBookmarks", label = "Saved")
-                        StatPill(count = "$totalNotes", label = "Notes")
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(50),
-                        color = Color.White,
-                        modifier = Modifier.clickable(onClick = onSearchClick)
-                    ) {
-                        Text(
-                            text = "Explore",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 9.dp)
-                        )
-                    }
-                }
-            }
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = stringResource(R.string.home_search_placeholder),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -466,7 +379,7 @@ private fun EmptyDatabaseState(
         Spacer(modifier = Modifier.height(18.dp))
 
         Text(
-            text = "No Anatomical Database Loaded",
+            text = stringResource(R.string.home_no_anatomical_database_loaded),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -475,7 +388,7 @@ private fun EmptyDatabaseState(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Import a JSON database file to load custom bone chapters, surgical operative guides, and anatomical approaches.",
+            text = stringResource(R.string.home_import_a_json_database_file),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -502,7 +415,7 @@ private fun EmptyDatabaseState(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Import Database",
+                    text = stringResource(R.string.home_import_database),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimary
@@ -533,13 +446,13 @@ private fun EmptyDatabaseState(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Classifications Ready",
+                        text = stringResource(R.string.home_classifications_ready),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                     Text(
-                        text = "Browse Gustilo-Anderson, Schatzker, Garden, Neer & more classification systems right now.",
+                        text = stringResource(R.string.home_browse_gustilo_anderson_schatzker_garden),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -552,23 +465,6 @@ private fun EmptyDatabaseState(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun StatPill(count: String, label: String) {
-    Column {
-        Text(
-            text = count,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = Color.White.copy(alpha = 0.80f)
-        )
     }
 }
 
@@ -603,13 +499,11 @@ private fun ChapterCard(
     }
 
     Card(
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
             .testTag("chapter_card_${chapter.id}")
     ) {
         Row(
@@ -635,14 +529,14 @@ private fun ChapterCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = chapter.title,
+                    text = chapter.displayTitle,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = chapter.description,
+                    text = chapter.displayDescription,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -657,7 +551,7 @@ private fun ChapterCard(
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
             ) {
                 Text(
-                    text = "${chapterWithCount.boneCount} guides",
+                    text = PatientValueLabels.plural(R.plurals.home_guides_count, chapterWithCount.boneCount),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

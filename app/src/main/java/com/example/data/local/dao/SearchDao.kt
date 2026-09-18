@@ -15,6 +15,14 @@ interface SearchDao {
            OR region LIKE '%' || :query || '%'
            OR traumaType LIKE '%' || :query || '%'
            OR classificationSummary LIKE '%' || :query || '%'
+           -- French text is searched alongside the English rather than instead
+           -- of it. A surgeon working in French still knows the English terms,
+           -- and matching both means a search never comes back empty just
+           -- because the query was typed in the other language.
+           OR IFNULL(nameFr, '') LIKE '%' || :query || '%'
+           OR IFNULL(subtitleFr, '') LIKE '%' || :query || '%'
+           OR IFNULL(regionFr, '') LIKE '%' || :query || '%'
+           OR IFNULL(classificationSummaryFr, '') LIKE '%' || :query || '%'
         ORDER BY 
             CASE 
                 WHEN name LIKE :query || '%' THEN 1

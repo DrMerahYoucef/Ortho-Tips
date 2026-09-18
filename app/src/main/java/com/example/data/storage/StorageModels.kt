@@ -72,7 +72,20 @@ value class StorageKey(val value: String) {
 
         fun patientPrefix(patientId: String): String = "patients/$patientId/"
 
-        fun snapshot(timestamp: Long): StorageKey = StorageKey("snapshots/ortho-db-$timestamp.json")
+        /**
+         * Snapshot keys carry their row count: `ortho-db-{millis}-r{rows}.json`.
+         *
+         * It looks like a hack and it earns its place. Restore has to pick a
+         * snapshot that actually contains records, and without the count in the
+         * name that decision needs a download per candidate. It also survives a
+         * manifest rebuild, because the name is what Telegram stores.
+         */
+        fun snapshot(timestamp: Long, rowCount: Int): StorageKey =
+            StorageKey("snapshots/ortho-db-$timestamp-r$rowCount.json")
+
+        /** Row count encoded in a snapshot key; null for pre-v2 keys. */
+        fun snapshotRowCount(key: StorageKey): Int? =
+            Regex("-r(\\d+)\\.json$").find(key.fileName)?.groupValues?.get(1)?.toIntOrNull()
 
         const val SNAPSHOT_PREFIX = "snapshots/"
         const val PATIENTS_PREFIX = "patients/"

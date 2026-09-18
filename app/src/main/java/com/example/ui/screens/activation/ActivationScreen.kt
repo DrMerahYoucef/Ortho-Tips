@@ -33,6 +33,8 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.example.data.prefs.ActivationRepository
 import kotlinx.coroutines.launch
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun ActivationScreen(
@@ -60,12 +62,12 @@ fun ActivationScreen(
             )
             Spacer(modifier = Modifier.height(20.dp))
             Text(
-                text = "Activation required",
+                text = stringResource(R.string.activation_activation_required),
                 style = MaterialTheme.typography.headlineSmall
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Enter the activation code to use Ortho-Tips for the first time.",
+                text = stringResource(R.string.activation_enter_the_activation_code_to),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -76,11 +78,11 @@ fun ActivationScreen(
                     code = it
                     hasError = false
                 },
-                label = { Text("Activation code") },
+                label = { Text(stringResource(R.string.activation_activation_code)) },
                 singleLine = true,
                 isError = hasError,
                 supportingText = {
-                    if (hasError) Text("Incorrect activation code")
+                    if (hasError) Text(stringResource(R.string.activation_incorrect_activation_code))
                 },
                 visualTransformation = ScrambledCodeVisualTransformation,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -116,7 +118,7 @@ fun ActivationScreen(
                     onClick = { code = ""; hasError = false },
                     modifier = Modifier.padding(top = 4.dp)
                 ) {
-                    Text("Try again")
+                    Text(stringResource(R.string.action_try_again))
                 }
             }
         }

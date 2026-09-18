@@ -17,9 +17,9 @@ import com.example.data.telegram.TelegramClient
 import com.example.data.telegram.TelegramDownloadEvent
 import com.example.data.telegram.TelegramException
 import com.example.data.telegram.TelegramUploadEvent
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
@@ -189,6 +189,10 @@ class TelegramStorageProvider(
 
             DriveLog.i(TAG, "Uploaded ${key.fileName} rev${row.revision} (${row.sizeBytes} B)")
             emit(TransferProgress.Completed(row.toStorageObject()))
+        } catch (e: CancellationException) {
+            // A collector that stops early cancels this flow. Emitting here would
+            // break flow transparency, and nobody is left to receive it anyway.
+            throw e
         } catch (e: TelegramException) {
             DriveLog.w(TAG, "Upload failed for ${key.fileName}: ${e.code}", e)
             emit(TransferProgress.Failed(e.message, retryable = e.isRateLimit || e.isNetworkFailure))
@@ -273,6 +277,10 @@ class TelegramStorageProvider(
 
             emit(TransferProgress.Running(destination.length(), destination.length()))
             emit(TransferProgress.Completed(row.toStorageObject()))
+        } catch (e: CancellationException) {
+            // Same rule on the read path: a cancelled download must propagate,
+            // not turn into a Failed event nobody can observe.
+            throw e
         } catch (e: TelegramException) {
             emit(TransferProgress.Failed(e.message, retryable = e.isRateLimit || e.isNetworkFailure))
         } catch (e: Exception) {
@@ -284,9 +292,7 @@ class TelegramStorageProvider(
     override suspend fun materialize(key: StorageKey): File? = withContext(Dispatchers.IO) {
         peek(key)?.let { return@withContext it }
         val cached = cacheFile(key)
-        val terminal = get(key, cached).first {
-            it is TransferProgress.Completed || it is TransferProgress.Failed
-        }
+        val terminal = get(key, cached).awaitTerminal()
         if (terminal is TransferProgress.Completed) {
             cached.setLastModified(System.currentTimeMillis())
             cached

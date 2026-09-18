@@ -1,5 +1,6 @@
 package com.example.ui.screens.patients
 
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import android.graphics.BitmapFactory
 import android.graphics.PointF
 import androidx.compose.foundation.Canvas
@@ -9,6 +10,9 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,8 +23,8 @@ import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.CropFree
@@ -42,6 +46,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -64,6 +72,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.example.R
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
@@ -136,6 +146,7 @@ fun ImageAnnotationScreen(
     var dragStart by remember { mutableStateOf<Offset?>(null) }
     var freehandPoints by remember { mutableStateOf<List<Offset>>(emptyList()) }
     var showOcrPanel by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
 
     var quadMode by remember { mutableStateOf(QuadMode.NONE) }
     var quadPoints by remember { mutableStateOf<List<Offset>?>(null) }
@@ -212,51 +223,60 @@ fun ImageAnnotationScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Annotate") },
+                title = { Text(stringResource(R.string.annotate_title), maxLines = 1) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") }
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                    }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        uiState.filePath?.let { path ->
-                            com.example.utils.ShareHelper.shareFile(
-                                context = context,
-                                file = java.io.File(path),
-                                mimeType = "image/jpeg",
-                                chooserTitle = "Share image"
-                            )
-                        }
-                    }) {
-                        Icon(Icons.Default.Share, contentDescription = "Share image")
-                    }
-                    IconButton(onClick = { showOcrPanel = true }) {
-                        Icon(Icons.Default.TextSnippet, contentDescription = "Scan whole image (OCR)")
-                    }
-                    IconButton(onClick = { startQuadMode(QuadMode.OCR) }) {
-                        Icon(
-                            Icons.Default.DocumentScanner,
-                            contentDescription = "Scan text from a selected region",
-                            tint = if (quadMode == QuadMode.OCR) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    IconButton(onClick = { viewModel.rotate90() }) {
-                        Icon(Icons.Default.RotateRight, contentDescription = "Rotate")
-                    }
-                    IconButton(onClick = { startQuadMode(QuadMode.CROP) }) {
-                        Icon(
-                            Icons.Default.Crop,
-                            contentDescription = "Crop",
-                            tint = if (quadMode == QuadMode.CROP) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    if (uiState.hasBackup) {
-                        IconButton(onClick = { viewModel.restoreOriginal(context) }) {
-                            Icon(Icons.Default.Restore, contentDescription = "Restore original photo")
-                        }
-                    }
+                    // Only the one action that finishes the job stays in the bar.
+                    // Everything occasional moved to the menu, everything used
+                    // while drawing moved to the toolbar at the bottom.
                     TextButton(onClick = { viewModel.saveAnnotations(); onNavigateBack() }) {
                         Icon(Icons.Default.Check, contentDescription = null)
-                        Text("Save")
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(R.string.action_save))
+                    }
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.annotate_more_actions))
+                        }
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.annotate_scan_region)) },
+                                leadingIcon = { Icon(Icons.Default.DocumentScanner, contentDescription = null) },
+                                onClick = { showMenu = false; startQuadMode(QuadMode.OCR) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.annotate_scan_all)) },
+                                leadingIcon = { Icon(Icons.Default.TextSnippet, contentDescription = null) },
+                                onClick = { showMenu = false; showOcrPanel = true }
+                            )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.annotate_share)) },
+                                leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
+                                onClick = {
+                                    showMenu = false
+                                    uiState.filePath?.let { path ->
+                                        com.example.utils.ShareHelper.shareFile(
+                                            context = context,
+                                            file = java.io.File(path),
+                                            mimeType = "image/jpeg",
+                                            chooserTitle = context.getString(R.string.annotate_share)
+                                        )
+                                    }
+                                }
+                            )
+                            if (uiState.hasBackup) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.annotate_restore_original)) },
+                                    leadingIcon = { Icon(Icons.Default.Restore, contentDescription = null) },
+                                    onClick = { showMenu = false; viewModel.restoreOriginal(context) }
+                                )
+                            }
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
@@ -264,35 +284,45 @@ fun ImageAnnotationScreen(
         },
         bottomBar = {
             if (quadMode == QuadMode.NONE) {
+                // Drawing tools on the left, image edits after a divider: the two
+                // groups do different things and were mixed together before.
                 Row(
                     horizontalArrangement = Arrangement.SpaceEvenly,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
                 ) {
-                    ToolButton(Icons.Default.ArrowForward, "Arrow", uiState.activeTool == AnnotationTool.ARROW) {
+                    ToolButton(Icons.Default.ArrowForward, stringResource(R.string.annotate_tool_arrow), uiState.activeTool == AnnotationTool.ARROW) {
                         viewModel.setActiveTool(AnnotationTool.ARROW)
                     }
-                    ToolButton(Icons.Default.TextFields, "Text", uiState.activeTool == AnnotationTool.TEXT) {
+                    ToolButton(Icons.Default.TextFields, stringResource(R.string.annotate_tool_text), uiState.activeTool == AnnotationTool.TEXT) {
                         viewModel.setActiveTool(AnnotationTool.TEXT)
                     }
-                    ToolButton(Icons.Default.CropFree, "Rectangle", uiState.activeTool == AnnotationTool.RECTANGLE) {
+                    ToolButton(Icons.Default.CropFree, stringResource(R.string.annotate_tool_rectangle), uiState.activeTool == AnnotationTool.RECTANGLE) {
                         viewModel.setActiveTool(AnnotationTool.RECTANGLE)
                     }
-                    ToolButton(Icons.Default.Gesture, "Lasso", uiState.activeTool == AnnotationTool.FREEHAND) {
+                    ToolButton(Icons.Default.Gesture, stringResource(R.string.annotate_tool_lasso), uiState.activeTool == AnnotationTool.FREEHAND) {
                         viewModel.setActiveTool(AnnotationTool.FREEHAND)
+                    }
+                    VerticalDivider(modifier = Modifier.height(24.dp))
+                    ToolButton(Icons.Default.Crop, stringResource(R.string.annotate_crop), false) {
+                        startQuadMode(QuadMode.CROP)
+                    }
+                    ToolButton(Icons.Default.RotateRight, stringResource(R.string.annotate_rotate), false) {
+                        viewModel.rotate90()
                     }
                 }
             } else {
                 Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                     Text(
-                        text = "Drag each corner onto the document's edges.",
+                        text = stringResource(R.string.annotate_drag_corners),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                     Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                        TextButton(onClick = { quadMode = QuadMode.NONE; quadPoints = null }) { Text("Cancel") }
+                        TextButton(onClick = { quadMode = QuadMode.NONE; quadPoints = null }) { Text(stringResource(R.string.action_cancel)) }
                         TextButton(onClick = { applyQuad() }, enabled = quadPoints != null) {
-                            Text(if (quadMode == QuadMode.OCR) "Scan text" else "Apply crop")
+                            Text(stringResource(if (quadMode == QuadMode.OCR) R.string.annotate_scan_text else R.string.annotate_apply_crop))
                         }
                     }
                 }
@@ -413,7 +443,7 @@ fun ImageAnnotationScreen(
             ) {
                 AsyncImage(
                     model = uiState.filePath?.let { "file://$it?rev=${uiState.fileRevision}" },
-                    contentDescription = "Patient image",
+                    contentDescription = stringResource(R.string.annot_patient_image),
                     contentScale = ContentScale.FillBounds, // safe: this box's aspect ratio already matches the image exactly
                     modifier = Modifier.fillMaxSize()
                 )
@@ -565,7 +595,7 @@ fun ImageAnnotationScreen(
     pendingTextPosition?.let { position ->
         AlertDialog(
             onDismissRequest = { pendingTextPosition = null; textInput = "" },
-            title = { Text("Add label") },
+            title = { Text(stringResource(R.string.annot_add_label)) },
             text = {
                 OutlinedTextField(value = textInput, onValueChange = { textInput = it }, singleLine = true)
             },
@@ -583,10 +613,10 @@ fun ImageAnnotationScreen(
                     }
                     pendingTextPosition = null
                     textInput = ""
-                }) { Text("Add") }
+                }) { Text(stringResource(R.string.annot_add)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingTextPosition = null; textInput = "" }) { Text("Cancel") }
+                TextButton(onClick = { pendingTextPosition = null; textInput = "" }) { Text(stringResource(R.string.action_cancel)) }
             }
         )
     }
@@ -594,26 +624,26 @@ fun ImageAnnotationScreen(
     if (showOcrPanel) {
         AlertDialog(
             onDismissRequest = { showOcrPanel = false },
-            title = { Text("Extracted text (whole image)") },
+            title = { Text(stringResource(R.string.annot_ocr_whole)) },
             text = {
                 Column {
                     if (uiState.isRunningOcr) {
                         CircularProgressIndicator(modifier = Modifier.padding(bottom = 8.dp))
                     }
-                    SelectableOcrText(uiState.ocrText.ifBlank { "No text detected yet." })
+                    SelectableOcrText(uiState.ocrText.ifBlank { stringResource(R.string.annotate_no_text) })
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
                     clipboardManager.setText(AnnotatedString(uiState.ocrText))
-                }) { Text("Copy") }
+                }) { Text(stringResource(R.string.annot_copy)) }
             },
             dismissButton = {
                 Row {
                     TextButton(onClick = { viewModel.rerunOcr(context) }, enabled = !uiState.isRunningOcr) {
-                        Text("Re-scan")
+                        Text(stringResource(R.string.annot_rescan))
                     }
-                    TextButton(onClick = { showOcrPanel = false }) { Text("Close") }
+                    TextButton(onClick = { showOcrPanel = false }) { Text(stringResource(R.string.action_close)) }
                 }
             }
         )
@@ -622,7 +652,7 @@ fun ImageAnnotationScreen(
     if (showQuadOcrDialog) {
         AlertDialog(
             onDismissRequest = { showQuadOcrDialog = false; viewModel.dismissQuadOcr() },
-            title = { Text("Scanned text (selected region)") },
+            title = { Text(stringResource(R.string.annot_ocr_region)) },
             text = {
                 Column {
                     if (uiState.isRunningQuadOcr) {
@@ -635,15 +665,15 @@ fun ImageAnnotationScreen(
                 TextButton(
                     onClick = { clipboardManager.setText(AnnotatedString(uiState.quadOcrText ?: "")) },
                     enabled = !uiState.quadOcrText.isNullOrBlank()
-                ) { Text("Copy") }
+                ) { Text(stringResource(R.string.annot_copy)) }
             },
             dismissButton = {
                 Row {
                     TextButton(
                         onClick = { viewModel.keepQuadOcrText(); showQuadOcrDialog = false },
                         enabled = !uiState.quadOcrText.isNullOrBlank()
-                    ) { Text("Save to image") }
-                    TextButton(onClick = { showQuadOcrDialog = false; viewModel.dismissQuadOcr() }) { Text("Close") }
+                    ) { Text(stringResource(R.string.annot_save_to_image)) }
+                    TextButton(onClick = { showQuadOcrDialog = false; viewModel.dismissQuadOcr() }) { Text(stringResource(R.string.annot_close)) }
                 }
             }
         )
@@ -676,13 +706,22 @@ private fun SelectableOcrText(text: String) {
 
 @Composable
 private fun ToolButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, isActive: Boolean, onClick: () -> Unit) {
-    IconButton(
-        onClick = onClick,
-        colors = IconButtonDefaults.iconButtonColors(
-            containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+    // The label under each icon: an unlabelled row of eight icons was the problem
+    // this screen had in the first place.
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        IconButton(
+            onClick = onClick,
+            colors = IconButtonDefaults.iconButtonColors(
+                containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+            )
+        ) {
+            Icon(icon, contentDescription = label, tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
         )
-    ) {
-        Icon(icon, contentDescription = label, tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

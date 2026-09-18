@@ -46,3 +46,26 @@
 
 # WorkManager instantiates workers by class name.
 -keep class com.example.work.** { *; }
+
+# The app's own code is small; keeping all of it avoids breaking reflection-based
+# pieces (kotlinx.serialization, Room, navigation arguments) while R8 still removes
+# the unused parts of the big libraries.
+-keep class com.example.** { *; }
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn javax.annotation.**
+
+# ML Kit / Play Services: their components are created by name from the manifest
+# (ComponentRegistrar). R8 removed them, which crashed the document scanner with a
+# NullPointerException in GmsDocumentScanning.getClient().
+-keep class com.google.mlkit.** { *; }
+-keep class com.google.android.gms.internal.mlkit_** { *; }
+-keep class com.google.android.gms.common.** { *; }
+-keep class com.google.android.gms.tasks.** { *; }
+-keep class com.google.firebase.components.** { *; }
+-keep class * implements com.google.firebase.components.ComponentRegistrar { *; }
+-dontwarn com.google.mlkit.**
+-dontwarn com.google.android.gms.**
+
+# Keep readable class names so release crash logs can be understood.
+# Unused code is still removed, so the size gain is kept.
+-dontobfuscate

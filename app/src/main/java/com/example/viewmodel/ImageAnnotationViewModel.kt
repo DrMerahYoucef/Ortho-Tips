@@ -57,8 +57,12 @@ class ImageAnnotationViewModel(
         viewModelScope.launch {
             val image = repository.getImageOrNull(imageId)
             if (image != null) {
+                // An offloaded image has a valid record and no bytes. The screen
+                // decodes the path to size its canvas and spins forever on a
+                // missing file, so fetch it back before reporting ready.
+                val resolved = repository.resolveImageFile(image)
                 _uiState.value = _uiState.value.copy(
-                    filePath = image.filePath,
+                    filePath = resolved?.absolutePath ?: image.filePath,
                     shapes = AnnotationSerializer.deserialize(image.annotationsJson),
                     notes = image.notes,
                     ocrText = image.ocrText,

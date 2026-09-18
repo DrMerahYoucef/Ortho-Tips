@@ -16,6 +16,7 @@ import com.example.data.local.dao.PatientImageDao
 import com.example.data.local.dao.RemoteObjectDao
 import com.example.data.local.dao.SearchDao
 import com.example.data.local.dao.SuggestionDao
+import com.example.data.local.dao.ShiftDao
 import com.example.data.local.dao.SurgeryDao
 import com.example.data.local.dao.SyncTombstoneDao
 import com.example.data.local.dao.TimelineEventDao
@@ -24,6 +25,7 @@ import com.example.data.local.dao.UserDataDao
 import com.example.data.local.entity.BookmarkEntity
 import com.example.data.local.entity.BoneEntity
 import com.example.data.local.entity.ChapterEntity
+import com.example.data.local.entity.FieldPairEntity
 import com.example.data.local.entity.FieldSuggestionEntity
 import com.example.data.local.entity.ImageEntity
 import com.example.data.local.entity.NoteEntity
@@ -32,6 +34,7 @@ import com.example.data.local.entity.PatientEntity
 import com.example.data.local.entity.PatientImageEntity
 import com.example.data.local.entity.RemoteObjectEntity
 import com.example.data.local.entity.SectionEntity
+import com.example.data.local.entity.ShiftEntity
 import com.example.data.local.entity.SurgeryEntity
 import com.example.data.local.entity.SyncTombstoneEntity
 import com.example.data.local.entity.TimelineEventEntity
@@ -51,16 +54,20 @@ import com.example.data.local.entity.TransferQueueEntity
         PatientImageEntity::class,
         PatientDocumentEntity::class,
         FieldSuggestionEntity::class,
+        FieldPairEntity::class,
         // Telegram Drive backend (schema v5, additive only)
         RemoteObjectEntity::class,
         TransferQueueEntity::class,
-        SyncTombstoneEntity::class
+        SyncTombstoneEntity::class,
+        ShiftEntity::class
     ],
-    version = 5,
+    version = 10,
     exportSchema = true
 )
 abstract class OrthoDatabase : RoomDatabase() {
     abstract fun chapterDao(): ChapterDao
+
+    abstract fun shiftDao(): ShiftDao
     abstract fun boneDao(): BoneDao
     abstract fun contentDao(): ContentDao
     abstract fun imageDao(): ImageDao
@@ -340,6 +347,89 @@ abstract class OrthoDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Learned field associations for smarter input. Additive: one new table,
+         * nothing existing is altered.
+         */
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `field_pairs` (
+                        `sourceField` TEXT NOT NULL,
+                        `sourceValue` TEXT NOT NULL,
+                        `targetField` TEXT NOT NULL,
+                        `targetValue` TEXT NOT NULL,
+                        `count` INTEGER NOT NULL,
+                        `lastUsedAt` INTEGER NOT NULL,
+                        PRIMARY KEY(`sourceField`, `sourceValue`, `targetField`, `targetValue`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS " +
+                        "`index_field_pairs_sourceField_sourceValue_targetField` " +
+                        "ON `field_pairs` (`sourceField`, `sourceValue`, `targetField`)"
+                )
+            }
+        }
+
+        /**
+         * French text for the reference library. Additive: nullable columns only,
+         * so an existing English-only database keeps working untouched and every
+         * row simply has NULL where a translation would go.
+         */
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                listOf(
+                    "ALTER TABLE chapters ADD COLUMN titleFr TEXT",
+                    "ALTER TABLE chapters ADD COLUMN descriptionFr TEXT",
+                    "ALTER TABLE bones ADD COLUMN nameFr TEXT",
+                    "ALTER TABLE bones ADD COLUMN subtitleFr TEXT",
+                    "ALTER TABLE bones ADD COLUMN regionFr TEXT",
+                    "ALTER TABLE bones ADD COLUMN classificationSummaryFr TEXT",
+                    "ALTER TABLE sections ADD COLUMN titleFr TEXT",
+                    "ALTER TABLE sections ADD COLUMN contentFr TEXT",
+                    "ALTER TABLE sections ADD COLUMN pearlsFr TEXT",
+                    "ALTER TABLE sections ADD COLUMN warningsFr TEXT",
+                    "ALTER TABLE images ADD COLUMN titleFr TEXT",
+                    "ALTER TABLE images ADD COLUMN descriptionFr TEXT"
+                ).forEach(db::execSQL)
+            }
+        }
+
+        /** Videos join the patient media table. */
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                listOf(
+                    "ALTER TABLE patient_images ADD COLUMN mediaType TEXT NOT NULL DEFAULT 'IMAGE'",
+                    "ALTER TABLE patient_images ADD COLUMN durationMs INTEGER NOT NULL DEFAULT 0"
+                ).forEach(db::execSQL)
+            }
+        }
+
+        /** On-call days, shown in the app and on the home-screen widget. */
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS shifts (" +
+                        "date TEXT NOT NULL PRIMARY KEY, " +
+                        "label TEXT NOT NULL DEFAULT '', " +
+                        "createdAt INTEGER NOT NULL DEFAULT 0)"
+                )
+            }
+        }
+
+        /** Attendance and a short remark on each appointment. */
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                listOf(
+                    "ALTER TABLE timeline_events ADD COLUMN attendance TEXT NOT NULL DEFAULT 'UNKNOWN'",
+                    "ALTER TABLE timeline_events ADD COLUMN remark TEXT NOT NULL DEFAULT ''"
+                ).forEach(db::execSQL)
+            }
+        }
+
         fun getInstance(context: Context): OrthoDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: buildDatabase(context).also { INSTANCE = it }
@@ -352,7 +442,7 @@ abstract class OrthoDatabase : RoomDatabase() {
                 OrthoDatabase::class.java,
                 "ortho_tips.db"
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
                 .fallbackToDestructiveMigration(true)
                 .fallbackToDestructiveMigrationOnDowngrade(true)
                 .build()

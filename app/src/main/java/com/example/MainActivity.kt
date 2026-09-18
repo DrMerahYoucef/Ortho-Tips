@@ -1,7 +1,13 @@
 package com.example
 
 import android.net.Uri
+import android.content.Context
+import androidx.core.content.ContextCompat
+import android.content.IntentFilter
+import android.content.Intent
+import android.content.BroadcastReceiver
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,9 +24,34 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.R
+import com.example.utils.AppLock
+import com.example.utils.currentFragmentActivity
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavController
+import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -29,6 +60,7 @@ import androidx.navigation.navArgument
 import com.example.data.prefs.FontSizePreference
 import com.example.data.prefs.ThemeMode
 import com.example.di.AppModule
+import com.example.util.AppLocale
 import com.example.navigation.OrthoDestinations
 import com.example.ui.screens.bone.BoneDetailScreen
 import com.example.ui.screens.activation.ActivationScreen
@@ -45,7 +77,12 @@ import com.example.ui.screens.patients.QrScannerScreen
 import com.example.ui.screens.patients.SurgeryEditScreen
 import com.example.ui.screens.patients.SurgeonProfileScreen
 import com.example.ui.screens.patients.TimelineEventEditScreen
-import com.example.ui.screens.splash.SplashScreen
+import com.example.ui.screens.favorites.FavoritesScreen
+import com.example.ui.screens.search.SearchScreen
+import com.example.ui.screens.settings.SettingsScreen
+import com.example.viewmodel.SavedViewModel
+import com.example.viewmodel.SearchViewModel
+import com.example.viewmodel.SettingsViewModel
 import com.example.ui.screens.storage.StorageDiagnosticsScreen
 import com.example.ui.screens.storage.TelegramDriveSettingsScreen
 import com.example.ui.screens.storage.TelegramSetupWizardScreen
@@ -71,7 +108,19 @@ import com.example.viewmodel.SurgeryEditViewModel
 import com.example.viewmodel.TimelineEventEditViewModel
 import com.example.viewmodel.ViewerViewModel
 
-class MainActivity : ComponentActivity() {
+class MainActivity : androidx.fragment.app.FragmentActivity() {
+
+    /**
+     * Applies the saved language before any resource is read.
+     *
+     * This runs before the first frame, which is why [AppLocale] keeps the
+     * setting in SharedPreferences rather than the app's DataStore — an async
+     * read here would render the first screen in the wrong language and then
+     * flicker when the real value arrived.
+     */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.wrap(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -98,6 +147,16 @@ class MainActivity : ComponentActivity() {
                 FontSizePreference.EXTRA_LARGE -> 1.30f
             }
 
+            // OR mode keeps the screen awake. Applied here, at the root, so it holds
+            // from launch; it used to take effect only once Settings was opened.
+            LaunchedEffect(settings.operativeMode) {
+                if (settings.operativeMode) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                } else {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                }
+            }
+
             val currentDensity = LocalDensity.current
             val adjustedDensity = Density(
                 density = currentDensity.density,
@@ -114,7 +173,9 @@ class MainActivity : ComponentActivity() {
                         color = MaterialTheme.colorScheme.background
                     ) {
                         when (isActivated) {
-                            true -> OrthoAppNavHost(appModule = appModule)
+                            true -> AppLockGate(enabled = settings.appLockEnabled) {
+                                OrthoAppNavHost(appModule = appModule)
+                            }
                             false -> ActivationScreen(
                                 activationRepository = appModule.activationRepository,
                                 onActivated = { }
@@ -133,56 +194,200 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Holds the app behind the phone's own lock (fingerprint, face, PIN, pattern).
+ * Asks once per launch, and again whenever the app comes back from the background,
+ * so a phone left unlocked on a desk does not expose patient data.
+ */
+@Composable
+private fun AppLockGate(enabled: Boolean, content: @Composable () -> Unit) {
+    val activity = currentFragmentActivity()
+    val context = LocalContext.current
+    val needsLock = enabled && activity != null && AppLock.isAvailable(context)
+
+    var unlocked by remember { mutableStateOf(!needsLock || AppLock.sessionUnlocked) }
+    var prompting by remember { mutableStateOf(false) }
+    var leftAt by remember { mutableStateOf(0L) }
+
+    fun ask() {
+        val host = activity ?: return
+        if (prompting) return
+        prompting = true
+        AppLock.authenticate(
+            activity = host,
+            title = context.getString(R.string.app_lock_title),
+            subtitle = context.getString(R.string.app_lock_subtitle)
+        ) { success ->
+            prompting = false
+            AppLock.sessionUnlocked = success
+            unlocked = success
+        }
+    }
+
+    // Locking the phone always locks the app, however briefly the user was away.
+    DisposableEffect(needsLock) {
+        if (!needsLock) return@DisposableEffect onDispose { }
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                AppLock.sessionUnlocked = false
+            }
+        }
+        ContextCompat.registerReceiver(
+            context,
+            receiver,
+            IntentFilter(Intent.ACTION_SCREEN_OFF),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        onDispose { runCatching { context.unregisterReceiver(receiver) } }
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, needsLock) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> leftAt = System.currentTimeMillis()
+                Lifecycle.Event.ON_RESUME -> {
+                    if (needsLock) {
+                        // Short trips out of the app — the camera, the gallery picker,
+                        // a quick glance at another app — keep the session open.
+                        val awayFor = if (leftAt == 0L) 0L else System.currentTimeMillis() - leftAt
+                        if (!AppLock.sessionUnlocked || awayFor > AppLock.GRACE_MS) {
+                            AppLock.sessionUnlocked = false
+                            unlocked = false
+                            // Asking here, not in a LaunchedEffect: the prompt can only
+                            // attach once the activity is actually resumed.
+                            ask()
+                        } else {
+                            unlocked = true
+                        }
+                    }
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    if (!needsLock || unlocked) {
+        content()
+    } else {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = stringResource(R.string.app_lock_locked),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(onClick = { ask() }) {
+                    Text(stringResource(R.string.app_lock_unlock))
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun OrthoAppNavHost(appModule: AppModule) {
     val navController = rememberNavController()
 
+    // The widget's note button asks for one appointment; open it once the graph exists.
+    val hostActivity = currentFragmentActivity()
+    LaunchedEffect(hostActivity) {
+        val intent = hostActivity?.intent ?: return@LaunchedEffect
+        val eventId = intent.getStringExtra(com.example.widget.OrthoWidgetProvider.EXTRA_OPEN_EVENT)
+        val patientId = intent.getStringExtra(com.example.widget.OrthoWidgetProvider.EXTRA_PATIENT_ID)
+        if (!eventId.isNullOrBlank() && !patientId.isNullOrBlank()) {
+            // Clear it so rotating the phone does not reopen the same appointment.
+            intent.removeExtra(com.example.widget.OrthoWidgetProvider.EXTRA_OPEN_EVENT)
+            // Main is the start screen, so the appointment simply opens on top of it.
+            navController.navigate(OrthoDestinations.timelineEventEdit(patientId, eventId))
+        }
+    }
+
     NavHost(
         navController = navController,
-        startDestination = OrthoDestinations.SPLASH
+        // No in-app splash: it held every cold start for two seconds. Android's own
+        // launch screen (icon on the window background) covers the brief load.
+        startDestination = OrthoDestinations.MAIN
     ) {
-        composable(OrthoDestinations.SPLASH) {
-            SplashScreen(
-                onSplashFinished = {
-                    navController.navigate(OrthoDestinations.MAIN) {
-                        popUpTo(OrthoDestinations.SPLASH) { inclusive = true }
-                    }
+
+        composable(OrthoDestinations.MAIN) { entry ->
+            MainScreen(
+                appModule = appModule,
+                onNavigateToChapter = { chapterId, chapterTitle ->
+                    navController.navigateFrom(entry, OrthoDestinations.chapterBones(chapterId, chapterTitle))
+                },
+                onNavigateToBoneDetail = { boneId ->
+                    navController.navigateFrom(entry, OrthoDestinations.boneDetail(boneId))
+                },
+                onNavigateToImport = {
+                    navController.navigateFrom(entry, OrthoDestinations.IMPORT)
+                },
+                onNavigateToClassificationChapter = { chapterFile ->
+                    navController.navigateFrom(entry, OrthoDestinations.classificationChapterDetail(chapterFile))
+                },
+                onNavigateToPatientDetail = { patientId ->
+                    navController.navigateFrom(entry, OrthoDestinations.patientDetail(patientId))
+                },
+                onNavigateToAddPatient = {
+                    navController.navigateFrom(entry, OrthoDestinations.patientEdit())
+                },
+                onNavigateToSurgeonProfile = {
+                    navController.navigateFrom(entry, OrthoDestinations.SURGEON_PROFILE)
+                },
+                onNavigateToDataTransfer = {
+                    navController.navigateFrom(entry, OrthoDestinations.PATIENT_DATA_IMPORT_EXPORT)
+                },
+                onNavigateToQrScanner = {
+                    navController.navigateFrom(entry, OrthoDestinations.QR_SCANNER)
+                },
+                onNavigateToSearch = { navController.navigateFrom(entry, OrthoDestinations.SEARCH) },
+                onNavigateToSaved = { navController.navigateFrom(entry, OrthoDestinations.SAVED) },
+                onNavigateToSettings = { navController.navigateFrom(entry, OrthoDestinations.SETTINGS) }
+            )
+        }
+
+        composable(OrthoDestinations.SEARCH) { entry ->
+            SearchScreen(
+                viewModel = viewModel(factory = SearchViewModel.provideFactory(appModule.orthoRepository)),
+                onNavigateBack = { navController.popFrom(entry) },
+                onNavigateToBoneDetail = { boneId ->
+                    navController.navigateFrom(entry, OrthoDestinations.boneDetail(boneId))
                 }
             )
         }
 
-        composable(OrthoDestinations.MAIN) {
-            MainScreen(
-                appModule = appModule,
-                onNavigateToChapter = { chapterId, chapterTitle ->
-                    navController.navigate(OrthoDestinations.chapterBones(chapterId, chapterTitle))
-                },
+        composable(OrthoDestinations.SAVED) { entry ->
+            FavoritesScreen(
+                viewModel = viewModel(factory = SavedViewModel.provideFactory(appModule.orthoRepository)),
+                onNavigateBack = { navController.popFrom(entry) },
                 onNavigateToBoneDetail = { boneId ->
-                    navController.navigate(OrthoDestinations.boneDetail(boneId))
-                },
-                onNavigateToImport = {
-                    navController.navigate(OrthoDestinations.IMPORT)
-                },
-                onNavigateToClassificationChapter = { chapterFile ->
-                    navController.navigate(OrthoDestinations.classificationChapterDetail(chapterFile))
-                },
-                onNavigateToPatientDetail = { patientId ->
-                    navController.navigate(OrthoDestinations.patientDetail(patientId))
-                },
-                onNavigateToAddPatient = {
-                    navController.navigate(OrthoDestinations.patientEdit())
-                },
-                onNavigateToSurgeonProfile = {
-                    navController.navigate(OrthoDestinations.SURGEON_PROFILE)
-                },
-                onNavigateToDataTransfer = {
-                    navController.navigate(OrthoDestinations.PATIENT_DATA_IMPORT_EXPORT)
-                },
-                onNavigateToQrScanner = {
-                    navController.navigate(OrthoDestinations.QR_SCANNER)
-                },
+                    navController.navigateFrom(entry, OrthoDestinations.boneDetail(boneId))
+                }
+            )
+        }
+
+        composable(OrthoDestinations.SETTINGS) { entry ->
+            SettingsScreen(
+                viewModel = viewModel(
+                    factory = SettingsViewModel.provideFactory(
+                        appModule.settingsRepository,
+                        appModule.backupManager,
+                        appModule.orthoRepository,
+                        appModule.patientRepository
+                    )
+                ),
+                onNavigateBack = { navController.popFrom(entry) },
+                onNavigateToImport = { navController.navigateFrom(entry, OrthoDestinations.IMPORT) },
                 onNavigateToTelegramDrive = {
-                    navController.navigate(OrthoDestinations.TELEGRAM_DRIVE_SETTINGS)
+                    navController.navigateFrom(entry, OrthoDestinations.TELEGRAM_DRIVE_SETTINGS)
                 }
             )
         }
@@ -193,17 +398,17 @@ fun OrthoAppNavHost(appModule: AppModule) {
                 navArgument("chapterId") { type = NavType.StringType },
                 navArgument("chapterTitle") { type = NavType.StringType }
             )
-        ) { backStackEntry ->
-            val chapterId = backStackEntry.arguments?.getString("chapterId")?.let { Uri.decode(it) } ?: ""
-            val chapterTitle = backStackEntry.arguments?.getString("chapterTitle")?.let { Uri.decode(it) } ?: "Chapter"
+        ) { entry ->
+            val chapterId = entry.arguments?.getString("chapterId")?.let { Uri.decode(it) } ?: ""
+            val chapterTitle = entry.arguments?.getString("chapterTitle")?.let { Uri.decode(it) } ?: "Chapter"
 
             BoneListScreen(
                 chapterId = chapterId,
                 chapterTitle = chapterTitle,
                 repository = appModule.orthoRepository,
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { navController.popFrom(entry) },
                 onNavigateToBoneDetail = { boneId ->
-                    navController.navigate(OrthoDestinations.boneDetail(boneId))
+                    navController.navigateFrom(entry, OrthoDestinations.boneDetail(boneId))
                 }
             )
         }
@@ -213,8 +418,8 @@ fun OrthoAppNavHost(appModule: AppModule) {
             arguments = listOf(
                 navArgument("boneId") { type = NavType.StringType }
             )
-        ) { backStackEntry ->
-            val boneId = backStackEntry.arguments?.getString("boneId")?.let { Uri.decode(it) } ?: ""
+        ) { entry ->
+            val boneId = entry.arguments?.getString("boneId")?.let { Uri.decode(it) } ?: ""
             val detailViewModel: BoneDetailViewModel = viewModel(
                 key = "bone_detail_$boneId",
                 factory = BoneDetailViewModel.provideFactory(
@@ -224,9 +429,9 @@ fun OrthoAppNavHost(appModule: AppModule) {
             )
             BoneDetailScreen(
                 viewModel = detailViewModel,
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { navController.popFrom(entry) },
                 onNavigateToImageViewer = { imageId ->
-                    navController.navigate(OrthoDestinations.imageViewer(imageId))
+                    navController.navigateFrom(entry, OrthoDestinations.imageViewer(imageId))
                 }
             )
         }
@@ -236,8 +441,8 @@ fun OrthoAppNavHost(appModule: AppModule) {
             arguments = listOf(
                 navArgument("imageId") { type = NavType.StringType }
             )
-        ) { backStackEntry ->
-            val imageId = backStackEntry.arguments?.getString("imageId")?.let { Uri.decode(it) } ?: ""
+        ) { entry ->
+            val imageId = entry.arguments?.getString("imageId")?.let { Uri.decode(it) } ?: ""
             val viewerViewModel: ViewerViewModel = viewModel(
                 key = "viewer_$imageId",
                 factory = ViewerViewModel.provideFactory(
@@ -247,17 +452,17 @@ fun OrthoAppNavHost(appModule: AppModule) {
             )
             ImageViewerScreen(
                 viewModel = viewerViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popFrom(entry) }
             )
         }
 
-        composable(OrthoDestinations.IMPORT) {
+        composable(OrthoDestinations.IMPORT) { entry ->
             val importViewModel: ImportViewModel = viewModel(
                 factory = ImportViewModel.provideFactory(appModule.boneDatabaseImporter)
             )
             ImportScreen(
                 viewModel = importViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popFrom(entry) }
             )
         }
 
@@ -266,8 +471,8 @@ fun OrthoAppNavHost(appModule: AppModule) {
             arguments = listOf(
                 navArgument("chapterFile") { type = NavType.StringType }
             )
-        ) { backStackEntry ->
-            val chapterFile = backStackEntry.arguments?.getString("chapterFile")?.let { Uri.decode(it) } ?: ""
+        ) { entry ->
+            val chapterFile = entry.arguments?.getString("chapterFile")?.let { Uri.decode(it) } ?: ""
             val classificationDetailViewModel: ClassificationViewModel = viewModel(
                 key = "classification_detail_$chapterFile",
                 factory = ClassificationViewModel.provideFactory(appModule.classificationRepository)
@@ -276,15 +481,15 @@ fun OrthoAppNavHost(appModule: AppModule) {
                 viewModel = classificationDetailViewModel,
                 repository = appModule.classificationRepository,
                 chapterFile = chapterFile,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popFrom(entry) }
             )
         }
 
         composable(
             route = OrthoDestinations.PATIENT_DETAIL,
             arguments = listOf(navArgument("patientId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val patientId = backStackEntry.arguments?.getString("patientId")?.let { Uri.decode(it) } ?: ""
+        ) { entry ->
+            val patientId = entry.arguments?.getString("patientId")?.let { Uri.decode(it) } ?: ""
             val detailViewModel: PatientDetailViewModel = viewModel(
                 key = "patient_detail_$patientId",
                 factory = PatientDetailViewModel.provideFactory(appModule.patientRepository, patientId)
@@ -301,18 +506,19 @@ fun OrthoAppNavHost(appModule: AppModule) {
             val savedChartPdfOptions by protocolViewModel.savedChartOptions.collectAsStateWithLifecycle()
             PatientDetailScreen(
                 viewModel = detailViewModel,
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToEdit = { navController.navigate(OrthoDestinations.patientEdit(patientId)) },
-                onNavigateToAddTimelineEvent = { navController.navigate(OrthoDestinations.timelineEventEdit(patientId)) },
+                onNavigateBack = { navController.popFrom(entry) },
+                onNavigateToEdit = { navController.navigateFrom(entry, OrthoDestinations.patientEdit(patientId)) },
+                onNavigateToAddTimelineEvent = { navController.navigateFrom(entry, OrthoDestinations.timelineEventEdit(patientId)) },
                 onNavigateToEditTimelineEvent = { eventId ->
-                    navController.navigate(OrthoDestinations.timelineEventEdit(patientId, eventId))
+                    navController.navigateFrom(entry, OrthoDestinations.timelineEventEdit(patientId, eventId))
                 },
-                onNavigateToAddSurgery = { navController.navigate(OrthoDestinations.surgeryEdit(patientId)) },
+                onNavigateToAddSurgery = { navController.navigateFrom(entry, OrthoDestinations.surgeryEdit(patientId)) },
                 onNavigateToEditSurgery = { surgeryId ->
-                    navController.navigate(OrthoDestinations.surgeryEdit(patientId, surgeryId))
+                    navController.navigateFrom(entry, OrthoDestinations.surgeryEdit(patientId, surgeryId))
                 },
-                onNavigateToCapture = { navController.navigate(OrthoDestinations.mediaCapture(patientId)) },
-                onNavigateToAnnotate = { imageId -> navController.navigate(OrthoDestinations.imageAnnotate(imageId)) },
+                onNavigateToCapture = { navController.navigateFrom(entry, OrthoDestinations.mediaCapture(patientId)) },
+                onNavigateToAnnotate = { imageId -> navController.navigateFrom(entry, OrthoDestinations.imageAnnotate(imageId)) },
+                onNavigateToVideo = { mediaId -> navController.navigateFrom(entry, OrthoDestinations.videoPlayer(mediaId)) },
                 savedSurgeryPdfOptions = savedSurgeryPdfOptions,
                 savedChartPdfOptions = savedChartPdfOptions,
                 onGenerateProtocol = { surgeryId, language, anonymize, options ->
@@ -329,8 +535,8 @@ fun OrthoAppNavHost(appModule: AppModule) {
             arguments = listOf(
                 navArgument("patientId") { type = NavType.StringType; nullable = true; defaultValue = null }
             )
-        ) { backStackEntry ->
-            val patientId = backStackEntry.arguments?.getString("patientId")?.let { Uri.decode(it) }
+        ) { entry ->
+            val patientId = entry.arguments?.getString("patientId")?.let { Uri.decode(it) }
             val editViewModel: PatientEditViewModel = viewModel(
                 key = "patient_edit_${patientId ?: "new"}",
                 factory = PatientEditViewModel.provideFactory(appModule.patientRepository, appModule.suggestionRepository, patientId)
@@ -338,11 +544,10 @@ fun OrthoAppNavHost(appModule: AppModule) {
             PatientEditScreen(
                 viewModel = editViewModel,
                 classificationRepository = appModule.classificationRepository,
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { navController.popFrom(entry) },
                 onSaved = { savedId ->
-                    navController.popBackStack()
-                    if (patientId == null) {
-                        // created from the list FAB: land straight on the new profile
+                    // created from the list FAB: land straight on the new profile
+                    if (navController.popFrom(entry) && patientId == null) {
                         navController.navigate(OrthoDestinations.patientDetail(savedId))
                     }
                 }
@@ -355,9 +560,9 @@ fun OrthoAppNavHost(appModule: AppModule) {
                 navArgument("patientId") { type = NavType.StringType },
                 navArgument("eventId") { type = NavType.StringType; nullable = true; defaultValue = null }
             )
-        ) { backStackEntry ->
-            val patientId = backStackEntry.arguments?.getString("patientId")?.let { Uri.decode(it) } ?: ""
-            val eventId = backStackEntry.arguments?.getString("eventId")?.let { Uri.decode(it) }
+        ) { entry ->
+            val patientId = entry.arguments?.getString("patientId")?.let { Uri.decode(it) } ?: ""
+            val eventId = entry.arguments?.getString("eventId")?.let { Uri.decode(it) }
 
             val existingEventState = androidx.compose.runtime.produceState<com.example.data.local.entity.TimelineEventEntity?>(
                 initialValue = null,
@@ -366,16 +571,20 @@ fun OrthoAppNavHost(appModule: AppModule) {
                 value = eventId?.let { appModule.patientRepository.getTimelineEvent(it) }
             }
             // Wait for the (possibly null) lookup so an edit doesn't briefly render as "new".
-            if (eventId != null && existingEventState.value == null) return@composable
+            if (eventId != null && existingEventState.value == null) {
+                // A spinner rather than a blank screen while the record loads.
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                return@composable
+            }
 
             val editViewModel: TimelineEventEditViewModel = viewModel(
                 key = "timeline_edit_${eventId ?: "new"}_$patientId",
-                factory = TimelineEventEditViewModel.provideFactory(appModule.patientRepository, patientId, existingEventState.value)
+                factory = TimelineEventEditViewModel.provideFactory(appModule.patientRepository, appModule.suggestionRepository, patientId, existingEventState.value)
             )
             TimelineEventEditScreen(
                 viewModel = editViewModel,
-                onNavigateBack = { navController.popBackStack() },
-                onSaved = { navController.popBackStack() }
+                onNavigateBack = { navController.popFrom(entry) },
+                onSaved = { navController.popFrom(entry) }
             )
         }
 
@@ -385,9 +594,9 @@ fun OrthoAppNavHost(appModule: AppModule) {
                 navArgument("patientId") { type = NavType.StringType },
                 navArgument("surgeryId") { type = NavType.StringType; nullable = true; defaultValue = null }
             )
-        ) { backStackEntry ->
-            val patientId = backStackEntry.arguments?.getString("patientId")?.let { Uri.decode(it) } ?: ""
-            val surgeryId = backStackEntry.arguments?.getString("surgeryId")?.let { Uri.decode(it) }
+        ) { entry ->
+            val patientId = entry.arguments?.getString("patientId")?.let { Uri.decode(it) } ?: ""
+            val surgeryId = entry.arguments?.getString("surgeryId")?.let { Uri.decode(it) }
 
             val existingSurgeryState = androidx.compose.runtime.produceState<com.example.data.local.entity.SurgeryEntity?>(
                 initialValue = null,
@@ -395,7 +604,11 @@ fun OrthoAppNavHost(appModule: AppModule) {
             ) {
                 value = surgeryId?.let { appModule.patientRepository.getSurgery(it) }
             }
-            if (surgeryId != null && existingSurgeryState.value == null) return@composable
+            if (surgeryId != null && existingSurgeryState.value == null) {
+                // A spinner rather than a blank screen while the record loads.
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                return@composable
+            }
 
             val editViewModel: SurgeryEditViewModel = viewModel(
                 key = "surgery_edit_${surgeryId ?: "new"}_$patientId",
@@ -404,16 +617,16 @@ fun OrthoAppNavHost(appModule: AppModule) {
             SurgeryEditScreen(
                 viewModel = editViewModel,
                 classificationRepository = appModule.classificationRepository,
-                onNavigateBack = { navController.popBackStack() },
-                onSaved = { navController.popBackStack() }
+                onNavigateBack = { navController.popFrom(entry) },
+                onSaved = { navController.popFrom(entry) }
             )
         }
 
         composable(
             route = OrthoDestinations.MEDIA_CAPTURE,
             arguments = listOf(navArgument("patientId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val patientId = backStackEntry.arguments?.getString("patientId")?.let { Uri.decode(it) } ?: ""
+        ) { entry ->
+            val patientId = entry.arguments?.getString("patientId")?.let { Uri.decode(it) } ?: ""
             val context = LocalContext.current
             val captureViewModel: MediaCaptureViewModel = viewModel(
                 key = "media_capture_$patientId",
@@ -427,56 +640,74 @@ fun OrthoAppNavHost(appModule: AppModule) {
 
             LaunchedEffect(captureState.isSaving, captureState.savedCount, captureState.totalToSave) {
                 if (!captureState.isSaving && captureState.totalToSave > 0 && captureState.savedCount == captureState.totalToSave) {
-                    navController.popBackStack()
+                    navController.popFrom(entry)
                 }
             }
 
             PatientCameraCaptureScreen(
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { navController.popFrom(entry) },
                 onPhotoCaptured = { uri, category ->
                     captureViewModel.saveCapturedImages(context, listOf(uri), category)
                 },
-                onOpenScanner = launchScanner
+                onOpenScanner = launchScanner,
+                onMediaPicked = { uris, category ->
+                    captureViewModel.saveCapturedMedia(context, uris, category)
+                },
+                onVideoRecorded = { uri, category ->
+                    captureViewModel.saveCapturedVideos(context, listOf(uri), category)
+                }
+            )
+        }
+
+        composable(
+            route = OrthoDestinations.VIDEO_PLAYER,
+            arguments = listOf(navArgument("mediaId") { type = NavType.StringType })
+        ) { entry ->
+            val mediaId = entry.arguments?.getString("mediaId")?.let { Uri.decode(it) } ?: ""
+            com.example.ui.screens.patients.VideoPlayerScreen(
+                repository = appModule.patientRepository,
+                mediaId = mediaId,
+                onNavigateBack = { navController.popFrom(entry) }
             )
         }
 
         composable(
             route = OrthoDestinations.IMAGE_ANNOTATE,
             arguments = listOf(navArgument("imageId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val imageId = backStackEntry.arguments?.getString("imageId")?.let { Uri.decode(it) } ?: ""
+        ) { entry ->
+            val imageId = entry.arguments?.getString("imageId")?.let { Uri.decode(it) } ?: ""
             val annotationViewModel: ImageAnnotationViewModel = viewModel(
                 key = "annotate_$imageId",
                 factory = ImageAnnotationViewModel.provideFactory(appModule.patientRepository, imageId)
             )
             ImageAnnotationScreen(
                 viewModel = annotationViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popFrom(entry) }
             )
         }
 
-        composable(OrthoDestinations.QR_SCANNER) {
+        composable(OrthoDestinations.QR_SCANNER) { entry ->
             QrScannerScreen(
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { navController.popFrom(entry) },
                 onPatientFound = { patientId ->
-                    navController.navigate(OrthoDestinations.patientDetail(patientId)) {
+                    navController.navigateFrom(entry, OrthoDestinations.patientDetail(patientId)) {
                         popUpTo(OrthoDestinations.QR_SCANNER) { inclusive = true }
                     }
                 }
             )
         }
 
-        composable(OrthoDestinations.SURGEON_PROFILE) {
+        composable(OrthoDestinations.SURGEON_PROFILE) { entry ->
             val profileViewModel: SurgeonProfileViewModel = viewModel(
                 factory = SurgeonProfileViewModel.provideFactory(appModule.surgeonProfileRepository)
             )
             SurgeonProfileScreen(
                 viewModel = profileViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popFrom(entry) }
             )
         }
 
-        composable(OrthoDestinations.TELEGRAM_DRIVE_SETTINGS) {
+        composable(OrthoDestinations.TELEGRAM_DRIVE_SETTINGS) { entry ->
             val driveContext = LocalContext.current.applicationContext
             val driveViewModel: TelegramDriveSettingsViewModel = viewModel(
                 key = "telegram_drive_settings",
@@ -484,17 +715,17 @@ fun OrthoAppNavHost(appModule: AppModule) {
             )
             TelegramDriveSettingsScreen(
                 viewModel = driveViewModel,
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { navController.popFrom(entry) },
                 onNavigateToSetup = {
-                    navController.navigate(OrthoDestinations.TELEGRAM_DRIVE_SETUP)
+                    navController.navigateFrom(entry, OrthoDestinations.TELEGRAM_DRIVE_SETUP)
                 },
                 onNavigateToDiagnostics = {
-                    navController.navigate(OrthoDestinations.TELEGRAM_DRIVE_DIAGNOSTICS)
+                    navController.navigateFrom(entry, OrthoDestinations.TELEGRAM_DRIVE_DIAGNOSTICS)
                 }
             )
         }
 
-        composable(OrthoDestinations.TELEGRAM_DRIVE_SETUP) {
+        composable(OrthoDestinations.TELEGRAM_DRIVE_SETUP) { entry ->
             val setupContext = LocalContext.current.applicationContext
             val setupViewModel: TelegramSetupViewModel = viewModel(
                 key = "telegram_drive_setup",
@@ -502,17 +733,19 @@ fun OrthoAppNavHost(appModule: AppModule) {
             )
             TelegramSetupWizardScreen(
                 viewModel = setupViewModel,
-                onNavigateBack = { navController.popBackStack() },
+                onNavigateBack = { navController.popFrom(entry) },
                 onSetupComplete = {
-                    navController.popBackStack(
-                        route = OrthoDestinations.TELEGRAM_DRIVE_SETTINGS,
-                        inclusive = false
-                    )
+                    if (navController.currentBackStackEntry?.id == entry.id) {
+                        navController.popBackStack(
+                            route = OrthoDestinations.TELEGRAM_DRIVE_SETTINGS,
+                            inclusive = false
+                        )
+                    }
                 }
             )
         }
 
-        composable(OrthoDestinations.TELEGRAM_DRIVE_DIAGNOSTICS) {
+        composable(OrthoDestinations.TELEGRAM_DRIVE_DIAGNOSTICS) { entry ->
             val diagnosticsContext = LocalContext.current.applicationContext
             val diagnosticsViewModel: TelegramDriveSettingsViewModel = viewModel(
                 key = "telegram_drive_settings",
@@ -520,18 +753,35 @@ fun OrthoAppNavHost(appModule: AppModule) {
             )
             StorageDiagnosticsScreen(
                 viewModel = diagnosticsViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popFrom(entry) }
             )
         }
 
-        composable(OrthoDestinations.PATIENT_DATA_IMPORT_EXPORT) {
+        composable(OrthoDestinations.PATIENT_DATA_IMPORT_EXPORT) { entry ->
             val transferViewModel: PatientDataTransferViewModel = viewModel(
                 factory = PatientDataTransferViewModel.provideFactory(appModule.patientRepository)
             )
             PatientDataTransferScreen(
                 viewModel = transferViewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popFrom(entry) }
             )
         }
     }
+}
+
+/**
+ * Pops only while [entry] is still the screen on top. A double tap on a back
+ * arrow, or a callback that fires twice, used to pop two screens and could empty
+ * the back stack, leaving a blank window.
+ */
+private fun NavController.popFrom(entry: NavBackStackEntry): Boolean =
+    currentBackStackEntry?.id == entry.id && popBackStack()
+
+/** Navigates only from the screen on top, so a double tap opens one copy, not two. */
+private fun NavController.navigateFrom(
+    entry: NavBackStackEntry,
+    route: String,
+    builder: NavOptionsBuilder.() -> Unit = {}
+) {
+    if (currentBackStackEntry?.id == entry.id) navigate(route, builder)
 }

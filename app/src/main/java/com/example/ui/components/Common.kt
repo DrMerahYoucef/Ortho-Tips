@@ -46,6 +46,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun RegionBadge(
@@ -87,7 +89,7 @@ fun HighYieldChip(
             )
             Spacer(modifier = Modifier.width(5.dp))
             Text(
-                text = "HIGH YIELD",
+                text = stringResource(R.string.common_high_yield),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onPrimary,
                 fontSize = 10.sp
@@ -102,7 +104,7 @@ fun OrthoSearchBar(
     onQueryChange: (String) -> Unit,
     onSearch: (String) -> Unit,
     onClear: () -> Unit,
-    placeholderText: String = "Search bones, pearls, approaches...",
+    placeholderText: String = stringResource(R.string.search_placeholder),
     modifier: Modifier = Modifier
 ) {
     OutlinedTextField(
@@ -120,7 +122,7 @@ fun OrthoSearchBar(
         leadingIcon = {
             Icon(
                 imageVector = Icons.Default.Search,
-                contentDescription = "Search",
+                contentDescription = stringResource(R.string.common_search),
                 tint = MaterialTheme.colorScheme.primary
             )
         },
@@ -136,7 +138,7 @@ fun OrthoSearchBar(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Clear search",
+                        contentDescription = stringResource(R.string.common_clear_search),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -181,7 +183,7 @@ fun WarningBanner(
             ) {
                 Icon(
                     imageVector = Icons.Default.Warning,
-                    contentDescription = "Danger Corridor Alert",
+                    contentDescription = stringResource(R.string.common_danger_corridor_alert),
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier
                         .padding(6.dp)
@@ -191,7 +193,7 @@ fun WarningBanner(
             Spacer(modifier = Modifier.width(10.dp))
             Column {
                 Text(
-                    text = "DANGER ZONE / PITFALL",
+                    text = stringResource(R.string.common_danger_zone_pitfall),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -227,7 +229,7 @@ fun PearlCard(
             Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)) {
                 Icon(
                     imageVector = Icons.Default.Info,
-                    contentDescription = "Surgical Pearl",
+                    contentDescription = stringResource(R.string.common_surgical_pearl),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .padding(6.dp)
@@ -237,7 +239,7 @@ fun PearlCard(
             Spacer(modifier = Modifier.width(10.dp))
             Column {
                 Text(
-                    text = "SURGICAL PEARL",
+                    text = stringResource(R.string.common_surgical_pearl_2),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )

@@ -11,6 +11,8 @@ import com.example.data.local.entity.TransferState
 import com.example.data.prefs.TelegramDriveRepository
 import com.example.data.storage.LocalStorageProvider
 import com.example.data.storage.StorageBackend
+import com.example.data.storage.StorageException
+import com.example.data.storage.awaitTerminal
 import com.example.data.storage.StorageKey
 import com.example.data.storage.StorageObjectKind
 import com.example.data.storage.StorageProviderRegistry
@@ -19,7 +21,6 @@ import com.example.data.storage.TransferProgress
 import com.example.data.telegram.DriveLog
 import com.example.data.telegram.TelegramClient
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -60,6 +61,8 @@ data class SyncReport(
     val uploadsQueued: Int = 0,
     val downloadsQueued: Int = 0,
     val manifestRowsSeen: Int = 0,
+    /** Drive objects this device holds no usable key for. */
+    val unreadableObjects: Int = 0,
     val tombstonesPropagated: Int = 0,
     val snapshotPushed: Boolean = false,
     val snapshotPulled: Boolean = false,
@@ -128,7 +131,12 @@ class SyncEngine(
 
         val pulled = runCatching { pullManifest(scope) }
             .onFailure { errors += "Manifest pull failed: ${it.message}" }
-            .getOrDefault(0)
+            .getOrDefault(ManifestPull())
+
+        if (pulled.unreadable > 0) {
+            errors += "${pulled.unreadable} drive objects are encrypted with a key " +
+                    "that is not on this device"
+        }
 
         val tombstones = runCatching { propagateTombstones() }
             .onFailure { errors += "Deletion propagation failed: ${it.message}" }
@@ -147,7 +155,8 @@ class SyncEngine(
             scope = scope,
             uploadsQueued = plan.uploads,
             downloadsQueued = plan.downloads,
-            manifestRowsSeen = pulled,
+            manifestRowsSeen = pulled.seen,
+            unreadableObjects = pulled.unreadable,
             tombstonesPropagated = tombstones,
             snapshotPushed = snapshotPushed,
             conflicts = plan.conflicts,
@@ -175,10 +184,18 @@ class SyncEngine(
      * On [SyncScope.FULL] the whole history is walked; incrementally it stops at
      * the first page that produced no new or changed rows.
      */
-    private suspend fun pullManifest(scope: SyncScope): Int {
-        val chatId = driveRepository.chatId() ?: return 0
+    private data class ManifestPull(
+        val seen: Int = 0,
+        val unreadable: Int = 0,
+        val foreign: Int = 0
+    )
+
+    private suspend fun pullManifest(scope: SyncScope): ManifestPull {
+        val chatId = driveRepository.chatId() ?: return ManifestPull()
         var fromMessageId = 0L
         var seen = 0
+        var unreadable = 0
+        var foreign = 0
         var pages = 0
 
         while (pages < MAX_PAGES) {
@@ -187,12 +204,17 @@ class SyncEngine(
             var changedInPage = 0
 
             for (document in page.documents) {
-                val manifest = manifestCodec.decode(document.caption)
-                if (manifest == null) {
-                    if (manifestCodec.isLocked(document.caption)) {
-                        DriveLog.w(TAG, "Encrypted manifest unreadable on this device")
+                val manifest = when (val decoded = manifestCodec.inspect(document.caption)) {
+                    is ManifestCodec.Decoded.Ok -> decoded.manifest
+                    ManifestCodec.Decoded.Unreadable -> {
+                        unreadable++
+                        continue
                     }
-                    continue
+
+                    ManifestCodec.Decoded.NotOurs -> {
+                        foreign++
+                        continue
+                    }
                 }
                 seen++
                 val existing = remoteObjectDao.get(manifest.storageKey)
@@ -229,8 +251,19 @@ class SyncEngine(
             if (fromMessageId == 0L) break
             if (scope == SyncScope.INCREMENTAL && changedInPage == 0 && pages > 1) break
         }
-        DriveLog.d(TAG, "Manifest pull: $seen entries over $pages pages")
-        return seen
+        DriveLog.i(
+            TAG,
+            "Manifest pull: $seen readable, $unreadable unreadable, $foreign foreign, " +
+                    "over $pages pages"
+        )
+        if (unreadable > 0) {
+            DriveLog.w(
+                TAG,
+                "$unreadable drive objects cannot be decrypted here. They were sealed " +
+                        "with a different content key, so this install cannot read them."
+            )
+        }
+        return ManifestPull(seen, unreadable, foreign)
     }
 
     /**
@@ -241,7 +274,7 @@ class SyncEngine(
     suspend fun rebuildManifest(): Int = withContext(Dispatchers.IO) {
         DriveLog.i(TAG, "Rebuilding manifest index from the drive channel")
         remoteObjectDao.clear()
-        pullManifest(SyncScope.FULL)
+        pullManifest(SyncScope.FULL).seen
     }
 
     // ---- Planning ------------------------------------------------------------
@@ -384,34 +417,110 @@ class SyncEngine(
 
     // ---- Records -------------------------------------------------------------
 
+    /**
+     * Exports the database and uploads it — unless doing so would bury a better
+     * snapshot.
+     *
+     * A fresh install has an empty database. Uploading that produces a snapshot
+     * that is newer than the one holding the user's actual records, and a later
+     * restore picks it and returns nothing. Refusing the push is the only safe
+     * behaviour: an empty local database is never evidence that the records were
+     * deleted, only that this device has not been restored yet.
+     */
     private suspend fun pushDatabaseSnapshot(): Boolean {
         val timestamp = System.currentTimeMillis()
-        val file = File(snapshotWorkDir, "ortho-db-$timestamp.json")
-        databaseSnapshot.export(file)
-        val key = StorageKey.snapshot(timestamp)
+        val staging = File(snapshotWorkDir, "ortho-db-$timestamp.json")
+        val summary = databaseSnapshot.export(staging)
+
+        if (summary.rowCount == 0 && driveHoldsRecords()) {
+            staging.delete()
+            DriveLog.w(
+                TAG,
+                "Local database is empty but the drive holds records; skipping the " +
+                        "snapshot push so restore keeps seeing the good copy"
+            )
+            return false
+        }
+
+        // The channel was filling with identical 242 B snapshots, one per sync.
+        // If the newest snapshot already holds exactly these bytes, there is
+        // nothing to back up.
+        val hash = Hashing.sha256(staging)
+        val newest = remoteObjectDao.getByPrefix(StorageKey.SNAPSHOT_PREFIX)
+            .maxByOrNull { it.modifiedAt }
+        if (hash != null && newest?.contentHash == hash) {
+            staging.delete()
+            DriveLog.d(TAG, "Records unchanged since the last snapshot; nothing to upload")
+            return false
+        }
+
+        val key = StorageKey.snapshot(timestamp, summary.rowCount)
         return try {
             val terminal = telegram.put(
                 key,
-                file,
+                staging,
                 StorageObjectKind.DATABASE_SNAPSHOT,
                 "application/json"
-            ).first { it is TransferProgress.Completed || it is TransferProgress.Failed }
+            ).awaitTerminal()
+            if (terminal is TransferProgress.Failed) {
+                throw StorageException(terminal.reason, retryable = terminal.retryable)
+            }
             terminal is TransferProgress.Completed
         } finally {
-            file.delete()
+            staging.delete()
         }
     }
+
+    /** True when any snapshot in the drive is known to contain records. */
+    private suspend fun driveHoldsRecords(): Boolean =
+        remoteObjectDao.getByPrefix(StorageKey.SNAPSHOT_PREFIX).any { row ->
+            val key = runCatching { StorageKey(row.storageKey) }.getOrNull() ?: return@any false
+            (StorageKey.snapshotRowCount(key) ?: 0) > 0
+        }
 
     /**
      * Fetches the newest snapshot from the drive and merges it. Used by the setup
      * wizard on a fresh install and by the explicit restore action.
      */
     suspend fun pullDatabaseSnapshot(): SnapshotSummary? = withContext(Dispatchers.IO) {
-        val newest = remoteObjectDao.getByPrefix(StorageKey.SNAPSHOT_PREFIX)
-            .maxByOrNull { it.modifiedAt } ?: return@withContext null
-        val key = runCatching { StorageKey(newest.storageKey) }.getOrNull() ?: return@withContext null
-        val file = telegram.materialize(key) ?: return@withContext null
-        databaseSnapshot.import(file)
+        val candidates = remoteObjectDao.getByPrefix(StorageKey.SNAPSHOT_PREFIX)
+            .sortedByDescending { it.modifiedAt }
+            .mapNotNull { runCatching { StorageKey(it.storageKey) }.getOrNull() }
+
+        if (candidates.isEmpty()) {
+            DriveLog.w(TAG, "No snapshot in the drive to restore from")
+            return@withContext null
+        }
+
+        // Newest-first, skipping any whose key says it holds nothing. Keys written
+        // before row counts existed carry no count, so those are still downloaded
+        // and inspected rather than assumed empty.
+        var inspected = 0
+        for (key in candidates) {
+            if (StorageKey.snapshotRowCount(key) == 0) continue
+            if (inspected++ >= MAX_SNAPSHOT_CANDIDATES) break
+
+            val file = telegram.materialize(key)
+            if (file == null) {
+                DriveLog.w(TAG, "Snapshot ${key.fileName} could not be fetched")
+                continue
+            }
+            val summary = databaseSnapshot.inspect(file)
+            if (summary == null || summary.rowCount == 0) {
+                DriveLog.d(TAG, "Snapshot ${key.fileName} holds no records; trying an older one")
+                continue
+            }
+            DriveLog.i(TAG, "Restoring ${summary.rowCount} rows from ${key.fileName}")
+            return@withContext databaseSnapshot.import(file)
+        }
+
+        DriveLog.w(
+            TAG,
+            "Checked ${candidates.size} snapshots and none contained records. If the " +
+                    "drive was written by another install, its encryption key is not on " +
+                    "this device."
+        )
+        null
     }
 
     // ---- Integrity -----------------------------------------------------------
@@ -452,13 +561,37 @@ class SyncEngine(
         val budget = driveRepository.current().cacheBudgetMb.toLong() * 1024 * 1024
         val freed = telegram.trimCacheTo(budget)
         val purgedLocal = local.purge(retentionMillis)
-        CleanupReport(trimmedHistory, trimmedTombstones, freed, purgedLocal)
+        val prunedSnapshots = pruneEmptySnapshots()
+        CleanupReport(trimmedHistory, trimmedTombstones, freed, purgedLocal, prunedSnapshots)
+    }
+
+    /**
+     * Removes snapshots known to hold no records, keeping the newest one as a
+     * marker. Only ever touches empty snapshots, so a real backup can never be
+     * pruned by this.
+     */
+    private suspend fun pruneEmptySnapshots(): Int {
+        val snapshots = remoteObjectDao.getByPrefix(StorageKey.SNAPSHOT_PREFIX)
+            .sortedByDescending { it.modifiedAt }
+            .mapNotNull { row ->
+                val key = runCatching { StorageKey(row.storageKey) }.getOrNull()
+                    ?: return@mapNotNull null
+                key to StorageKey.snapshotRowCount(key)
+            }
+        val empties = snapshots.filter { it.second == 0 }.drop(1)
+        empties.forEach { (key, _) ->
+            runCatching { telegram.delete(key) }
+                .onFailure { DriveLog.w(TAG, "Could not prune ${key.fileName}", it) }
+        }
+        if (empties.isNotEmpty()) DriveLog.i(TAG, "Pruned ${empties.size} empty snapshots")
+        return empties.size
     }
 
     companion object {
         private const val TAG = "SyncEngine"
         private const val PAGE_SIZE = 100
         private const val MAX_PAGES = 200
+        private const val MAX_SNAPSHOT_CANDIDATES = 10
     }
 }
 
@@ -476,5 +609,6 @@ data class CleanupReport(
     val transferRowsTrimmed: Int,
     val tombstonesTrimmed: Int,
     val cacheBytesFreed: Long,
-    val localObjectsPurged: Int
+    val localObjectsPurged: Int,
+    val emptySnapshotsPruned: Int = 0
 )

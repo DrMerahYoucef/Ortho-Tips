@@ -1,5 +1,6 @@
 package com.example.viewmodel
 
+import com.example.R
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
@@ -79,11 +80,11 @@ class PatientDataTransferViewModel(
                     mode = TransferMode.IDLE,
                     progress = ImportExportProgress(patientsAdded = bundles.size, isComplete = true)
                 )
-                ShareHelper.shareFile(context, destination, mimeType = "application/zip", chooserTitle = "Share patient database")
+                ShareHelper.shareFile(context, destination, mimeType = "application/zip", chooserTitle = context.getString(R.string.transfer_share_title))
             } catch (e: Exception) {
                 _uiState.value = PatientDataTransferUiState(
                     mode = TransferMode.IDLE,
-                    progress = ImportExportProgress(errors = listOf(e.message ?: "Export failed"), isComplete = true)
+                    progress = ImportExportProgress(errors = listOf(e.message ?: context.getString(R.string.transfer_export_failed)), isComplete = true)
                 )
             }
         }
@@ -107,7 +108,7 @@ class PatientDataTransferViewModel(
             } catch (e: Exception) {
                 _uiState.value = PatientDataTransferUiState(
                     mode = TransferMode.IDLE,
-                    progress = ImportExportProgress(errors = listOf(e.message ?: "Import failed"), isComplete = true)
+                    progress = ImportExportProgress(errors = listOf(e.message ?: context.getString(R.string.transfer_import_failed)), isComplete = true)
                 )
             }
         }

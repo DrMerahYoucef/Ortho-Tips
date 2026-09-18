@@ -1,5 +1,6 @@
 package com.example.viewmodel
 
+import com.example.R
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -62,17 +63,17 @@ class OperativeProtocolViewModel(
                 val surgeon = surgeonProfileRepository.profileFlow.first()
 
                 if (patient == null || surgery == null) {
-                    _uiState.value = ProtocolGenerationUiState(error = "Patient or surgery record not found")
+                    _uiState.value = ProtocolGenerationUiState(error = context.getString(R.string.protocol_err_record_not_found))
                     return@launch
                 }
 
                 val file = withContext(Dispatchers.IO) {
                     OperativeProtocolGenerator.generate(context, patient, surgery, surgeon, language, anonymize, options)
                 }
-                ShareHelper.sharePdf(context, file, chooserTitle = "Share operative protocol")
+                ShareHelper.sharePdf(context, file, chooserTitle = context.getString(R.string.protocol_share_title))
                 _uiState.value = ProtocolGenerationUiState()
             } catch (e: Exception) {
-                _uiState.value = ProtocolGenerationUiState(error = e.message ?: "Failed to generate PDF")
+                _uiState.value = ProtocolGenerationUiState(error = e.message ?: context.getString(R.string.protocol_err_pdf))
             }
         }
     }
@@ -90,7 +91,7 @@ class OperativeProtocolViewModel(
 
                 val patient = patientRepository.getPatient(patientId)
                 if (patient == null) {
-                    _uiState.value = ProtocolGenerationUiState(error = "Patient not found")
+                    _uiState.value = ProtocolGenerationUiState(error = context.getString(R.string.protocol_err_patient_not_found))
                     return@launch
                 }
                 val surgeon = surgeonProfileRepository.profileFlow.first()
@@ -100,10 +101,10 @@ class OperativeProtocolViewModel(
                 val file = withContext(Dispatchers.IO) {
                     com.example.utils.PatientChartPdfGenerator.generate(context, patient, timeline, surgeries, surgeon, anonymize, options)
                 }
-                ShareHelper.sharePdf(context, file, chooserTitle = "Share patient chart")
+                ShareHelper.sharePdf(context, file, chooserTitle = context.getString(R.string.chart_share_title))
                 _uiState.value = ProtocolGenerationUiState()
             } catch (e: Exception) {
-                _uiState.value = ProtocolGenerationUiState(error = e.message ?: "Failed to generate PDF")
+                _uiState.value = ProtocolGenerationUiState(error = e.message ?: context.getString(R.string.protocol_err_pdf))
             }
         }
     }

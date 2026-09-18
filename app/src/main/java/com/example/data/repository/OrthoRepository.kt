@@ -2,6 +2,15 @@ package com.example.data.repository
 
 import com.example.data.local.OrthoDatabase
 import com.example.data.local.entity.BookmarkEntity
+import com.example.data.local.displayClassificationSummary
+import com.example.data.local.displayContent
+import com.example.data.local.displayName
+import com.example.data.local.displayPearls
+import com.example.data.local.displayRegion
+import com.example.data.local.displaySubtitle
+import com.example.data.local.displayTitle
+import com.example.data.local.displayWarnings
+import com.example.data.local.localized
 import com.example.data.local.entity.BoneEntity
 import com.example.data.local.entity.ChapterEntity
 import com.example.data.local.entity.ImageEntity
@@ -77,7 +86,7 @@ class OrthoRepository(
         ) { chapters, bones ->
             chapters.map { chap ->
                 val count = bones.count { it.chapterId == chap.id }
-                ChapterWithCount(chap, count)
+                ChapterWithCount(chap.localized(), count)
             }
         }.flowOn(Dispatchers.IO)
     }
@@ -94,11 +103,11 @@ class OrthoRepository(
                 BoneSummary(
                     id = bone.id,
                     chapterId = bone.chapterId,
-                    name = bone.name,
-                    subtitle = bone.subtitle,
-                    region = bone.region,
+                    name = bone.displayName,
+                    subtitle = bone.displaySubtitle,
+                    region = bone.displayRegion,
                     traumaType = bone.traumaType,
-                    classificationSummary = bone.classificationSummary,
+                    classificationSummary = bone.displayClassificationSummary,
                     isHighYield = bone.isHighYield,
                     isBookmarked = bookmarkedSet.contains(bone.id),
                     noteCount = noteCount
@@ -119,11 +128,11 @@ class OrthoRepository(
                 BoneSummary(
                     id = bone.id,
                     chapterId = bone.chapterId,
-                    name = bone.name,
-                    subtitle = bone.subtitle,
-                    region = bone.region,
+                    name = bone.displayName,
+                    subtitle = bone.displaySubtitle,
+                    region = bone.displayRegion,
                     traumaType = bone.traumaType,
-                    classificationSummary = bone.classificationSummary,
+                    classificationSummary = bone.displayClassificationSummary,
                     isHighYield = bone.isHighYield,
                     isBookmarked = bookmarkedSet.contains(bone.id),
                     noteCount = noteCount
@@ -144,11 +153,11 @@ class OrthoRepository(
                 BoneSummary(
                     id = bone.id,
                     chapterId = bone.chapterId,
-                    name = bone.name,
-                    subtitle = bone.subtitle,
-                    region = bone.region,
+                    name = bone.displayName,
+                    subtitle = bone.displaySubtitle,
+                    region = bone.displayRegion,
                     traumaType = bone.traumaType,
-                    classificationSummary = bone.classificationSummary,
+                    classificationSummary = bone.displayClassificationSummary,
                     isHighYield = bone.isHighYield,
                     isBookmarked = bookmarkedSet.contains(bone.id),
                     noteCount = noteCount
@@ -169,11 +178,11 @@ class OrthoRepository(
                 BoneSummary(
                     id = bone.id,
                     chapterId = bone.chapterId,
-                    name = bone.name,
-                    subtitle = bone.subtitle,
-                    region = bone.region,
+                    name = bone.displayName,
+                    subtitle = bone.displaySubtitle,
+                    region = bone.displayRegion,
                     traumaType = bone.traumaType,
-                    classificationSummary = bone.classificationSummary,
+                    classificationSummary = bone.displayClassificationSummary,
                     isHighYield = bone.isHighYield,
                     isBookmarked = true,
                     noteCount = noteMap[bone.id]?.size ?: 0
@@ -192,9 +201,9 @@ class OrthoRepository(
         ) { bone, sections, images, notes, isBookmarked ->
             if (bone == null) null
             else BoneDetail(
-                bone = bone,
-                sections = sections,
-                images = images,
+                bone = bone.localized(),
+                sections = sections.map { it.localized() },
+                images = images.map { it.localized() },
                 notes = notes,
                 isBookmarked = isBookmarked
             )
@@ -202,7 +211,7 @@ class OrthoRepository(
     }
 
     suspend fun getChapter(chapterId: String): ChapterEntity? = withContext(Dispatchers.IO) {
-        chapterDao.getChapterById(chapterId)
+        chapterDao.getChapterById(chapterId)?.localized()
     }
 
     suspend fun toggleBookmark(boneId: String) = withContext(Dispatchers.IO) {
@@ -224,7 +233,8 @@ class OrthoRepository(
         userDataDao.deleteNoteById(noteId)
     }
 
-    fun getAllImages(): Flow<List<ImageEntity>> = imageDao.getAllImages().flowOn(Dispatchers.IO)
+    fun getAllImages(): Flow<List<ImageEntity>> =
+        imageDao.getAllImages().map { list -> list.map { it.localized() } }.flowOn(Dispatchers.IO)
 
     /**
      * One-shot snapshot of every figure that belongs to [boneId], ordered the same way
@@ -232,11 +242,11 @@ class OrthoRepository(
      * swipeable pager starting from whichever figure the user tapped.
      */
     suspend fun getImagesForBoneOnce(boneId: String): List<ImageEntity> = withContext(Dispatchers.IO) {
-        imageDao.getImagesForBone(boneId).first()
+        imageDao.getImagesForBone(boneId).first().map { it.localized() }
     }
 
     suspend fun getImageById(imageId: String): ImageEntity? = withContext(Dispatchers.IO) {
-        imageDao.getImageById(imageId)
+        imageDao.getImageById(imageId)?.localized()
     }
 
     fun searchAll(query: String): Flow<List<SearchResultItem>> {
@@ -244,6 +254,9 @@ class OrthoRepository(
         if (trimmed.isEmpty()) {
             return getHighYieldBones().map { list ->
                 list.map {
+                    // BoneSummary, not BoneEntity: getHighYieldBones already
+                    // resolved the language when it built these, so reading the
+                    // plain fields here is both correct and already French.
                     SearchResultItem(
                         id = it.id,
                         boneId = it.id,
@@ -272,11 +285,11 @@ class OrthoRepository(
                     SearchResultItem(
                         id = "b_${bone.id}",
                         boneId = bone.id,
-                        boneName = bone.name,
-                        region = bone.region,
+                        boneName = bone.displayName,
+                        region = bone.displayRegion,
                         sectionType = null,
-                        title = bone.name,
-                        snippet = "${bone.subtitle} • ${bone.classificationSummary}",
+                        title = bone.displayName,
+                        snippet = "${bone.displaySubtitle} • ${bone.displayClassificationSummary}",
                         isPearl = false
                     )
                 )
@@ -285,13 +298,13 @@ class OrthoRepository(
             // Add section matches
             sectionMatches.forEach { sec ->
                 val parent = boneMap[sec.boneId]
-                val isPearlMatch = sec.pearls.contains(trimmed, ignoreCase = true)
+                val isPearlMatch = sec.displayPearls.contains(trimmed, ignoreCase = true)
                 val snippetText = if (isPearlMatch) {
-                    sec.pearls
-                } else if (sec.warnings.contains(trimmed, ignoreCase = true)) {
-                    "⚠️ ${sec.warnings}"
+                    sec.displayPearls
+                } else if (sec.displayWarnings.contains(trimmed, ignoreCase = true)) {
+                    "⚠️ ${sec.displayWarnings}"
                 } else {
-                    sec.content.take(150) + "..."
+                    sec.displayContent.take(150) + "..."
                 }
 
                 results.add(
@@ -301,7 +314,7 @@ class OrthoRepository(
                         boneName = parent?.name ?: "Procedure",
                         region = parent?.region ?: "General",
                         sectionType = sec.sectionType,
-                        title = sec.title,
+                        title = sec.displayTitle,
                         snippet = snippetText,
                         isPearl = isPearlMatch
                     )

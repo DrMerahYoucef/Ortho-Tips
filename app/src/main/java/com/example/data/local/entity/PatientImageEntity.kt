@@ -9,6 +9,9 @@ enum class ImageCategory {
     RADIOLOGY, CLINICAL_PHOTO, DOCUMENT_SCAN, OTHER
 }
 
+/** Photos and videos share one table; this says which a row is. */
+enum class MediaType { IMAGE, VIDEO }
+
 /**
  * An image attached to a patient. [timelineEventId] and [surgeryId] are optional
  * links so the same image row can surface both on the patient's media grid and,
@@ -59,5 +62,13 @@ data class PatientImageEntity(
     /** Serialized (JSON) list of annotation overlays: arrows, text labels, shapes. */
     val annotationsJson: String = "",
     val notes: String = "",
+    /** [MediaType] name. Videos keep a first-frame image in [thumbnailPath]. */
+    val mediaType: String = MediaType.IMAGE.name,
+    /** Video length in milliseconds, 0 for photos. */
+    val durationMs: Long = 0,
+    /**
+     * When the photo or video was taken, read from its metadata (EXIF or the
+     * video container) rather than when it was added to the patient.
+     */
     val capturedAt: Long = System.currentTimeMillis()
 )

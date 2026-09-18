@@ -19,6 +19,7 @@ object PatientMediaStorage {
     private const val IMAGES_DIR_NAME = "images"
     private const val THUMBS_DIR_NAME = "thumbs"
     private const val DOCUMENTS_DIR_NAME = "documents"
+    private const val VIDEOS_DIR_NAME = "videos"
 
     fun rootDir(context: Context): File = File(context.filesDir, ROOT_DIR_NAME)
 
@@ -39,6 +40,12 @@ object PatientMediaStorage {
 
     fun newThumbnailFile(context: Context, patientId: String, imageId: String): File =
         File(thumbsDir(context, patientId), "$imageId.jpg")
+
+    fun videosDir(context: Context, patientId: String): File =
+        File(patientDir(context, patientId), VIDEOS_DIR_NAME).also { it.mkdirs() }
+
+    fun newVideoFile(context: Context, patientId: String, mediaId: String, extension: String = "mp4"): File =
+        File(videosDir(context, patientId), "$mediaId.$extension")
 
     fun newDocumentFile(context: Context, patientId: String, documentId: String, extension: String): File =
         File(documentsDir(context, patientId), "$documentId.$extension")

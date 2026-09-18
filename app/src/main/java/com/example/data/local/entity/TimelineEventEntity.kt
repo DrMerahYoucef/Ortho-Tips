@@ -29,6 +29,13 @@ data class TimelineEventEntity(
     val eventDate: Long,
     val title: String,
     val description: String = "",
+    /** [Attendance] name: whether the patient turned up for this appointment. */
+    val attendance: String = Attendance.UNKNOWN.name,
+    /** Short note added from the widget or the form. */
+    val remark: String = "",
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )
+
+/** Did the patient come to the appointment? */
+enum class Attendance { UNKNOWN, ATTENDED, MISSED }
