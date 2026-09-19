@@ -2,3 +2,4 @@ build/
 .gradle/
 local.properties
 *.keystore
+.kotlin/
