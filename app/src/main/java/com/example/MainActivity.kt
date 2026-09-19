@@ -61,6 +61,10 @@ import com.example.data.prefs.FontSizePreference
 import com.example.data.prefs.ThemeMode
 import com.example.di.AppModule
 import com.example.util.AppLocale
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import com.example.navigation.OrthoDestinations
 import com.example.ui.screens.bone.BoneDetailScreen
 import com.example.ui.screens.activation.ActivationScreen
@@ -127,6 +131,15 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
         enableEdgeToEdge()
 
         val appModule = (application as OrthoApplication).appModule
+
+        // The home-screen widget cannot read the DataStore in time, so hand it the
+        // theme choice each time it changes (and once at launch for older installs).
+        lifecycleScope.launch {
+            appModule.settingsRepository.settingsFlow
+                .map { it.themeMode }
+                .distinctUntilChanged()
+                .collect { com.example.widget.WidgetTheme.setMode(applicationContext, it) }
+        }
 
         setContent {
             val appViewModel: AppViewModel = viewModel(

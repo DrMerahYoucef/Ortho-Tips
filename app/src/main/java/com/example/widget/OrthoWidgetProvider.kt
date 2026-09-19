@@ -68,17 +68,28 @@ class OrthoWidgetProvider : AppWidgetProvider() {
         val dayOffset = prefs(context).getInt(keyDay(id), 0)
         val locale = context.resources.configuration.locales[0]
 
+        // Light or dark, following the app's theme setting rather than the launcher's.
+        val dark = WidgetTheme.isDark(context)
+        val palette = WidgetTheme.palette(dark)
+
         val views = RemoteViews(context.packageName, R.layout.widget_ortho).apply {
+            setInt(R.id.widget_root, "setBackgroundResource", palette.background)
             setInt(
                 R.id.widget_tab_shifts, "setBackgroundResource",
-                if (showingShifts) R.drawable.widget_tab_selected else R.drawable.widget_tab_unselected
+                if (showingShifts) palette.tabSelected else palette.tabUnselected
             )
             setInt(
                 R.id.widget_tab_events, "setBackgroundResource",
-                if (showingShifts) R.drawable.widget_tab_unselected else R.drawable.widget_tab_selected
+                if (showingShifts) palette.tabUnselected else palette.tabSelected
             )
-            setTextColor(R.id.widget_tab_shifts, if (showingShifts) SELECTED_TEXT else DIMMED_TEXT)
-            setTextColor(R.id.widget_tab_events, if (showingShifts) DIMMED_TEXT else SELECTED_TEXT)
+            setTextColor(R.id.widget_tab_shifts, if (showingShifts) palette.tabSelectedText else palette.tabDimmedText)
+            setTextColor(R.id.widget_tab_events, if (showingShifts) palette.tabDimmedText else palette.tabSelectedText)
+            setInt(R.id.widget_prev_day, "setBackgroundResource", palette.tabUnselected)
+            setInt(R.id.widget_next_day, "setBackgroundResource", palette.tabUnselected)
+            setTextColor(R.id.widget_prev_day, palette.arrow)
+            setTextColor(R.id.widget_next_day, palette.arrow)
+            setTextColor(R.id.widget_day_label, palette.dayLabel)
+            setTextColor(R.id.widget_empty, palette.empty)
             setTextViewText(R.id.widget_tab_events, context.getString(R.string.widget_events_tab))
 
             // The day bar only makes sense on the appointments tab.
@@ -108,6 +119,7 @@ class OrthoWidgetProvider : AppWidgetProvider() {
         }
         manager.updateAppWidget(id, views)
         manager.notifyAppWidgetViewDataChanged(id, R.id.widget_list)
+        WidgetTheme.markRendered(context, dark)
     }
 
     companion object {
@@ -122,8 +134,6 @@ class OrthoWidgetProvider : AppWidgetProvider() {
         const val EXTRA_ATTENDED = "attended"
         const val EXTRA_OPEN_EVENT = "open_event"
         private const val PREFS = "ortho_widget"
-        private const val SELECTED_TEXT = 0xFFFFFFFF.toInt()
-        private const val DIMMED_TEXT = 0x99FFFFFF.toInt()
 
         private fun prefs(context: Context) =
             context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -191,7 +201,7 @@ class OrthoWidgetProvider : AppWidgetProvider() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
             )
 
-        /** Called after shifts, appointments or the language change. */
+        /** Called after shifts, appointments, the language or the theme change. */
         fun refreshAll(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
             val ids = manager.getAppWidgetIds(ComponentName(context, OrthoWidgetProvider::class.java))

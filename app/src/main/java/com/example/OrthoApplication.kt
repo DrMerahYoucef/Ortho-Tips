@@ -1,6 +1,8 @@
 package com.example
 
 import android.app.Application
+import android.content.ComponentCallbacks
+import android.content.res.Configuration
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import com.example.data.local.ContentLocale
@@ -28,6 +30,15 @@ class OrthoApplication : Application(), ImageLoaderFactory {
         // recreate, so every read below sees a stable value.
         ContentLocale.refresh(this)
         restoreTelegramDriveSession()
+        // When the app follows the phone's theme, recolour the widget as soon as
+        // the phone switches between light and dark.
+        registerComponentCallbacks(object : ComponentCallbacks {
+            override fun onConfigurationChanged(newConfig: Configuration) {
+                com.example.widget.WidgetTheme.refreshIfStale(this@OrthoApplication)
+            }
+            @Deprecated("Deprecated in Java")
+            override fun onLowMemory() = Unit
+        })
     }
 
     /**

@@ -37,6 +37,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -219,10 +227,43 @@ private fun StepHeading(title: String, body: String) {
     Text(text = title, style = MaterialTheme.typography.headlineSmall)
     Spacer(Modifier.height(10.dp))
     Text(
-        text = body,
+        text = linkifyTelegram(body),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
+}
+
+private const val TELEGRAM_API_HOST = "my.telegram.org"
+
+/**
+ * Turns every "my.telegram.org" in a step's text into a tappable link that opens
+ * the site in the browser. Works for both languages, since the host name itself
+ * is never translated.
+ */
+@Composable
+private fun linkifyTelegram(body: String): AnnotatedString {
+    val linkStyles = TextLinkStyles(
+        style = SpanStyle(
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Medium,
+            textDecoration = TextDecoration.Underline
+        )
+    )
+    return buildAnnotatedString {
+        var from = 0
+        while (true) {
+            val at = body.indexOf(TELEGRAM_API_HOST, from)
+            if (at < 0) {
+                append(body.substring(from))
+                break
+            }
+            append(body.substring(from, at))
+            withLink(LinkAnnotation.Url("https://$TELEGRAM_API_HOST", linkStyles)) {
+                append(TELEGRAM_API_HOST)
+            }
+            from = at + TELEGRAM_API_HOST.length
+        }
+    }
 }
 
 @Composable

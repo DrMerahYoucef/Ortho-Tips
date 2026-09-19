@@ -34,10 +34,14 @@ private class OrthoWidgetFactory(
      */
     private var context: Context = com.example.util.AppLocale.wrap(baseContext)
 
+    /** Re-read with the data, so a theme switch recolours the rows too. */
+    private var palette = WidgetTheme.palette(WidgetTheme.isDark(baseContext))
+
     override fun onCreate() = Unit
 
     override fun onDataSetChanged() {
         context = com.example.util.AppLocale.wrap(baseContext)
+        palette = WidgetTheme.palette(WidgetTheme.isDark(baseContext))
         val locale = context.resources.configuration.locales[0] ?: Locale.getDefault()
         rows = runCatching {
             if (showShifts) WidgetData.shifts(context, locale)
@@ -56,6 +60,9 @@ private class OrthoWidgetFactory(
         return RemoteViews(context.packageName, R.layout.widget_row).apply {
             setTextViewText(R.id.row_title, row.title)
             setTextViewText(R.id.row_subtitle, row.subtitle)
+            setInt(R.id.row_container, "setBackgroundResource", palette.row)
+            setTextColor(R.id.row_title, palette.title)
+            setTextColor(R.id.row_subtitle, palette.subtitle)
             val color = ContextCompat.getColor(
                 context,
                 when (row.accent) {
