@@ -729,10 +729,10 @@ class TelegramDriveSettingsViewModel(
             if (full) SyncScope.FULL else SyncScope.INCREMENTAL
         )
         _uiState.value = _uiState.value.copy(lastReport = report)
-        if (report.uploadsQueued > 0 || report.downloadsQueued > 0) {
-            val settings = drive.current()
-            scheduler.kickTransfers(settings.syncOnWifiOnly, settings.syncWhileChargingOnly)
-        }
+        // Always kick: rows already waiting are not counted as "queued" by the
+        // sync, so this button used to leave them pending.
+        val settings = drive.current()
+        scheduler.kickTransfers(settings.syncOnWifiOnly, settings.syncWhileChargingOnly)
         message(
             if (report.succeeded) {
                 text(R.string.drive_msg_queued_both, report.uploadsQueued, report.downloadsQueued)

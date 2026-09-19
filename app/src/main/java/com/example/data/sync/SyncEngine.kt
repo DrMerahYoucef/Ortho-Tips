@@ -110,8 +110,10 @@ class SyncEngine(
     ): SyncReport = withContext(Dispatchers.IO) {
         val startedAt = System.currentTimeMillis()
         val errors = mutableListOf<String>()
+        DriveLog.i(TAG, "Sync ${scope.name.lowercase()} started")
 
         if (driveRepository.backend() != StorageBackend.TELEGRAM) {
+            DriveLog.w(TAG, "Sync skipped: Telegram Drive is not the selected backend")
             return@withContext SyncReport(
                 scope = scope,
                 errors = listOf("Telegram Drive is not the selected backend"),
@@ -119,6 +121,7 @@ class SyncEngine(
             )
         }
         if (!telegram.isReady()) {
+            DriveLog.w(TAG, "Sync skipped: Telegram Drive is not connected")
             return@withContext SyncReport(
                 scope = scope,
                 errors = listOf("Telegram Drive is not connected"),

@@ -85,6 +85,10 @@ interface TransferQueueDao {
     )
     suspend fun findActiveFor(storageKey: String): TransferQueueEntity?
 
+    /** When the earliest waiting transfer becomes due; null when nothing waits. */
+    @Query("SELECT MIN(nextAttemptAt) FROM transfer_queue WHERE state = 'PENDING'")
+    suspend fun nextPendingAt(): Long?
+
     @Query("SELECT COUNT(*) FROM transfer_queue WHERE direction = :direction AND state = 'PENDING'")
     fun observePendingCount(direction: String): Flow<Int>
 

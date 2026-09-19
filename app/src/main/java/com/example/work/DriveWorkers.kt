@@ -1,6 +1,7 @@
 package com.example.work
 
 import android.content.Context
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -8,8 +9,10 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import androidx.work.await
 import androidx.work.workDataOf
 import com.example.OrthoApplication
 import com.example.data.local.entity.TransferDirection
@@ -21,8 +24,11 @@ import com.example.data.storage.StorageObjectKind
 import com.example.data.storage.TransferProgress
 import com.example.data.sync.SyncScope
 import com.example.data.telegram.DriveLog
+import com.example.data.telegram.TelegramAuthState
 import com.example.di.AppModule
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.math.min
@@ -50,12 +56,29 @@ class TransferQueueWorker(
         val telegram = module.telegramStorageProvider
         val local = module.localStorageProvider
 
+        // Signed out or back on local storage: nothing to drain, and no reason to
+        // keep waking up.
+        val driveSettings = module.telegramDriveRepository.current()
+        if (!driveSettings.setupCompleted) return Result.success()
+
+        // A background start is a cold process: the Telegram session is still
+        // being restored by OrthoApplication when this runs. Wait for it rather
+        // than retrying at once — WorkManager's retry backoff doubles up to five
+        // hours, and while this unique work sat in that backoff every new
+        // "kick" (KEEP policy) was ignored, so uploads stayed pending for hours.
         if (!telegram.isReady()) {
-            DriveLog.d(TAG, "Drive not ready; retrying later")
-            return Result.retry()
+            withTimeoutOrNull(READY_WAIT_MILLIS) {
+                module.telegramClient.authState.first { it == TelegramAuthState.Ready }
+            }
+        }
+        if (!telegram.isReady()) {
+            DriveLog.d(TAG, "Drive not ready; checking again shortly")
+            SyncScheduler(applicationContext).scheduleWakeUp(NOT_READY_RETRY_MILLIS)
+            return Result.success()
         }
 
         queueDao.requeueInterrupted(System.currentTimeMillis())
+        DriveLog.i(TAG, "Transfer worker started (attempt ${runAttemptCount + 1})")
         var processed = 0
         var failures = 0
 
@@ -95,18 +118,28 @@ class TransferQueueWorker(
             }
 
             var terminal: TransferProgress? = null
-            flow.collect { progress ->
-                when (progress) {
-                    is TransferProgress.Running -> setProgress(
-                        workDataOf(
-                            PROGRESS_KEY to row.storageKey,
-                            PROGRESS_FRACTION to progress.fraction
+            try {
+                flow.collect { progress ->
+                    when (progress) {
+                        is TransferProgress.Running -> setProgress(
+                            workDataOf(
+                                PROGRESS_KEY to row.storageKey,
+                                PROGRESS_FRACTION to progress.fraction
+                            )
                         )
-                    )
 
-                    is TransferProgress.Completed, is TransferProgress.Failed -> terminal = progress
-                    else -> Unit
+                        is TransferProgress.Completed, is TransferProgress.Failed -> terminal = progress
+                        else -> Unit
+                    }
                 }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                // A throw inside the transfer (drive not initialised, network
+                // drop, TDLib error) used to crash the whole worker and leave the
+                // row RUNNING. Treat it as a retryable failure of this row only.
+                DriveLog.w(TAG, "Transfer of ${key.fileName} threw", error)
+                terminal = TransferProgress.Failed(error.message ?: "Transfer error", retryable = true)
             }
 
             when (val outcome = terminal) {
@@ -141,13 +174,18 @@ class TransferQueueWorker(
             processed++
         }
 
-        if (processed == 0) return Result.success()
-        DriveLog.i(TAG, "Transfer batch: $processed handled, $failures failed")
+        if (processed > 0) DriveLog.i(TAG, "Transfer batch: $processed handled, $failures failed")
 
-        // More work waiting means another pass; WorkManager re-enqueues under the
-        // same constraints instead of this worker running unbounded.
-        val remaining = queueDao.claimBatch(System.currentTimeMillis(), 1).isNotEmpty()
-        return if (remaining) Result.retry() else Result.success()
+        // Rows backed off after a failure are only due later. Nothing else wakes
+        // them, so this worker books its own next pass for the moment the
+        // earliest one is due (or straight away if the batch limit cut it short).
+        // Result.retry() is avoided: its growing backoff is what parked uploads.
+        val nextDue = queueDao.nextPendingAt()
+        if (nextDue != null) {
+            val delay = (nextDue - System.currentTimeMillis()).coerceAtLeast(MIN_WAKE_UP_MILLIS)
+            SyncScheduler(applicationContext).scheduleWakeUp(delay)
+        }
+        return Result.success()
     }
 
     /** Exponential backoff capped so a flood-wait never parks work for hours. */
@@ -179,9 +217,35 @@ class TransferQueueWorker(
         const val PROGRESS_KEY = "storage_key"
         const val PROGRESS_FRACTION = "fraction"
         private const val BATCH_LIMIT = 40
+        private const val READY_WAIT_MILLIS = 90_000L
+        private const val NOT_READY_RETRY_MILLIS = 60_000L
+        private const val MIN_WAKE_UP_MILLIS = 15_000L
         private const val MAX_ATTEMPTS = 6
         private const val BASE_BACKOFF_MILLIS = 15_000L
         private const val MAX_BACKOFF_MILLIS = 30 * 60 * 1000L
+    }
+}
+
+/**
+ * Fires when backed-off transfers become due and restarts the queue worker
+ * with the user's current Wi-Fi / charging preferences.
+ */
+class TransferWakeUpWorker(
+    context: Context,
+    params: WorkerParameters
+) : CoroutineWorker(context, params) {
+
+    override suspend fun doWork(): Result {
+        val settings = applicationContext.appModule().telegramDriveRepository.current()
+        if (!settings.setupCompleted) return Result.success()
+        SyncScheduler(applicationContext).kickTransfers(
+            settings.syncOnWifiOnly, settings.syncWhileChargingOnly
+        )
+        return Result.success()
+    }
+
+    companion object {
+        const val UNIQUE_NAME = "ortho_drive_transfers_wake_up"
     }
 }
 
@@ -199,6 +263,7 @@ class SyncWorker(
         val module = applicationContext.appModule()
         val settings = module.telegramDriveRepository.current()
         if (!settings.setupCompleted) return Result.success()
+        DriveLog.d(TAG, "Sync worker started")
 
         val scope = if (inputData.getBoolean(INPUT_FULL, false)) {
             SyncScope.FULL
@@ -207,16 +272,21 @@ class SyncWorker(
         }
 
         val report = module.syncEngine.sync(scope)
+
+        // Always make sure the queue is being drained. Rows queued earlier are not
+        // counted in uploadsQueued (they are already active), and a sync with an
+        // error — e.g. one unreadable object in the channel — used to skip the
+        // kick entirely, stranding every pending upload.
+        SyncScheduler(applicationContext).kickTransfers(
+            settings.syncOnWifiOnly, settings.syncWhileChargingOnly
+        )
+
         if (!report.succeeded) {
             DriveLog.w(TAG, "Sync reported ${report.errors.size} errors")
             return Result.retry()
         }
 
         module.syncEngine.cleanUp(CLEANUP_RETENTION_MILLIS)
-
-        if (report.uploadsQueued > 0 || report.downloadsQueued > 0) {
-            SyncScheduler(applicationContext).kickTransfers()
-        }
         return Result.success()
     }
 
@@ -308,14 +378,49 @@ class SyncScheduler(private val context: Context) {
         )
     }
 
-    /** Ensures the queue worker is scheduled; no-op when one is already queued. */
-    fun kickTransfers(wifiOnly: Boolean = false, chargingOnly: Boolean = false) {
+    /**
+     * Makes sure the queue worker runs now.
+     *
+     * The old KEEP policy kept whatever was already enqueued — including a job
+     * parked in WorkManager's retry backoff, which grows to five hours and is
+     * saved across app updates. Every kick was then silently ignored, which is
+     * why uploads sat at "en attente". Now a waiting job is replaced; only a
+     * worker that is actually running is left alone, with a fresh run chained
+     * after it so rows queued meanwhile are not missed.
+     */
+    suspend fun kickTransfers(wifiOnly: Boolean = false, chargingOnly: Boolean = false) {
+        val running = runCatching {
+            workManager.getWorkInfosForUniqueWork(TransferQueueWorker.UNIQUE_NAME).await()
+        }.getOrDefault(emptyList()).any { it.state == WorkInfo.State.RUNNING }
+
         val request = OneTimeWorkRequestBuilder<TransferQueueWorker>()
             .setConstraints(constraints(wifiOnly, chargingOnly))
+            .setBackoffCriteria(BackoffPolicy.LINEAR, 30, TimeUnit.SECONDS)
             .build()
         workManager.enqueueUniqueWork(
             TransferQueueWorker.UNIQUE_NAME,
-            ExistingWorkPolicy.KEEP,
+            if (running) ExistingWorkPolicy.APPEND_OR_REPLACE else ExistingWorkPolicy.REPLACE,
+            request
+        )
+        DriveLog.d(
+            TAG,
+            "Transfers kicked (" + (if (running) "after the running pass" else "starting now") +
+                    ", wifiOnly=$wifiOnly, chargingOnly=$chargingOnly)"
+        )
+    }
+
+    /**
+     * Books a future pass of the queue worker. Uses its own unique name so it
+     * never replaces (and so cancels) a transfer in progress; when it fires it
+     * simply kicks the real worker.
+     */
+    fun scheduleWakeUp(delayMillis: Long) {
+        val request = OneTimeWorkRequestBuilder<TransferWakeUpWorker>()
+            .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)
+            .build()
+        workManager.enqueueUniqueWork(
+            TransferWakeUpWorker.UNIQUE_NAME,
+            ExistingWorkPolicy.REPLACE,
             request
         )
     }
@@ -324,6 +429,7 @@ class SyncScheduler(private val context: Context) {
     fun restartTransfers(wifiOnly: Boolean, chargingOnly: Boolean) {
         val request = OneTimeWorkRequestBuilder<TransferQueueWorker>()
             .setConstraints(constraints(wifiOnly, chargingOnly))
+            .setBackoffCriteria(BackoffPolicy.LINEAR, 30, TimeUnit.SECONDS)
             .build()
         workManager.enqueueUniqueWork(
             TransferQueueWorker.UNIQUE_NAME,
@@ -336,6 +442,7 @@ class SyncScheduler(private val context: Context) {
         workManager.cancelUniqueWork(SyncWorker.UNIQUE_PERIODIC)
         workManager.cancelUniqueWork(SyncWorker.UNIQUE_ONE_SHOT)
         workManager.cancelUniqueWork(TransferQueueWorker.UNIQUE_NAME)
+        workManager.cancelUniqueWork(TransferWakeUpWorker.UNIQUE_NAME)
         workManager.cancelUniqueWork(UNIQUE_RECORD_SNAPSHOT)
     }
 
@@ -343,12 +450,14 @@ class SyncScheduler(private val context: Context) {
         Constraints.Builder()
             .setRequiredNetworkType(if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
             .setRequiresCharging(chargingOnly)
-            // Patient media can be large; refusing to start on a nearly full disk
-            // is cheaper than failing halfway through a 200 MB CT series.
-            .setRequiresStorageNotLow(true)
+            // No "storage not low" constraint: on a phone Android considers low
+            // on space it held every upload back forever, without a single log
+            // line. A genuinely full disk now fails the transfer visibly instead.
             .build()
 
     companion object {
+        private const val TAG = "SyncScheduler"
+
         /** WorkManager's floor for a periodic request. */
         private const val MIN_INTERVAL_HOURS = 1L
         private const val UNIQUE_RECORD_SNAPSHOT = "ortho_drive_record_snapshot"

@@ -78,6 +78,11 @@ class OrthoApplication : Application(), ImageLoaderFactory {
                 }
                 appModule.telegramClient.start(credentials)
                 SyncScheduler(this@OrthoApplication).applyPreferences()
+                // Drain anything left pending by an earlier run (killed worker,
+                // app closed mid-upload) as soon as the session is back.
+                SyncScheduler(this@OrthoApplication).kickTransfers(
+                    settings.syncOnWifiOnly, settings.syncWhileChargingOnly
+                )
                 DriveLog.d(TAG, "Telegram Drive session restored")
             }.onFailure {
                 DriveLog.e(TAG, "Could not restore the Telegram Drive session", it)
