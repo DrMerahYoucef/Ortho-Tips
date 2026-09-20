@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_tab_extensions">Extensions</string>
+
+    <string name="ext_your_extensions">Vos extensions</string>
+    <string name="ext_import">Importer</string>
+    <string name="ext_import_file">Importer un fichier .html</string>
+    <string name="ext_empty_title">Aucune extension</string>
+    <string name="ext_empty_body">Une extension est un petit programme .html autonome. Importez-en un pour l’ouvrir ici, hors ligne, à côté de vos classifications.</string>
+    <string name="ext_privacy_note">Les extensions tournent hors ligne, isolées, et ne voient pas vos patients. Ce qu’elles enregistrent reste sur ce téléphone et disparaît quand vous les supprimez.</string>
+    <string name="ext_meta">v%1$s · %2$s</string>
+    <string name="ext_uses_internet">Utilise Internet</string>
+    <string name="ext_more">Plus d’options</string>
+
+    <string name="ext_action_open">Ouvrir</string>
+    <string name="ext_action_export">Exporter le fichier</string>
+    <string name="ext_action_clear_data">Effacer ses données</string>
+    <string name="ext_action_delete">Supprimer</string>
+
+    <string name="ext_delete_title">Supprimer %1$s ?</string>
+    <string name="ext_delete_body">L’extension et tout ce qu’elle a enregistré sur ce téléphone seront supprimés. Si elle a son propre bouton de sauvegarde, faites d’abord une sauvegarde.</string>
+    <string name="ext_delete">Supprimer</string>
+    <string name="ext_clear_title">Effacer les données de %1$s ?</string>
+    <string name="ext_clear_body">Tout ce que l’extension a enregistré (progression, réglages) est effacé. L’extension reste installée.</string>
+    <string name="ext_clear">Effacer</string>
+    <string name="ext_cancel">Annuler</string>
+
+    <string name="ext_msg_installed">%1$s installée</string>
+    <string name="ext_msg_updated">%1$s mise à jour en version %2$s</string>
+    <string name="ext_msg_import_unreadable">Impossible de lire ou d’enregistrer ce fichier.</string>
+    <string name="ext_msg_import_not_html">Ce fichier n’est pas un programme HTML.</string>
+    <string name="ext_msg_import_too_large">Fichier trop volumineux (15 Mo maximum).</string>
+    <string name="ext_msg_deleted">%1$s supprimée</string>
+    <string name="ext_msg_data_cleared">Données de %1$s effacées</string>
+    <string name="ext_msg_exported">Fichier de l’extension enregistré</string>
+    <string name="ext_msg_export_failed">Impossible d’enregistrer le fichier</string>
+
+    <string name="ext_back">Retour</string>
+    <string name="ext_reload">Recharger</string>
+    <string name="ext_console">Console</string>
+    <string name="ext_console_errors">Console (%1$d erreurs)</string>
+    <string name="ext_console_empty">Aucun message.</string>
+    <string name="ext_clear_console">Vider</string>
+    <string name="ext_close">Fermer</string>
+    <string name="ext_not_found">Cette extension n’est plus installée.</string>
+    <string name="ext_file_saved">Fichier enregistré</string>
+    <string name="ext_file_save_failed">Impossible d’enregistrer le fichier</string>
+</resources>

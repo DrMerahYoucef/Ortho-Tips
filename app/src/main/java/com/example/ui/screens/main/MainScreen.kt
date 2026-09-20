@@ -40,6 +40,7 @@ import com.example.ui.screens.home.HomeScreen
 import com.example.ui.screens.patients.PatientListScreen
 import com.example.viewmodel.AppointmentsViewModel
 import com.example.viewmodel.ClassificationViewModel
+import com.example.viewmodel.ExtensionsViewModel
 import com.example.viewmodel.HomeViewModel
 import com.example.viewmodel.PatientDataTransferViewModel
 import com.example.viewmodel.PatientListViewModel
@@ -70,6 +71,7 @@ fun MainScreen(
     onNavigateToBoneDetail: (String) -> Unit,
     onNavigateToImport: () -> Unit,
     onNavigateToClassificationChapter: (String) -> Unit,
+    onNavigateToExtension: (String) -> Unit,
     onNavigateToPatientDetail: (String) -> Unit,
     onNavigateToAddPatient: () -> Unit,
     onNavigateToSurgeonProfile: () -> Unit,
@@ -146,13 +148,17 @@ fun MainScreen(
                         classificationViewModel = viewModel<ClassificationViewModel>(
                             factory = ClassificationViewModel.provideFactory(appModule.classificationRepository)
                         ),
+                        extensionsViewModel = viewModel<ExtensionsViewModel>(
+                            factory = ExtensionsViewModel.provideFactory(appModule.extensionRepository)
+                        ),
                         onNavigateToChapter = onNavigateToChapter,
                         onNavigateToBoneDetail = onNavigateToBoneDetail,
                         onNavigateToSearch = onNavigateToSearch,
                         onNavigateToSaved = onNavigateToSaved,
                         onNavigateToImport = onNavigateToImport,
                         onNavigateToSettings = onNavigateToSettings,
-                        onNavigateToClassificationChapter = onNavigateToClassificationChapter
+                        onNavigateToClassificationChapter = onNavigateToClassificationChapter,
+                        onNavigateToExtension = onNavigateToExtension
                     )
 
                     MainTab.AGENDA -> AgendaScreen(

@@ -70,6 +70,7 @@ import com.example.ui.screens.bone.BoneDetailScreen
 import com.example.ui.screens.activation.ActivationScreen
 import com.example.ui.screens.bone.BoneListScreen
 import com.example.ui.screens.classifications.ClassificationChapterDetailRoute
+import com.example.ui.screens.extensions.ExtensionRunnerScreen
 import com.example.ui.screens.importer.ImportScreen
 import com.example.ui.screens.main.MainScreen
 import com.example.ui.screens.patients.ImageAnnotationScreen
@@ -345,6 +346,9 @@ fun OrthoAppNavHost(appModule: AppModule) {
                 },
                 onNavigateToClassificationChapter = { chapterFile ->
                     navController.navigateFrom(entry, OrthoDestinations.classificationChapterDetail(chapterFile))
+                },
+                onNavigateToExtension = { extensionId ->
+                    navController.navigateFrom(entry, OrthoDestinations.extensionRunner(extensionId))
                 },
                 onNavigateToPatientDetail = { patientId ->
                     navController.navigateFrom(entry, OrthoDestinations.patientDetail(patientId))
@@ -766,6 +770,18 @@ fun OrthoAppNavHost(appModule: AppModule) {
             )
             StorageDiagnosticsScreen(
                 viewModel = diagnosticsViewModel,
+                onNavigateBack = { navController.popFrom(entry) }
+            )
+        }
+
+        composable(
+            route = OrthoDestinations.EXTENSION_RUNNER,
+            arguments = listOf(navArgument("extensionId") { type = NavType.StringType })
+        ) { entry ->
+            val extensionId = entry.arguments?.getString("extensionId")?.let { Uri.decode(it) }.orEmpty()
+            ExtensionRunnerScreen(
+                repository = appModule.extensionRepository,
+                extensionId = extensionId,
                 onNavigateBack = { navController.popFrom(entry) }
             )
         }

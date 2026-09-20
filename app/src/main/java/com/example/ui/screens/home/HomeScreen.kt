@@ -65,6 +65,8 @@ import com.example.R
 import com.example.data.local.model.ChapterWithCount
 import com.example.ui.components.BoneRow
 import com.example.ui.screens.classifications.ClassificationChaptersScreen
+import com.example.ui.screens.extensions.ExtensionsTab
+import com.example.viewmodel.ExtensionsViewModel
 import com.example.viewmodel.ClassificationViewModel
 import com.example.viewmodel.ClinicalStudiesTab
 import com.example.viewmodel.HomeViewModel
@@ -77,12 +79,14 @@ import androidx.compose.ui.res.stringResource
 fun HomeScreen(
     viewModel: HomeViewModel,
     classificationViewModel: ClassificationViewModel,
+    extensionsViewModel: ExtensionsViewModel,
     onNavigateToChapter: (String, String) -> Unit,
     onNavigateToBoneDetail: (String) -> Unit,
     onNavigateToSearch: () -> Unit,
     onNavigateToSaved: () -> Unit,
     onNavigateToImport: () -> Unit,
     onNavigateToClassificationChapter: (String) -> Unit,
+    onNavigateToExtension: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -159,7 +163,7 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Operative Guides / Classifications sub-tabs
+            // Operative Guides / Classifications / Extensions sub-tabs
             PrimaryTabRow(
                 selectedTabIndex = uiState.activeTab.ordinal,
                 containerColor = MaterialTheme.colorScheme.background,
@@ -200,6 +204,13 @@ fun HomeScreen(
                     ClassificationChaptersScreen(
                         viewModel = classificationViewModel,
                         onOpenChapter = { chapter -> onNavigateToClassificationChapter(chapter.file) }
+                    )
+                }
+
+                ClinicalStudiesTab.EXTENSIONS -> {
+                    ExtensionsTab(
+                        viewModel = extensionsViewModel,
+                        onOpenExtension = onNavigateToExtension
                     )
                 }
             }

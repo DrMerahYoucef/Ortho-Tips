@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Extensions: small HTML programs run inside the app (see guide.md). -->
+<resources>
+    <string name="home_tab_extensions">Extensions</string>
+
+    <string name="ext_your_extensions">Your extensions</string>
+    <string name="ext_import">Import</string>
+    <string name="ext_import_file">Import an .html file</string>
+    <string name="ext_empty_title">No extensions yet</string>
+    <string name="ext_empty_body">An extension is a small self-contained .html program. Import one to open it here, offline, next to your classifications.</string>
+    <string name="ext_privacy_note">Extensions run offline in a sandbox and cannot see your patients. What they save stays on this phone and is erased when you delete them.</string>
+    <string name="ext_meta">v%1$s · %2$s</string>
+    <string name="ext_uses_internet">Uses the internet</string>
+    <string name="ext_more">More options</string>
+
+    <string name="ext_action_open">Open</string>
+    <string name="ext_action_export">Export the file</string>
+    <string name="ext_action_clear_data">Clear its data</string>
+    <string name="ext_action_delete">Delete</string>
+
+    <string name="ext_delete_title">Delete %1$s?</string>
+    <string name="ext_delete_body">The extension and everything it saved on this phone will be removed. If it has its own backup button, save a backup first.</string>
+    <string name="ext_delete">Delete</string>
+    <string name="ext_clear_title">Clear the data of %1$s?</string>
+    <string name="ext_clear_body">Everything the extension saved (progress, settings) is erased. The extension itself stays installed.</string>
+    <string name="ext_clear">Clear</string>
+    <string name="ext_cancel">Cancel</string>
+
+    <string name="ext_msg_installed">%1$s installed</string>
+    <string name="ext_msg_updated">%1$s updated to version %2$s</string>
+    <string name="ext_msg_import_unreadable">This file could not be read or saved.</string>
+    <string name="ext_msg_import_not_html">This file is not an HTML program.</string>
+    <string name="ext_msg_import_too_large">This file is too large (15 MB maximum).</string>
+    <string name="ext_msg_deleted">%1$s deleted</string>
+    <string name="ext_msg_data_cleared">Data of %1$s cleared</string>
+    <string name="ext_msg_exported">Extension file saved</string>
+    <string name="ext_msg_export_failed">Could not save the file</string>
+
+    <string name="ext_back">Back</string>
+    <string name="ext_reload">Reload</string>
+    <string name="ext_console">Console</string>
+    <string name="ext_console_errors">Console (%1$d errors)</string>
+    <string name="ext_console_empty">No messages.</string>
+    <string name="ext_clear_console">Clear</string>
+    <string name="ext_close">Close</string>
+    <string name="ext_not_found">This extension is no longer installed.</string>
+    <string name="ext_file_saved">File saved</string>
+    <string name="ext_file_save_failed">Could not save the file</string>
+</resources>

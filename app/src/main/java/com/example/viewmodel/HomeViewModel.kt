@@ -15,7 +15,8 @@ import kotlinx.coroutines.launch
 
 enum class ClinicalStudiesTab(@androidx.annotation.StringRes val labelRes: Int) {
     OPERATIVE_GUIDES(com.example.R.string.home_tab_operative_guides),
-    CLASSIFICATIONS(com.example.R.string.home_tab_classifications)
+    CLASSIFICATIONS(com.example.R.string.home_tab_classifications),
+    EXTENSIONS(com.example.R.string.home_tab_extensions)
 }
 
 data class HomeUiState(

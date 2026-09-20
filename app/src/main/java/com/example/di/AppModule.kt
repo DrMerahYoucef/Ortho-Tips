@@ -74,6 +74,11 @@ class AppModule(private val context: Context) {
         ClassificationRepository(context)
     }
 
+    // Extensions: imported HTML programs (see guide.md)
+    val extensionRepository: com.example.data.extensions.ExtensionRepository by lazy {
+        com.example.data.extensions.ExtensionRepository(context)
+    }
+
     // Patient management module
     private val patientMediaRootDir: File by lazy {
         PatientMediaStorage.rootDir(context)
