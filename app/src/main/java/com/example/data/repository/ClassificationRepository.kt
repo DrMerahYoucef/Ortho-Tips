@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import com.example.data.local.model.ChapterRef
 import com.example.data.local.model.ClassificationChapter
 import com.example.data.local.model.ClassificationIndex
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +20,7 @@ import kotlinx.serialization.json.Json
 class ClassificationRepository(private val context: Context) {
 
     private val json = Json { ignoreUnknownKeys = true }
+    private val customPrefs = context.getSharedPreferences("extension_classifications", Context.MODE_PRIVATE)
 
     private var indexCache: ClassificationIndex? = null
     private val chapterCache = mutableMapOf<String, ClassificationChapter>()
@@ -26,12 +28,32 @@ class ClassificationRepository(private val context: Context) {
     suspend fun getIndex(): ClassificationIndex = withContext(Dispatchers.IO) {
         indexCache ?: run {
             val text = context.assets.open("classifications/index.json").bufferedReader().use { it.readText() }
-            json.decodeFromString<ClassificationIndex>(text).also { indexCache = it }
+            val builtIn = json.decodeFromString<ClassificationIndex>(text)
+            val custom = customPrefs.all.keys.mapNotNull { key ->
+                runCatching { json.decodeFromString<ClassificationChapter>(customPrefs.getString(key, "") ?: "") }
+                    .getOrNull()
+                    ?.let { chapter ->
+                        ChapterRef(
+                            id = chapter.id,
+                            title = chapter.title,
+                            file = customFile(chapter.id),
+                            sectionCount = chapter.sections.size,
+                            classificationCount = chapter.sections.sumOf { it.classifications.size }
+                        )
+                    }
+            }
+            ClassificationIndex(builtIn.chapters + custom).also { indexCache = it }
         }
     }
 
     /** [fileRelativePath] is the "file" field from [ChapterRef], e.g. "data/epaule.json". */
     suspend fun getChapter(fileRelativePath: String): ClassificationChapter = withContext(Dispatchers.IO) {
+        if (fileRelativePath.startsWith(CUSTOM_PREFIX)) {
+            val id = fileRelativePath.removePrefix(CUSTOM_PREFIX)
+            return@withContext customPrefs.getString(id, null)
+                ?.let { json.decodeFromString<ClassificationChapter>(it) }
+                ?: throw IllegalArgumentException("Custom classification not found")
+        }
         chapterCache[fileRelativePath] ?: run {
             val text = context.assets.open("classifications/$fileRelativePath").bufferedReader().use { it.readText() }
             json.decodeFromString<ClassificationChapter>(text).also { chapterCache[fileRelativePath] = it }
@@ -45,5 +67,23 @@ class ClassificationRepository(private val context: Context) {
         }
     } catch (e: Exception) {
         null
+    }
+
+    fun saveCustomChapter(chapter: ClassificationChapter) {
+        customPrefs.edit().putString(chapter.id, json.encodeToString(chapter)).apply()
+        indexCache = null
+    }
+
+    fun deleteCustomChapter(id: String) {
+        customPrefs.edit().remove(id).apply()
+        indexCache = null
+    }
+
+    fun isCustomFile(file: String): Boolean = file.startsWith(CUSTOM_PREFIX)
+
+    private fun customFile(id: String): String = "$CUSTOM_PREFIX$id"
+
+    companion object {
+        private const val CUSTOM_PREFIX = "custom:"
     }
 }

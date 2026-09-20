@@ -187,6 +187,7 @@
     <string name="settings_disclaimer_body">Ortho Tips is an educational and surgical reference tool for orthopedic residents, fellows, and surgeons. It is not a substitute for clinical judgment, official AO/OTA guidelines, or individualized patient care.</string>
     <string name="settings_version">Ortho Tips App • Version %1$s (Build %2$s)</string>
     <string name="nav_studies">Studies</string>
+    <string name="nav_extensions">Extensions</string>
     <string name="nav_patients">Patients</string>
     <string name="nav_settings">Settings</string>
     <string name="bone_row_view_technique">View technique</string>

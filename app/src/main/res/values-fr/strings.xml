@@ -484,6 +484,7 @@
     <string name="home_stat_procedures">Techniques</string>
     <string name="home_stat_saved">Favoris</string>
     <string name="home_stat_notes">Notes</string>
+    <string name="nav_extensions">Extensions</string>
     <string name="home_tab_operative_guides">Guides opératoires</string>
     <string name="home_tab_classifications">Classifications</string>
     <string name="bone_detail_procedure_technique">Technique opératoire</string>

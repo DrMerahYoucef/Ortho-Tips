@@ -6,6 +6,7 @@ import com.example.data.crypto.KeystoreManager
 import com.example.data.crypto.KeystoreTdlibKeyProvider
 import com.example.data.crypto.StreamCrypto
 import com.example.data.crypto.WrappedKeyRepository
+import com.example.data.extensions.ExtensionRepository
 import com.example.data.importer.BoneDatabaseImporter
 import com.example.data.local.OrthoDatabase
 import com.example.data.prefs.PdfOptionsRepository
@@ -72,6 +73,10 @@ class AppModule(private val context: Context) {
     // Static, asset-backed classification reference (read-only, see assets/classifications/)
     val classificationRepository: ClassificationRepository by lazy {
         ClassificationRepository(context)
+    }
+
+    val extensionRepository: ExtensionRepository by lazy {
+        ExtensionRepository(context, streamCrypto, wrappedKeyRepository)
     }
 
     // Patient management module

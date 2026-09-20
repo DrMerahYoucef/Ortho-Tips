@@ -36,7 +36,7 @@ import com.example.R
 import com.example.di.AppModule
 import com.example.ui.components.DriveSpaceBadge
 import com.example.ui.screens.agenda.AgendaScreen
-import com.example.ui.screens.home.HomeScreen
+import com.example.ui.screens.extensions.ExtensionsScreen
 import com.example.ui.screens.patients.PatientListScreen
 import com.example.viewmodel.AppointmentsViewModel
 import com.example.viewmodel.ClassificationViewModel
@@ -44,6 +44,7 @@ import com.example.viewmodel.HomeViewModel
 import com.example.viewmodel.PatientDataTransferViewModel
 import com.example.viewmodel.PatientListViewModel
 import com.example.viewmodel.ShiftsViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 /**
  * The three top-level areas. Search, Saved and Settings are ordinary screens
@@ -55,7 +56,7 @@ enum class MainTab(
     val unselectedIcon: ImageVector,
     val testTag: String
 ) {
-    STUDIES(R.string.nav_studies, Icons.Filled.MenuBook, Icons.Outlined.MenuBook, "nav_home"),
+    EXTENSIONS(R.string.nav_extensions, Icons.Filled.MenuBook, Icons.Outlined.MenuBook, "nav_extensions"),
     AGENDA(R.string.nav_agenda, Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth, "nav_agenda"),
     PATIENTS(R.string.nav_patients, Icons.Filled.People, Icons.Outlined.PeopleOutline, "nav_patients")
 }
@@ -78,6 +79,7 @@ fun MainScreen(
     onNavigateToSearch: () -> Unit,
     onNavigateToSaved: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onOpenExtension: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -87,7 +89,7 @@ fun MainScreen(
         mutableStateOf(
             prefs.getString(KEY_LAST_TAB, null)
                 ?.let { saved -> MainTab.entries.firstOrNull { it.name == saved } }
-                ?: MainTab.STUDIES
+                ?: MainTab.EXTENSIONS
         )
     }
     fun select(tab: MainTab) {
@@ -141,19 +143,22 @@ fun MainScreen(
                 // launch. They live on the Main back-stack entry, so switching tabs
                 // keeps them.
                 when (tab) {
-                    MainTab.STUDIES -> HomeScreen(
-                        viewModel = viewModel(factory = HomeViewModel.provideFactory(appModule.orthoRepository)),
-                        classificationViewModel = viewModel<ClassificationViewModel>(
-                            factory = ClassificationViewModel.provideFactory(appModule.classificationRepository)
-                        ),
-                        onNavigateToChapter = onNavigateToChapter,
-                        onNavigateToBoneDetail = onNavigateToBoneDetail,
-                        onNavigateToSearch = onNavigateToSearch,
-                        onNavigateToSaved = onNavigateToSaved,
-                        onNavigateToImport = onNavigateToImport,
-                        onNavigateToSettings = onNavigateToSettings,
-                        onNavigateToClassificationChapter = onNavigateToClassificationChapter
-                    )
+                    MainTab.EXTENSIONS -> {
+                        val homeViewModel: HomeViewModel = viewModel(
+                            factory = HomeViewModel.provideFactory(appModule.orthoRepository)
+                        )
+                        ExtensionsScreen(
+                            homeState = homeViewModel.uiState.collectAsStateWithLifecycle().value,
+                            classificationViewModel = viewModel(
+                                factory = ClassificationViewModel.provideFactory(appModule.classificationRepository)
+                            ),
+                            classificationRepository = appModule.classificationRepository,
+                            extensionRepository = appModule.extensionRepository,
+                            onOpenChapter = onNavigateToClassificationChapter,
+                            onOpenBoneChapter = onNavigateToChapter,
+                            onOpenExtension = onOpenExtension
+                        )
+                    }
 
                     MainTab.AGENDA -> AgendaScreen(
                         appointmentsViewModel = viewModel<AppointmentsViewModel>(

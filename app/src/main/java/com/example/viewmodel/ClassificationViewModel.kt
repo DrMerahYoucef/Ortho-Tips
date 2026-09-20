@@ -48,6 +48,13 @@ class ClassificationViewModel(
         }
     }
 
+    fun reloadIndex() {
+        chapters = emptyList()
+        currentChapter = null
+        loadedChapterFile = null
+        loadIndex()
+    }
+
     fun openChapter(fileRelativePath: String) {
         // Already showing this chapter — avoid a redundant reload/flash of the loading state.
         if (loadedChapterFile == fileRelativePath && currentChapter != null) return

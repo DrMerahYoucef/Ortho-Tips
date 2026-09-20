@@ -384,9 +384,14 @@ private fun ClassificationBlockView(block: ClassificationBlock) {
                 block.text?.takeIf { it.isNotBlank() }?.let { text ->
                     Text(text = text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 2.dp))
                 }
-                block.bullets.forEach { bullet ->
+                block.bullets.forEachIndexed { index, bullet ->
+                    val marker = when (block.bulletStyle) {
+                        "number" -> "${index + 1}."
+                        "letter" -> "${('A'.code + index).toChar()}."
+                        else -> "•"
+                    }
                     Text(
-                        text = "•  $bullet",
+                        text = "$marker  $bullet",
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(start = 4.dp, top = 3.dp)
                     )
@@ -398,9 +403,14 @@ private fun ClassificationBlockView(block: ClassificationBlock) {
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(start = 12.dp, top = 7.dp)
                     )
-                    sub.bullets.forEach { bullet ->
+                    sub.bullets.forEachIndexed { index, bullet ->
+                        val marker = when (block.bulletStyle) {
+                            "number" -> "${index + 1}."
+                            "letter" -> "${('a'.code + index).toChar()}."
+                            else -> "–"
+                        }
                         Text(
-                            text = "–  $bullet",
+                            text = "$marker  $bullet",
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(start = 24.dp, top = 2.dp)
                         )

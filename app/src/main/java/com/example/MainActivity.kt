@@ -71,6 +71,7 @@ import com.example.ui.screens.activation.ActivationScreen
 import com.example.ui.screens.bone.BoneListScreen
 import com.example.ui.screens.classifications.ClassificationChapterDetailRoute
 import com.example.ui.screens.importer.ImportScreen
+import com.example.ui.screens.extensions.ExtensionRunnerScreen
 import com.example.ui.screens.main.MainScreen
 import com.example.ui.screens.patients.ImageAnnotationScreen
 import com.example.ui.screens.patients.PatientCameraCaptureScreen
@@ -363,7 +364,20 @@ fun OrthoAppNavHost(appModule: AppModule) {
                 },
                 onNavigateToSearch = { navController.navigateFrom(entry, OrthoDestinations.SEARCH) },
                 onNavigateToSaved = { navController.navigateFrom(entry, OrthoDestinations.SAVED) },
-                onNavigateToSettings = { navController.navigateFrom(entry, OrthoDestinations.SETTINGS) }
+                onNavigateToSettings = { navController.navigateFrom(entry, OrthoDestinations.SETTINGS) },
+                onOpenExtension = { id -> navController.navigateFrom(entry, OrthoDestinations.extension(id)) }
+            )
+        }
+
+        composable(
+            route = OrthoDestinations.EXTENSION_RUNNER,
+            arguments = listOf(navArgument("extensionId") { type = NavType.StringType })
+        ) { entry ->
+            val extensionId = entry.arguments?.getString("extensionId")?.let(Uri::decode) ?: ""
+            ExtensionRunnerScreen(
+                extensionId = extensionId,
+                html = runCatching { appModule.extensionRepository.read(extensionId) }.getOrDefault("<html><body>Extension introuvable.</body></html>"),
+                onBack = { navController.popFrom(entry) }
             )
         }
 

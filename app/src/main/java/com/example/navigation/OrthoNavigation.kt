@@ -11,6 +11,7 @@ object OrthoDestinations {
     const val BONE_DETAIL = "bone/{boneId}"
     const val IMAGE_VIEWER = "image/{imageId}"
     const val IMPORT = "import"
+    const val EXTENSION_RUNNER = "extension/{extensionId}"
 
     // Classifications module (static asset-backed reference)
     const val CLASSIFICATION_CHAPTER_DETAIL = "classification_chapter/{chapterFile}"
@@ -48,6 +49,8 @@ object OrthoDestinations {
     fun classificationChapterDetail(chapterFile: String): String {
         return "classification_chapter/${Uri.encode(chapterFile)}"
     }
+
+    fun extension(extensionId: String): String = "extension/${Uri.encode(extensionId)}"
 
     fun patientDetail(patientId: String): String {
         return "patient/${Uri.encode(patientId)}"

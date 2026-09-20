@@ -59,6 +59,7 @@ data class ClassificationEntry(
 @Serializable
 data class ClassificationBlock(
     val type: String,
+    val bulletStyle: String = "bullet",
     val lines: List<String> = emptyList(),
     val label: String? = null,
     val text: String? = null,

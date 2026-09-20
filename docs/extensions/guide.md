@@ -5,16 +5,18 @@ Ortho Tips Android app, or to **adapt an existing HTML program** so it runs well
 inside it. Read it fully before writing code. Follow the rules marked **must**.
 
 > **How to use this file.** Give it to the AI together with your request, for example:
-> *"Using guide.md, make me an Ortho Tips extension that … . Output a single .html file."*
-> Then import the file in the app: **Études** tab → **Extensions** → **Importer**.
+> *"Using guide.md, make me an Ortho Tips extension that … . Output the HTML payload."*
+> The app packages and encrypts that payload as a `.OTips` file. Import it from the
+> **Extensions** tab → **Importer**.
 
 ---
 
 ## 1. What an extension is
 
-An extension is **one self-contained `.html` file**: HTML, CSS and JavaScript in the
-same file, no other files. The app lists it in the **Extensions** tab (next to
-Classifications) and opens it full screen.
+An extension is **one self-contained HTML payload**: HTML, CSS and JavaScript in the
+same file, no other files. On disk and during import/export it is an encrypted
+`.OTips` container, not a readable `.html` file. The app lists it in the
+**Extensions** tab and opens it full screen.
 
 Where it runs:
 
@@ -34,7 +36,8 @@ app with `window.OrthoTips` and fall back to plain web APIs when it is absent.
 
 ## 2. File rules
 
-1. **Must** be a single UTF-8 `.html` file, **15 MB maximum**. Everything is inline.
+1. **Must** be a single UTF-8 HTML payload, **15 MB maximum**. Everything is inline;
+  the app's encrypted container is the only file users import or export: `.OTips`.
 2. **Must** start with `<!DOCTYPE html>`, and have a `<head>` containing
    `<meta charset="utf-8">` and
    `<meta name="viewport" content="width=device-width, initial-scale=1">`.
@@ -91,6 +94,11 @@ browser it is `undefined`.
 ```js
 const HOST = window.OrthoTips || null;   // always feature-detect
 ```
+
+The app injects the bridge only after the `.OTips` container has been decrypted in
+its private WebView. A plain HTML file, a renamed ZIP, or a file encrypted by
+another installation is rejected. The current `.OTips` envelope uses authenticated
+AES-GCM and an app-keystore key; the key is never exported with the file.
 
 ### Properties
 
@@ -199,7 +207,7 @@ in-page UI or `toast` for non-blocking messages.
    - Wrap `JSON.parse` of stored data in `try/catch` and fall back to defaults.
 5. **Backup buttons**: an export that saves `{ app: "<id>", v, date, data }` as
    `.json`, and an import that validates `app` and the shape before replacing
-   anything. Deleting an extension in the app erases its data, so this is the
+  anything. Deleting an extension in the app erases its data, so this is the
    user's only copy.
 6. **Escapes text** before inserting it with `innerHTML`, using an `esc()` helper
    as in the template.
@@ -247,11 +255,14 @@ in-page UI or `toast` for non-blocking messages.
 4. Import the new file. The app replaces the program, keeps the data, and shows
    "updated to version X".
 
+The `.OTips` file must be produced by the app's extension packager/export action.
+Do not rename an HTML file to `.OTips`: the extension will not be accepted.
+
 ---
 
 ## 9. Adapting an existing HTML program (checklist)
 
-This is what was done to `programme-dems.html`:
+This is what was done to the HTML payload of `programme-dems`:
 
 1. Add the metadata block (section 3).
 2. Remove external `<link>` and `<script src>` resources. Inline them, or
@@ -503,12 +514,12 @@ render();
 | File | Role |
 |---|---|
 | `assets/extension_host/ortho-bridge.js` | Builds `window.OrthoTips`, `window.storage`, the `localStorage` redirect and the download routing. Injected first in every page. |
-| `data/extensions/ExtensionRepository.kt` | Import, list, delete, export. Files live in `filesDir/extensions/<id>/index.html`. |
+| `data/extensions/ExtensionRepository.kt` | Decrypt, validate, import, list, delete, export. Files live in `filesDir/extensions/<id>.OTips`. |
 | `data/extensions/OrthoExtension.kt` | Model and parser for the `ortho-ext-*` metadata. |
 | `data/extensions/ExtensionStorage.kt` | Per-extension key/value store (SharedPreferences `ext_data_<id>`). |
-| `ui/screens/extensions/ExtensionBridge.kt` | The `OrthoTipsNative` Java interface behind the bridge. |
+| `ui/screens/extensions/ExtensionWebBridge.kt` | The `OrthoTipsNative` Java interface behind the bridge. |
 | `ui/screens/extensions/ExtensionRunnerScreen.kt` | Full-screen WebView: settings, file picker, save dialog, theme, Back, console. |
-| `ui/screens/extensions/ExtensionsTab.kt` | The list in the Études tab → Extensions. |
+| `ui/screens/extensions/ExtensionsScreen.kt` | The Extensions tab: built-in guides/classifications, editor, import and export. |
 
 To add a new capability, add a method to `ExtensionBridge` (annotated
 `@JavascriptInterface`), expose it through `ortho-bridge.js`, raise

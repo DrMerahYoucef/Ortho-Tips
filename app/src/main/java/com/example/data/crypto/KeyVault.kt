@@ -18,6 +18,7 @@ object CryptoKeys {
     const val CONTENT = "content"
     const val THUMBNAIL = "thumbnail"
     const val TDLIB_DATABASE = "tdlib_db"
+    const val EXTENSIONS = "extensions"
 }
 
 /**
