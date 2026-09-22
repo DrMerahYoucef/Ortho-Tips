@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.components.ZoomableImage
-import com.example.utils.MediaActions
+import com.example.utils.FigureShare
 import com.example.viewmodel.ViewerViewModel
 import kotlinx.coroutines.launch
 import com.example.R
@@ -102,6 +102,7 @@ fun ImageViewerScreen(
         pageCount = { images.size }
     )
     val currentImage = images.getOrNull(pagerState.currentPage) ?: images[0]
+    val shareChooserTitle = stringResource(R.string.image_viewer_share_figure_info)
 
     Scaffold(
         topBar = {
@@ -142,10 +143,13 @@ fun ImageViewerScreen(
                     actions = {
                         IconButton(
                             onClick = {
-                                MediaActions.shareClinicalTip(
-                                    context,
-                                    "${currentImage.figureNumber}: ${currentImage.title}",
-                                    currentImage.description
+                                FigureShare.share(
+                                    context = context,
+                                    imagePath = currentImage.imagePath,
+                                    drawableResName = currentImage.drawableResName,
+                                    title = "${currentImage.figureNumber}: ${currentImage.title}",
+                                    caption = currentImage.description,
+                                    chooserTitle = shareChooserTitle
                                 )
                             }
                         ) {

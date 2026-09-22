@@ -17,7 +17,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-enum class DatabaseConfirmAction { REMOVE, REINITIALIZE, DELETE_PATIENTS }
+/**
+ * Removing the operative guide's data is no longer a setting: it goes with the
+ * Operative Guide extension (Extensions → Manage → Delete).
+ */
+enum class DatabaseConfirmAction { REINITIALIZE, DELETE_PATIENTS }
 
 data class SettingsUiState(
     val userSettings: UserSettings = UserSettings(),
@@ -153,11 +157,6 @@ class SettingsViewModel(
         }
     }
 
-    fun requestRemoveDatabase() {
-        _databaseActionMessage.value = null
-        _pendingDatabaseAction.value = DatabaseConfirmAction.REMOVE
-    }
-
     fun requestReinitializeDatabase() {
         _databaseActionMessage.value = null
         _pendingDatabaseAction.value = DatabaseConfirmAction.REINITIALIZE
@@ -172,10 +171,6 @@ class SettingsViewModel(
         _pendingDatabaseAction.value = null
         viewModelScope.launch {
             when (action) {
-                DatabaseConfirmAction.REMOVE -> {
-                    orthoRepository.removeDatabase()
-                    _databaseActionMessage.value = MSG_DB_REMOVED
-                }
                 DatabaseConfirmAction.REINITIALIZE -> {
                     orthoRepository.reinitializeDatabase()
                     _databaseActionMessage.value = MSG_DB_REINITIALIZED
@@ -199,7 +194,6 @@ class SettingsViewModel(
         // ViewModel never holds English sentences.
         const val MSG_RESTORED = "RESTORED:"
         const val MSG_RESTORE_ERROR = "RESTORE_ERROR:"
-        const val MSG_DB_REMOVED = "DB_REMOVED"
         const val MSG_DB_REINITIALIZED = "DB_REINITIALIZED"
         fun provideFactory(
             settingsRepository: SettingsRepository,

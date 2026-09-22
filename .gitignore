@@ -3,3 +3,15 @@ build/
 local.properties
 *.keystore
 .kotlin/
+
+# Secrets and signing keys: never commit
+.env
+*.jks
+*.p12
+secrets.properties
+
+# Local files
+repomix-output.md
+.idea/
+*.iml
+captures/

@@ -1,5 +1,5 @@
 /*
- * Ortho Tips — extension host bridge (API version 1).
+ * Ortho Tips — extension host bridge (API version 2).
  *
  * Injected as the first script of every extension page, before any of the
  * page's own code. It turns the raw Android interface `OrthoTipsNative` into:
@@ -8,6 +8,11 @@
  *   window.storage     Claude-artifact compatible async key/value storage
  *   localStorage       redirected to the same app-managed store
  *   <a download>       blob:/data: downloads saved through Android's file picker
+ *
+ * Version 2 adds the permission system (extension guide, section 4):
+ * `OrthoTips.permissions`, and the gated `files`, `assets` and `database` APIs.
+ * A gated call without its permission rejects with a PermissionError and never
+ * throws synchronously; the app enforces the same rule natively.
  *
  * Everything an extension saves lives in the app, per extension, and is erased
  * when the extension is deleted or its data is cleared from the Extensions tab.
@@ -36,6 +41,61 @@
     if (!done) return;
     delete pending[id];
     done(value);
+  }
+
+  // ---- permissions ---------------------------------------------------------
+  var granted = Array.isArray(info.permissions) ? info.permissions.map(String) : [];
+  function has(name) { return granted.indexOf(String(name)) !== -1; }
+
+  function PermissionError(permission) {
+    var e = new Error("PermissionError: '" + permission + "' not granted");
+    e.name = 'PermissionError';
+    e.permission = permission;
+    return e;
+  }
+  function denied(permission) {
+    var e = PermissionError(permission);
+    try { console.warn(e.message); } catch (x) {}
+    return Promise.reject(e);
+  }
+
+  // ---- promise-based native calls (files, assets, database) ------------------
+  var calls = {};
+  var callSeq = 0;
+  function call(method, args) {
+    return new Promise(function (resolve, reject) {
+      var id = 'c' + (++callSeq);
+      calls[id] = { resolve: resolve, reject: reject };
+      try { N.call(id, method, JSON.stringify(args || {})); }
+      catch (e) { delete calls[id]; reject(e); }
+    });
+  }
+  function settleCall(id, ok, value) {
+    var c = calls[id];
+    if (!c) return;
+    delete calls[id];
+    if (ok) { c.resolve(value); return; }
+    var message = String(value);
+    var e = new Error(message);
+    if (message.indexOf('PermissionError') === 0) e.name = 'PermissionError';
+    c.reject(e);
+  }
+  function gated(permission, method, args) {
+    return has(permission) ? call(method, args) : denied(permission);
+  }
+  function fromBase64(b64) {
+    var bin = atob(b64);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+  /** Decodes base64 from the app as text (default), 'base64' or 'arraybuffer'. */
+  function decode(b64, as) {
+    if (b64 === null || b64 === undefined) return null;
+    if (as === 'base64') return b64;
+    var bytes = fromBase64(b64);
+    if (as === 'arraybuffer') return bytes.buffer;
+    return new TextDecoder('utf-8').decode(bytes);
   }
 
   // ---- storage -------------------------------------------------------------
@@ -156,6 +216,10 @@
   }
   /** Asks where to save, then writes. Resolves to true when the file was written. */
   function saveFile(fileName, data, mimeType) {
+    if (!has('import_export')) {
+      try { console.warn(PermissionError('import_export').message); } catch (x) {}
+      return Promise.resolve(false);
+    }
     var name = String(fileName || 'fichier');
     var mime = mimeType || (data && data.type) || guessMime(name);
     return toBytes(data).then(function (bytes) {
@@ -199,7 +263,7 @@
   }
 
   var api = {
-    bridgeVersion: 1,
+    bridgeVersion: 2,
     extensionId: String(info.extensionId || ''),
     extensionVersion: String(info.extensionVersion || ''),
     appVersion: String(info.appVersion || ''),
@@ -207,6 +271,42 @@
     theme: info.theme === 'dark' ? 'dark' : 'light',
 
     storage: { get: store.get, set: store.set, remove: store.remove, keys: store.keys },
+
+    permissions: {
+      granted: granted.slice(),
+      has: has
+    },
+    // Requires `storage`: a private folder for data too big for `storage`.
+    files: {
+      write: function (path, data) {
+        if (!has('storage')) return denied('storage');
+        return toBytes(data).then(function (bytes) {
+          return call('files.write', { path: String(path), base64: toBase64(bytes) });
+        });
+      },
+      read: function (path, options) {
+        var as = options && options.as;
+        return gated('storage', 'files.read', { path: String(path) })
+          .then(function (b64) { return decode(b64, as); });
+      },
+      list: function (prefix) {
+        return gated('storage', 'files.list', { prefix: prefix == null ? '' : String(prefix) });
+      },
+      delete: function (path) { return gated('storage', 'files.delete', { path: String(path) }); }
+    },
+    // Requires `assets`: read-only access to other files shipped in the package.
+    assets: {
+      read: function (path, options) {
+        var as = options && options.as;
+        return gated('assets', 'assets.read', { path: String(path) })
+          .then(function (b64) { return decode(b64, as); });
+      }
+    },
+    // Requires `database`: read-only clinical reference data, never patients.
+    database: {
+      query: function (spec) { return gated('database', 'database.query', spec || {}); }
+    },
+
     saveFile: saveFile,
     toast: function (message) { N.toast(String(message)); },
     close: function () { N.close(); },
@@ -215,6 +315,7 @@
 
     // Called by the app, not by extensions.
     __resolve: resolveRequest,
+    __settle: settleCall,
     __setTheme: function (t) {
       var theme = t === 'dark' ? 'dark' : 'light';
       if (theme === api.theme) return;

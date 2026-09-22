@@ -6,6 +6,13 @@ import com.example.data.crypto.KeystoreManager
 import com.example.data.crypto.KeystoreTdlibKeyProvider
 import com.example.data.crypto.StreamCrypto
 import com.example.data.crypto.WrappedKeyRepository
+import com.example.data.extensions.ClassificationsExtensionHandler
+import com.example.data.extensions.ExtensionDatabaseAccess
+import com.example.data.extensions.ExtensionHandlerRegistry
+import com.example.data.extensions.ExtensionRepository
+import com.example.data.extensions.HtmlExtensionHandler
+import com.example.data.extensions.OperativeGuideExtensionHandler
+import com.example.data.extensions.OperativeGuideMigration
 import com.example.data.importer.BoneDatabaseImporter
 import com.example.data.local.OrthoDatabase
 import com.example.data.prefs.PdfOptionsRepository
@@ -69,14 +76,39 @@ class AppModule(private val context: Context) {
         BoneDatabaseImporter(context, database)
     }
 
-    // Static, asset-backed classification reference (read-only, see assets/classifications/)
+    // Classification reference, read from the installed classification extensions
     val classificationRepository: ClassificationRepository by lazy {
-        ClassificationRepository(context)
+        ClassificationRepository(extensionRepository)
     }
 
-    // Extensions: imported HTML programs (see guide.md)
-    val extensionRepository: com.example.data.extensions.ExtensionRepository by lazy {
-        com.example.data.extensions.ExtensionRepository(context)
+    // Extensions: .OTips packages (see docs/extensions/guide.md). Each kind the
+    // app can install is one handler here; adding a kind adds one line.
+    val extensionRepository: ExtensionRepository by lazy {
+        ExtensionRepository(
+            context = context,
+            handlers = ExtensionHandlerRegistry(
+                listOf(
+                    HtmlExtensionHandler(),
+                    OperativeGuideExtensionHandler { orthoRepository },
+                    ClassificationsExtensionHandler()
+                )
+            )
+        )
+    }
+
+    /** Moves operative guide data from before the extension system into its extension. */
+    val operativeGuideMigration: OperativeGuideMigration by lazy {
+        OperativeGuideMigration(extensionRepository, orthoRepository)
+    }
+
+    /** Drafts of the classification editor; published as classification extensions. */
+    val classificationDraftRepository: com.example.data.classification.ClassificationDraftRepository by lazy {
+        com.example.data.classification.ClassificationDraftRepository(context, extensionRepository)
+    }
+
+    /** Read-only reference data for extensions holding the `database` permission. */
+    val extensionDatabaseAccess: ExtensionDatabaseAccess by lazy {
+        ExtensionDatabaseAccess(database)
     }
 
     // Patient management module

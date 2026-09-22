@@ -1,0 +1,16 @@
+{
+  "id": "operative-guide",
+  "kind": "operative-guide",
+  "name": "Operative Guide",
+  "description": "Chapters, operative guides, approaches and figures, with search, bookmarks and case notes. Import your guide data after installing.",
+  "version": "1.0",
+  "icon": "🦴",
+  "author": "Ortho Tips",
+  "permissions": [],
+  "minAppVersionCode": 1,
+  "contentSchema": 1,
+  "attributes": {
+    "name.fr": "Guide opératoire",
+    "description.fr": "Chapitres, guides opératoires, voies d’abord et figures, avec recherche, favoris et notes de cas. Importez vos données du guide après l’installation."
+  }
+}

@@ -6,11 +6,19 @@ inside it. Read it fully before writing code. Follow the rules marked **must**.
 
 > **How to use this file.** Give it to the AI together with your request, for example:
 > *"Using guide.md, make me an Ortho Tips extension that … . Output a single .html file."*
-> Then import the file in the app: **Études** tab → **Extensions** → **Importer**.
+> Then package and install it in the app: **Extensions** tab → **Gérer** → **Importer** →
+> ⋮ → **Convertir un programme HTML en .OTips**. The app writes the `.OTips` file and
+> offers to install it right away. Share the `.OTips` file, never the `.html`.
 
 ---
 
 ## 1. What an extension is
+
+> **Distribution format.** Everything the app installs is an **`.OTips` package**:
+> an encrypted, integrity-checked container (section 15). You write an extension
+> as one `.html` file, following the rules below; the app packages it into an
+> `.OTips` file. Users only ever handle `.OTips` files: they cannot be opened,
+> read or edited outside Ortho Tips, and a damaged or modified file is refused.
 
 An extension is **one self-contained `.html` file**: HTML, CSS and JavaScript in the
 same file, no other files. The app lists it in the **Extensions** tab (next to
@@ -22,13 +30,16 @@ Where it runs:
 |---|---|
 | Engine | Android System WebView (Chromium, recent). Modern JS (ES2020+) and CSS are fine. |
 | Screen | A phone in portrait, about **360–430 px wide**, under the app's top bar. |
-| Network | **Blocked by default.** The file must work fully offline. |
+| Network | **Blocked unless the extension declares and is granted the `internet` permission** (section 4). Without it the file must work fully offline. |
+| Local database | **Blocked unless the extension declares and is granted the `database` permission** (section 4). |
 | Origin | Its own private origin, `https://<id>.ext.orthotips.invalid/`. |
-| Access to the app | Only through `window.OrthoTips` (section 4). It cannot see patients, the database or other extensions. |
+| Access to the app | Only through `window.OrthoTips` (section 5), and only for the capabilities covered by permissions the extension was granted. It never sees other extensions. |
 | Data | Saved by the app, per extension. Deleting the extension erases its data. |
 
 The same file must still **work when opened in a normal browser**. Detect the
 app with `window.OrthoTips` and fall back to plain web APIs when it is absent.
+In a plain browser there is no permission system — the page gets whatever the
+browser itself allows.
 
 ---
 
@@ -38,10 +49,13 @@ app with `window.OrthoTips` and fall back to plain web APIs when it is absent.
 2. **Must** start with `<!DOCTYPE html>`, and have a `<head>` containing
    `<meta charset="utf-8">` and
    `<meta name="viewport" content="width=device-width, initial-scale=1">`.
-3. **Must** contain the metadata block of section 3 near the top of `<head>`.
+3. **Must** contain the metadata block of section 3 near the top of `<head>`,
+   including the `ortho-ext-permissions` tag if the extension needs any (section 4).
 4. **No external resources**: no CDN scripts, no Google Fonts, no remote images.
    Use system fonts, inline SVG, and `data:` URIs for images. Libraries must be
-   pasted inline. The only exception is section 3's `ortho-ext-network`.
+   pasted inline. This rule is about how the file is *built*, not what it may do
+   at runtime — it still applies even to an extension holding the `internet`
+   permission (see section 8).
 5. **One page.** Build different screens as views inside the page and switch them
    in JavaScript. Do not link to other pages or reload with a different URL.
 6. Inside `<script>`, never write the literal text `</script>` in a string.
@@ -64,25 +78,108 @@ quotes, and do not put `>` inside a `content` value.
 <meta name="ortho-ext-icon" content="🎓">
 <!-- optional -->
 <meta name="ortho-ext-author" content="Dr …">
-<meta name="ortho-ext-network" content="allow">
+<meta name="ortho-ext-permissions" content="internet, database, storage">
 ```
 
 | Name | Required | Meaning |
 |---|---|---|
-| `ortho-ext-id` | **yes** | Permanent identity: lowercase letters, digits and `-`, 48 characters maximum. **Never change it** in later versions. Importing a file with an id that is already installed **replaces** the program and **keeps its data**; that is how updates work. |
+| `ortho-ext-id` | **yes** | Permanent identity: lowercase letters, digits and `-`, 48 characters maximum. **Never change it** in later versions. Installing an `.OTips` package whose id is already installed **replaces** the program and **keeps its data**; that is how updates work. |
 | `ortho-ext-name` | **yes** | Name shown in the list and the top bar. Short, about 30 characters. |
 | `ortho-ext-description` | recommended | One sentence, shown under the name (2 lines maximum). |
 | `ortho-ext-version` | recommended | Free text such as `1.0` or `2.3`. Raise it for every new version. |
 | `ortho-ext-icon` | recommended | **One emoji**. The default is 🧩. |
 | `ortho-ext-author` | no | Free text. |
-| `ortho-ext-network` | no | `allow` lets the page load from the internet. Avoid it: the app shows an "uses the internet" badge, and the extension breaks offline. |
+| `ortho-ext-permissions` | no | Comma-separated list of permissions this extension needs, from the table in section 4. Omitting the tag means **no permissions** — the strictest, most compatible default. |
+| `ortho-ext-network` | no — legacy | Old, single-purpose tag from before the permission system. `allow` is treated as a synonym for the `internet` permission. New extensions should use `ortho-ext-permissions` instead; keep this tag only for files written before section 4 existed. |
 
-A file without this block still imports, using `<title>` as its name. Its id is
+A file without this block still packages, using `<title>` as its name. Its id is
 then derived from the title, so updates are less reliable. Always include the block.
 
 ---
 
-## 4. Host API — `window.OrthoTips`
+## 4. Permissions
+
+Extensions can request access to capabilities that used to be blocked outright
+(internet, the local database) or that go beyond the small per-extension
+key/value store (larger file storage, bundled assets, import/export). Access is
+**opt-in, per capability, declared up front** — the same idea as Android app
+permissions.
+
+### 4.1 Available permissions
+
+| Permission | Unlocks | Notes |
+|---|---|---|
+| `internet` | `fetch`, `XMLHttpRequest`, `WebSocket`, and loading remote images/fonts at runtime. | Does **not** relax rule 4 in section 2 — the file itself must still ship complete and inline. This is about what the *running* page may reach out to, e.g. calling a public API for reference data. |
+| `database` | `OrthoTips.database.*` (section 5) — read access to Ortho Tips' local clinical reference data (bones, regions, chapters, figures — see the `clinical-bones-app` data model). | Patient records stay out of scope regardless of this permission; extensions are study/reference tools (section 8). |
+| `storage` | `OrthoTips.files.*` (section 5) — a private on-disk folder for the extension, for data bigger than the ~2 MB key/value store is meant for. | Separate from the always-available `OrthoTips.storage` key/value API, which needs no permission. |
+| `assets` | `OrthoTips.assets.read(path)` (section 5) — read-only access to extra files bundled alongside the extension. | Only meaningful for multi-file extension packages; a single `.html` file has nothing to read here. |
+| `import_export` | `OrthoTips.saveFile(...)` and the file-picker `<input type="file">` flow (section 5). | Previously always available to every extension; now explicit like everything else. |
+| `notifications` *(reserved)* | Scheduling/showing Android notifications. | Not implemented yet. Declaring it is harmless and future-proofs the manifest. |
+| `background` *(reserved)* | Running work while the extension isn't in the foreground. | Not implemented yet, same as above. |
+
+Adding a capability later should mean adding one row here and one value to the
+permission enum (section 14) — nothing else about this system should need to change.
+
+### 4.2 Declaring permissions
+
+List only what is actually used, in the metadata block (section 3):
+
+```html
+<meta name="ortho-ext-permissions" content="internet, database">
+```
+
+No tag, or an empty `content`, means the extension gets none of the capabilities
+above — it behaves exactly like an extension written before this system existed.
+
+### 4.3 Import-time review
+
+On import, the app can show the requester what was asked for, e.g.:
+
+> This extension requests:
+> • Internet access
+> • Local database access
+
+Because every extension currently in use is written and installed by the same
+person who maintains the app, this is kept **informational rather than a hard
+gate**: permissions are granted automatically on import, and the summary is
+there so you notice at a glance if an update suddenly asks for more than the
+previous version did. If extensions are ever shared with or installed by
+someone else, turn this into a blocking **Accept / Cancel** step — nothing in
+the manifest format or the runtime enforcement (4.4) needs to change to do that,
+only the import screen's behavior.
+
+Whatever an extension was granted stays visible afterwards on its **Extension
+Details** screen.
+
+### 4.4 Runtime enforcement
+
+The host must check permissions on every gated call, not just at import:
+
+- Calling a gated API (e.g. `OrthoTips.database.query(...)`) **without** the
+  matching permission must fail gracefully: reject the returned promise with a
+  clear error (e.g. `PermissionError: 'database' not granted`), never throw
+  synchronously or crash the WebView.
+- Network access without `internet` should behave like it does today — requests
+  simply fail (offline-style), not a crash.
+- Denied calls should still be visible in the extension's **⋮ → Console** so a
+  missing permission is easy to diagnose while writing an extension.
+
+### 4.5 Security & best practices
+
+- **Least privilege by default**: no `ortho-ext-permissions` tag = no extra
+  capabilities. This is also what makes every extension written before this
+  section fully backward compatible.
+- **Explicit, per-capability declaration** — no "allow everything" option.
+- **Future-proof**: unknown/reserved values (`notifications`, `background`) can
+  be declared now and simply do nothing until implemented, instead of needing a
+  manifest-format change later.
+- When writing a new extension, only request what it actually calls — it keeps
+  the Extension Details screen an accurate, quick record of what each program
+  can reach.
+
+---
+
+## 5. Host API — `window.OrthoTips`
 
 The app injects this object **before any of the page's scripts run**, so it is
 available synchronously at the top of your first `<script>`. In a normal
@@ -96,7 +193,7 @@ const HOST = window.OrthoTips || null;   // always feature-detect
 
 | Property | Type | Notes |
 |---|---|---|
-| `bridgeVersion` | number | `1` for this guide. |
+| `bridgeVersion` | number | `2` for this guide (raised from `1` for the permission system). |
 | `extensionId` | string | The `ortho-ext-id` of this file. |
 | `extensionVersion` | string | The installed version. |
 | `appVersion` | string | Ortho Tips version name. |
@@ -105,7 +202,17 @@ const HOST = window.OrthoTips || null;   // always feature-detect
 
 The app also sets `data-ortho-theme="light|dark"` on `<html>`.
 
-### Storage (synchronous)
+### Permissions
+
+```js
+OrthoTips.permissions.granted        // → array of granted permission names, e.g. ['internet','database']
+OrthoTips.permissions.has('internet') // → boolean
+```
+
+Check `has()` before relying on a gated feature so the extension can show a
+sensible message instead of just letting a call fail.
+
+### Storage (synchronous, no permission needed)
 
 ```js
 OrthoTips.storage.get(key)          // → string | null
@@ -115,7 +222,8 @@ OrthoTips.storage.keys(prefix)      // → sorted array of keys starting with pr
 ```
 
 The limits are 200 characters per key and 5 MB per value. Keep the total under
-about 2 MB: store JSON, not images.
+about 2 MB: store JSON, not images. For anything bigger, request `storage` and
+use `OrthoTips.files` instead (below).
 
 Programs written for other environments also keep working, because the same
 store is exposed two more ways:
@@ -131,7 +239,67 @@ store is exposed two more ways:
 Do not use IndexedDB, cookies or Cache Storage. They bypass the app, so they are
 not erased with the extension and not reliable.
 
-### Files
+### Network — requires `internet`
+
+With `internet` granted, standard `fetch()` / `XMLHttpRequest` / `WebSocket`
+work as they would on any web page. Without it, they fail the same way they
+would offline. Rule 4 in section 2 still applies: the extension file itself
+must not *depend* on the network to load — only optional, in-use features
+(e.g. "fetch the latest guideline PDF") should reach for it.
+
+### Local database — requires `database`
+
+Implemented shape (read-only; values are always bound, never concatenated):
+
+```js
+const rows = await OrthoTips.database.query({
+  table: 'bones',                 // 'chapters' | 'bones' | 'sections' | 'images'
+  where: { chapterId: 'chap_1' }, // equality on listed columns (optional)
+  search: 'clavicle',             // LIKE over the table's text columns (optional)
+  orderBy: 'orderIndex', descending: false,
+  limit: 100, offset: 0           // limit is capped at 500
+});                               // → array of plain row objects
+```
+
+Columns: `chapters` (id, title, description, titleFr, descriptionFr, icon,
+orderIndex) · `bones` (id, chapterId, name, subtitle, region, traumaType,
+classificationSummary, nameFr, subtitleFr, regionFr, classificationSummaryFr,
+orderIndex, isHighYield) · `sections` (id, boneId, sectionType, title, content,
+pearls, warnings, titleFr, contentFr, pearlsFr, warningsFr, orderIndex) ·
+`images` (id, boneId, sectionId, title, description, titleFr, descriptionFr,
+figureNumber, tags). Patient tables and local file paths are never reachable.
+
+```js
+const rows = await OrthoTips.database.query(/* … */);
+```
+
+Read access to Ortho Tips' local clinical reference data. The exact query
+shape is defined alongside the implementation (section 14) — treat this as the
+contract: **Promise-based, rejects with a `PermissionError` if `database` isn't
+granted**, and never exposes patient records.
+
+### Larger file storage — requires `storage`
+
+```js
+await OrthoTips.files.write(path, data);   // data: string, Blob, ArrayBuffer or Uint8Array
+const data = await OrthoTips.files.read(path);
+await OrthoTips.files.list(prefix);
+```
+
+A private on-disk area for an extension, for data too big or too structured
+for the key/value store above.
+
+### Bundled assets — requires `assets`
+
+```js
+const text = await OrthoTips.assets.read('data/questions.json');
+```
+
+Read-only access to extra files shipped alongside the extension package. Not
+useful for a plain single `.html` file (section 1) — relevant once an
+extension ships more than one file.
+
+### Files — import/export, requires `import_export`
 
 ```js
 // Save: opens Android's "save as" screen. Resolves true if the file was written.
@@ -145,6 +313,8 @@ const ok = await OrthoTips.saveFile('backup-2026-09-19.json', jsonString, 'appli
 - The usual browser download trick (`<a download href="blob:…">` and `.click()`)
   also works in the app; it is routed to `saveFile`. Calling `saveFile` directly
   gives you the true/false result.
+- Every extension using its own JSON backup/restore (section 6, point 5) needs
+  this permission — it's the most commonly used one after the default storage.
 
 ### Theme
 
@@ -182,9 +352,10 @@ in-page UI or `toast` for non-blocking messages.
 
 ---
 
-## 5. Behaviour every extension must have
+## 6. Behaviour every extension must have
 
-1. **Works offline** and **in a normal browser** (section 1).
+1. **Works offline** and **in a normal browser** (section 1), unless it holds
+   `internet` and is knowingly using it for an optional feature.
 2. **Light and dark themes** through CSS variables on `html[data-theme="dark"]`.
    Follow `OrthoTips.theme` in the app, and `prefers-color-scheme` in a browser.
 3. **Mobile first**: readable at 360 px wide, no horizontal scrolling, touch
@@ -197,18 +368,58 @@ in-page UI or `toast` for non-blocking messages.
    - On load, pass stored data through a `migrate()` function. When the shape
      changes, raise the schema number and convert old data. Never discard it.
    - Wrap `JSON.parse` of stored data in `try/catch` and fall back to defaults.
-5. **Backup buttons**: an export that saves `{ app: "<id>", v, date, data }` as
-   `.json`, and an import that validates `app` and the shape before replacing
-   anything. Deleting an extension in the app erases its data, so this is the
-   user's only copy.
+5. **Backup buttons** (needs `import_export`): an export that saves
+   `{ app: "<id>", v, date, data }` as `.json`, and an import that validates
+   `app` and the shape before replacing anything. Deleting an extension in the
+   app erases its data, so this is the user's only copy.
 6. **Escapes text** before inserting it with `innerHTML`, using an `esc()` helper
    as in the template.
 7. **Fast**: build the content once, avoid heavy libraries, and keep data as a
    JS constant inside the file.
+8. **Keyboard-safe sheets, dialogs and fixed bars.** Inside the app the page runs
+   in a WebView whose visible height changes when the keyboard opens (the app may
+   resize the page, or the keyboard may cover it). A panel that works in Chrome
+   can end up **stuck off-screen** in the app. Always:
+   - **Never focus a field automatically** when a panel opens: no `autofocus`, no
+     `input.focus()` in the opening code. Opening the keyboard mid-animation makes
+     the WebView resize and scroll, and the panel stays below the screen. Let the
+     user tap the field.
+   - **Make the resting state the visible state.** Style the panel where it should
+     end up, and animate *into* it with a CSS `@keyframes` animation. Do not hide
+     it with `transform: translateY(100%)` and rely on a class added in
+     `requestAnimationFrame` or a `transition` to bring it in.
+   - **Size it from what is really visible**, not from `vh`: `visualViewport`
+     gives the visible height and how much the keyboard covers.
+   - **Bring the tapped field into view** once the keyboard is up.
+
+   ```css
+   .sheet{position:fixed;left:0;right:0;bottom:var(--kb,0px);
+     max-height:calc(var(--vh,100vh) - 24px);overflow:auto;
+     animation:sheet-in .25s ease both}
+   @keyframes sheet-in{from{transform:translateY(100%)}to{transform:none}}
+   @media (prefers-reduced-motion: reduce){.sheet{animation:none}}
+   ```
+   ```js
+   function fitViewport(){
+     const vv = window.visualViewport, root = document.documentElement.style;
+     const visible = vv ? vv.height : innerHeight;
+     const keyboard = vv ? Math.max(0, innerHeight - vv.height - vv.offsetTop) : 0;
+     root.setProperty('--vh', visible + 'px'); root.setProperty('--kb', keyboard + 'px');
+   }
+   if (window.visualViewport) { visualViewport.addEventListener('resize', fitViewport);
+     visualViewport.addEventListener('scroll', fitViewport); }
+   addEventListener('resize', fitViewport); fitViewport();
+   sheet.addEventListener('focusin', e => {             // once per sheet
+     if (!e.target.matches('input,select,textarea')) return;
+     setTimeout(() => { fitViewport(); e.target.scrollIntoView({block:'center'}); }, 320);
+   });
+   ```
+   The same applies to anything `position: fixed` that holds inputs (search bars,
+   dialogs, bottom toolbars).
 
 ---
 
-## 6. Design so it feels part of Ortho Tips
+## 7. Design so it feels part of Ortho Tips
 
 - Clean Material-like cards with rounded corners (about 16 px), a subtle border
   or shadow, and 16 px page padding.
@@ -224,44 +435,52 @@ in-page UI or `toast` for non-blocking messages.
 
 ---
 
-## 7. What does not work (do not use)
+## 8. What does not work (do not use)
 
 | Avoid | Why / use instead |
 |---|---|
-| CDN scripts, web fonts, remote images | Network is blocked. Inline everything. |
+| Building the file so it *needs* a CDN script, web font, or remote image just to load | Rule 4 (section 2) is unconditional — inline everything, even with `internet` granted. Reach for the network only for optional, in-use features once the page has already loaded. |
 | `window.open`, `target="_blank"` for internal pages, multi-page links | One page only. External `https://` links open in the phone's browser, which is fine for references. |
 | `<form>` submitting to a URL | Use `addEventListener('submit', e => e.preventDefault())` and handle it in JS. |
-| Service workers, `Notification`, geolocation, camera, microphone, clipboard read | Not available in the extension sandbox. |
-| IndexedDB, cookies, Cache Storage | Not managed by the app. Use `OrthoTips.storage` or `localStorage`. |
+| Service workers, `Notification`, geolocation, camera, microphone, clipboard read | Not available in the extension sandbox (the reserved `notifications` permission, section 4, will cover notifications once implemented). |
+| IndexedDB, cookies, Cache Storage | Not managed by the app. Use `OrthoTips.storage`, or `OrthoTips.files` with `storage`. |
 | `<input type="file" multiple>` | One file at a time. |
 | Assuming a desktop width | Design for 360 px first. |
-| Patient-identifying data | Extensions are for study and reference tools. Keep patient data in the app itself. |
+| Patient-identifying data | Extensions are for study and reference tools. Even with `database`, patient records stay out of scope — keep them in the app itself. |
+| `autofocus` / `focus()` when a sheet or dialog opens | Opens the keyboard mid-animation; in the app's WebView the panel is left stuck off-screen. Let the user tap the field (section 6, point 8). |
+| `vh` / `100vh` to size fixed panels | Not updated for the keyboard in a WebView. Use the visible height from `visualViewport` (section 6, point 8). |
+| Panels shown only by a `transition` started in `requestAnimationFrame` | If the frame or transition does not run, the panel stays hidden. Make the visible position the resting style and animate with `@keyframes`. |
+| Requesting a permission "just in case" | Ask for what the extension actually calls (section 4.5). |
 
 ---
 
-## 8. Updating an extension
+## 9. Updating an extension
 
 1. Keep the **same `ortho-ext-id`**.
 2. Raise `ortho-ext-version`.
 3. If the saved-data shape changed, raise the schema number and extend `migrate()`.
-4. Import the new file. The app replaces the program, keeps the data, and shows
+4. If the set of permissions changed, update `ortho-ext-permissions` — the
+   import-time summary (section 4.3) will reflect the new list.
+5. Package it again (section 1) and install the new `.OTips`. The app replaces the program, keeps the data, and shows
    "updated to version X".
 
 ---
 
-## 9. Adapting an existing HTML program (checklist)
+## 10. Adapting an existing HTML program (checklist)
 
 This is what was done to `programme-dems.html`:
 
-1. Add the metadata block (section 3).
+1. Add the metadata block (section 3), including `ortho-ext-permissions` for
+   anything the program already does that maps to section 4 (network calls,
+   its own file import/export, …).
 2. Remove external `<link>` and `<script src>` resources. Inline them, or
    replace fonts with system stacks (keep the original font first in the stack
    so it still shows in a browser where it is installed).
 3. At the top of the script, add `const HOST = window.OrthoTips || null;`.
 4. Theme: if `HOST`, hide the page's own theme switch, call
    `applyTheme(HOST.theme)`, and subscribe with `HOST.onThemeChange`.
-5. Export: if `HOST`, use `await HOST.saveFile(name, json, 'application/json')`.
-   Keep the blob download for browsers.
+5. Export: if `HOST`, use `await HOST.saveFile(name, json, 'application/json')`
+   (needs `import_export`). Keep the blob download for browsers.
 6. Back: if the program has tabs or views, register `HOST.onBack` to return to
    the main view first.
 7. Any text that says "saved in this browser" should say "saved in Ortho Tips on
@@ -270,39 +489,53 @@ This is what was done to `programme-dems.html`:
 
 ---
 
-## 10. Testing before importing
+## 11. Testing before importing
 
 1. Open the file in desktop Chrome, turn on device mode (DevTools) at **360 × 740**,
    and check light and dark (DevTools → Rendering → prefers-color-scheme).
 2. Use every feature, reload the page, and confirm the data is still there.
 3. Export a backup, change something, restore the backup, and confirm the change is undone.
 4. Watch the DevTools console: there must be **no errors**.
-5. In the app: import it, open it, switch the app theme, press Back from a
-   secondary view, then use **⋮ → Console** in the extension's top bar to see
-   any JavaScript errors from the phone.
+5. In the app: package it as `.OTips`, install it, open it, switch the app theme,
+   press Back from a secondary view, then use **⋮ → Console** in the extension's
+   top bar to see any JavaScript errors from the phone.
+   **Also in the app, not only in a browser:** open **every** sheet and dialog, tap
+   each field so the keyboard opens, and check nothing is cut off or hidden
+   under the keyboard (section 6, point 8). Chrome does not reproduce this.
+6. If the extension uses a gated feature (network, database, files, assets),
+   confirm it fails gracefully — no crash, a clear message or fallback — when
+   the matching permission is missing, then confirm it works once granted.
 
 ---
 
-## 11. Troubleshooting
+## 12. Troubleshooting
 
 | Symptom | Likely cause |
 |---|---|
 | "This file is not an HTML program" | The file has no `<html>`, `<head>`, `<body>` or `<script>` tag near the start. |
 | Import created a second copy instead of updating | `ortho-ext-id` changed or is missing. |
+| « Ce fichier n’est pas une extension .OTips » | You picked the `.html`; package it first (section 1). |
+| « Cette extension est endommagée ou a été modifiée » | The file was altered, truncated or corrupted in transfer. Export or package it again. |
+| « … créé par une ancienne version de test » | An unencrypted package from a pre-release build. Export it again from the app. |
 | Blank page | A JavaScript error at load: check ⋮ → Console. Often a remote script that could not load. |
 | Fonts or icons missing | They were loaded from the internet. Inline them or use system fonts / inline SVG. |
 | Data gone after an update | The id changed, or `migrate()` discarded the old shape. |
-| Export does nothing | The file picker was cancelled (`saveFile` resolved `false`). |
+| Export does nothing | The file picker was cancelled (`saveFile` resolved `false`), or `import_export` isn't in `ortho-ext-permissions`. |
 | Theme does not follow the app | The code did not use `OrthoTips.theme` / `onThemeChange`, or the page hard-codes colors instead of CSS variables. |
+| A gated call silently rejects | The needed permission isn't listed in `ortho-ext-permissions` — check with `OrthoTips.permissions.has(...)` and the console (⋮ → Console). |
+| A bottom sheet or dialog opens cut off, only a field visible at the bottom (fine in Chrome) | A field is focused automatically on opening, or the panel is sized in `vh` / shown by a `requestAnimationFrame` transition. Apply section 6, point 8. |
+| Import summary lists more than expected | A later version's `ortho-ext-permissions` grew — compare it against what the code actually calls. |
 
 ---
 
-## 12. Starter template
+## 13. Starter template
 
 A complete, working extension that shows every pattern above: metadata, host
 detection, storage with schema and migration, debounced saves, light/dark
 theme, two views with Back handling, export and import. Copy it and replace
-the content.
+the content. It requests no permissions — it only uses the always-available
+key/value store and `saveFile`/file-input for its own backup, so it works
+identically before and after the permission system.
 
 ```html
 <!DOCTYPE html>
@@ -498,18 +731,61 @@ render();
 
 ---
 
-## 13. For developers: where the host lives in the app
+## 14. For developers: where the host lives in the app
 
 | File | Role |
 |---|---|
-| `assets/extension_host/ortho-bridge.js` | Builds `window.OrthoTips`, `window.storage`, the `localStorage` redirect and the download routing. Injected first in every page. |
-| `data/extensions/ExtensionRepository.kt` | Import, list, delete, export. Files live in `filesDir/extensions/<id>/index.html`. |
-| `data/extensions/OrthoExtension.kt` | Model and parser for the `ortho-ext-*` metadata. |
-| `data/extensions/ExtensionStorage.kt` | Per-extension key/value store (SharedPreferences `ext_data_<id>`). |
-| `ui/screens/extensions/ExtensionBridge.kt` | The `OrthoTipsNative` Java interface behind the bridge. |
-| `ui/screens/extensions/ExtensionRunnerScreen.kt` | Full-screen WebView: settings, file picker, save dialog, theme, Back, console. |
-| `ui/screens/extensions/ExtensionsTab.kt` | The list in the Études tab → Extensions. |
+| `data/extensions/otips/OTipsFormat.kt` | Container layout, errors, limits, signature hook. |
+| `data/extensions/otips/OTipsCrypto.kt` | Header and chunked payload encryption (AES-256-GCM, HKDF-SHA256), key ring. |
+| `data/extensions/otips/OTipsReader.kt` / `OTipsWriter.kt` | Streaming verification + extraction; deterministic, encrypted writing. Also compiled into `buildSrc`. |
+| `data/extensions/ExtensionManifest.kt` | Manifest model and validation; version ordering. |
+| `data/extensions/ExtensionPermission.kt` | The permissions of section 4.1 — single source of truth. |
+| `data/extensions/ExtensionKind.kt` + `ExtensionHandler.kt` | Kinds (`html`, `operative-guide`, `classifications`) and the handler interface: adding a kind = one handler registered in `di/AppModule.kt`. |
+| `data/extensions/ExtensionRepository.kt` | Inspect, install (atomic, verified), update, delete, export, HTML → `.OTips`, legacy migration. Layout: `filesDir/extensions/<id>/{install.json,content/,files/}`. |
+| `data/extensions/*ExtensionHandler*`, `OperativeGuideExtension.kt`, `ClassificationsExtension.kt` | Kind-specific validation and activation. |
+| `OperativeGuideMigration` (in `OperativeGuideExtension.kt`) | For updates only: guide data already on the phone gets its extension installed silently. Nothing is ever installed automatically on a new installation; bundled extensions are installed by the user from the import screen. |
+| `ui/screens/extensions/ExtensionBridge.kt` + `assets/extension_host/ortho-bridge.js` | `window.OrthoTips` (bridge v2); permissions enforced on every call. |
+| `ui/screens/extensions/ExtensionImportScreen.kt` | Bundled / updates / external / installed, and the import-time review (4.3). |
+| `ui/screens/extensions/ExtensionsTab.kt` | Manager: open, details (granted permissions), export, clear data, delete. |
+| `app/src/extensions/<id>/` + `buildSrc` (`packBundledExtensions`) | Sources of bundled extensions, packed into encrypted `.OTips` assets at build time. |
+| `data/classification/*`, `ui/screens/classifications/ClassificationEditorScreens.kt` | The Word-style classification editor; publishes classification packs as `.OTips`. |
 
-To add a new capability, add a method to `ExtensionBridge` (annotated
-`@JavascriptInterface`), expose it through `ortho-bridge.js`, raise
-`bridgeVersion`, and document it here.
+## 15. The `.OTips` format and its protection
+
+- **Container v2**: magic, version, flags, an **encrypted header block**
+  (manifest, sizes, hashes), the **encrypted payload** (a ZIP of the content),
+  a reserved signature block, and a SHA-256 trailer over the whole file.
+- **Encryption**: every package has its own keys, derived with HKDF-SHA256 from
+  the app key and a random salt. The header is sealed with AES-256-GCM; the
+  payload with AES-256-GCM in 64 KB chunks, each bound to the header, its index
+  and an end marker, so nothing can be altered, reordered, truncated or swapped
+  between files. Large packages stream without being held in memory.
+- **Validation** before anything is installed: trailer checksum, header and every
+  chunk authenticated, plain-content SHA-256, manifest rules (id, kind, safe
+  paths), size limits (zip-bomb safe), and the kind's own checks (e.g. every
+  classification figure exists). Installation is atomic: a refused or failed
+  package leaves the previous version untouched.
+- **Versioning**: container version, manifest `version` (ordered numerically),
+  `minAppVersionCode`, per-kind `contentSchema`, and a key id for key rotation.
+  Unencrypted version-1 files from pre-release builds are refused as outdated.
+- **Signatures (prepared)**: the `SIGNED` flag and signature block are part of
+  the format and `OTipsSignatureVerifier` is called during verification; no
+  publisher key is enforced yet.
+- **Protection level, honestly**: files cannot be read or edited with ordinary
+  tools, and any modification is detected. The app key ships inside the app, as
+  it must for the app to decrypt offline; a determined reverse engineer with the
+  APK could in principle extract it. Publisher signatures (above) are the step
+  that closes that gap for official packages.
+
+## 16. Built-in kinds
+
+- **Operative guide** (`operative-guide`): the package enables the guide; its
+  content is the user's own `bones_database.zip`, imported afterwards from the
+  guide's tab and never bundled. Deleting the extension deletes that data
+  (bookmarks and notes are kept).
+- **Classifications** (`classifications`): packs of chapters (JSON) and figures.
+  Several packs can be installed; they are shown together and in the patient
+  picker. Create or edit them with the **classification editor** (Classifications
+  tab → ✎): paste text, select lines, apply Title / Subtitle / Sub-subtitle /
+  headings, text, notes, bullet / numbered / lettered lists nested at any depth,
+  images and tables; **Publish** installs the pack, **Export** shares its `.OTips`.

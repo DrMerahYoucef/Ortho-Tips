@@ -70,6 +70,7 @@ import com.example.ui.screens.bone.BoneDetailScreen
 import com.example.ui.screens.activation.ActivationScreen
 import com.example.ui.screens.bone.BoneListScreen
 import com.example.ui.screens.classifications.ClassificationChapterDetailRoute
+import com.example.ui.screens.extensions.ExtensionImportScreen
 import com.example.ui.screens.extensions.ExtensionRunnerScreen
 import com.example.ui.screens.importer.ImportScreen
 import com.example.ui.screens.main.MainScreen
@@ -99,6 +100,13 @@ import com.example.data.local.entity.ImageCategory
 import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.BoneDetailViewModel
 import com.example.viewmodel.ClassificationViewModel
+import com.example.viewmodel.ExtensionImportViewModel
+import com.example.viewmodel.ClassificationDocumentViewModel
+import com.example.viewmodel.ClassificationDraftViewModel
+import com.example.viewmodel.ClassificationEditorHomeViewModel
+import com.example.ui.screens.classifications.ClassificationDocumentScreen
+import com.example.ui.screens.classifications.ClassificationDraftScreen
+import com.example.ui.screens.classifications.ClassificationEditorHomeScreen
 import com.example.viewmodel.ImageAnnotationViewModel
 import com.example.viewmodel.ImportViewModel
 import com.example.viewmodel.MediaCaptureViewModel
@@ -350,6 +358,12 @@ fun OrthoAppNavHost(appModule: AppModule) {
                 onNavigateToExtension = { extensionId ->
                     navController.navigateFrom(entry, OrthoDestinations.extensionRunner(extensionId))
                 },
+                onNavigateToExtensionImport = {
+                    navController.navigateFrom(entry, OrthoDestinations.EXTENSION_IMPORT)
+                },
+                onNavigateToClassificationEditor = {
+                    navController.navigateFrom(entry, OrthoDestinations.CLASSIFICATION_EDITOR)
+                },
                 onNavigateToPatientDetail = { patientId ->
                     navController.navigateFrom(entry, OrthoDestinations.patientDetail(patientId))
                 },
@@ -402,7 +416,6 @@ fun OrthoAppNavHost(appModule: AppModule) {
                     )
                 ),
                 onNavigateBack = { navController.popFrom(entry) },
-                onNavigateToImport = { navController.navigateFrom(entry, OrthoDestinations.IMPORT) },
                 onNavigateToTelegramDrive = {
                     navController.navigateFrom(entry, OrthoDestinations.TELEGRAM_DRIVE_SETTINGS)
                 }
@@ -781,7 +794,70 @@ fun OrthoAppNavHost(appModule: AppModule) {
             val extensionId = entry.arguments?.getString("extensionId")?.let { Uri.decode(it) }.orEmpty()
             ExtensionRunnerScreen(
                 repository = appModule.extensionRepository,
+                databaseAccess = appModule.extensionDatabaseAccess,
                 extensionId = extensionId,
+                onNavigateBack = { navController.popFrom(entry) }
+            )
+        }
+
+        composable(OrthoDestinations.EXTENSION_IMPORT) { entry ->
+            ExtensionImportScreen(
+                viewModel = viewModel(factory = ExtensionImportViewModel.provideFactory(appModule.extensionRepository)),
+                onNavigateBack = { navController.popFrom(entry) },
+                onOpenClassificationEditor = {
+                    navController.navigateFrom(entry, OrthoDestinations.CLASSIFICATION_EDITOR)
+                }
+            )
+        }
+
+        composable(OrthoDestinations.CLASSIFICATION_EDITOR) { entry ->
+            ClassificationEditorHomeScreen(
+                viewModel = viewModel(
+                    factory = ClassificationEditorHomeViewModel.provideFactory(
+                        appModule.classificationDraftRepository,
+                        appModule.extensionRepository
+                    )
+                ),
+                onNavigateBack = { navController.popFrom(entry) },
+                onOpenDraft = { draftId ->
+                    navController.navigateFrom(entry, OrthoDestinations.classificationDraft(draftId))
+                }
+            )
+        }
+
+        composable(
+            route = OrthoDestinations.CLASSIFICATION_DRAFT,
+            arguments = listOf(navArgument("draftId") { type = NavType.StringType })
+        ) { entry ->
+            val draftId = entry.arguments?.getString("draftId")?.let { Uri.decode(it) } ?: ""
+            ClassificationDraftScreen(
+                viewModel = viewModel(
+                    factory = ClassificationDraftViewModel.provideFactory(appModule.classificationDraftRepository, draftId)
+                ),
+                onNavigateBack = { navController.popFrom(entry) },
+                onOpenChapter = { chapterFile ->
+                    navController.navigateFrom(entry, OrthoDestinations.classificationDocument(draftId, chapterFile))
+                }
+            )
+        }
+
+        composable(
+            route = OrthoDestinations.CLASSIFICATION_DOCUMENT,
+            arguments = listOf(
+                navArgument("draftId") { type = NavType.StringType },
+                navArgument("chapterFile") { type = NavType.StringType }
+            )
+        ) { entry ->
+            val draftId = entry.arguments?.getString("draftId")?.let { Uri.decode(it) } ?: ""
+            val chapterFile = entry.arguments?.getString("chapterFile")?.let { Uri.decode(it) } ?: ""
+            ClassificationDocumentScreen(
+                viewModel = viewModel(
+                    factory = ClassificationDocumentViewModel.provideFactory(
+                        appModule.classificationDraftRepository,
+                        draftId,
+                        chapterFile
+                    )
+                ),
                 onNavigateBack = { navController.popFrom(entry) }
             )
         }

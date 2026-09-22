@@ -68,9 +68,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.BuildConfig
 import com.example.R
+import com.example.data.extensions.ExtensionDatabaseAccess
+import com.example.data.extensions.ExtensionFiles
+import com.example.data.extensions.ExtensionPermission
 import com.example.data.extensions.ExtensionRepository
 import com.example.data.extensions.ExtensionStorage
 import com.example.data.extensions.OrthoExtension
+import org.json.JSONArray
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -94,6 +98,7 @@ private class RunnerHost {
     @Volatile var theme: String = "light"
     @Volatile var language: String = "fr"
     var webView: WebView? = null
+    var bridge: ExtensionBridge? = null
     var fileCallback: ValueCallback<Array<Uri>>? = null
     var pendingSave: PendingSave? = null
     val console = mutableStateListOf<ConsoleLine>()
@@ -101,6 +106,15 @@ private class RunnerHost {
     fun resolve(requestId: String, value: Boolean) {
         webView?.evaluateJavascript(
             "window.OrthoTips&&OrthoTips.__resolve(${JSONObject.quote(requestId)},$value)",
+            null
+        )
+    }
+
+    /** Settles a promise from `OrthoTipsNative.call`; [value] is a JSON literal when [ok]. */
+    fun settle(requestId: String, ok: Boolean, value: String) {
+        val payload = if (ok) value else JSONObject.quote(value)
+        webView?.evaluateJavascript(
+            "window.OrthoTips&&OrthoTips.__settle(${JSONObject.quote(requestId)},$ok,$payload)",
             null
         )
     }
@@ -114,14 +128,16 @@ private class RunnerHost {
 private class PendingSave(val requestId: String, val bytes: ByteArray)
 
 /**
- * Runs one extension full screen. The page is the extension's own HTML with the
- * host bridge injected in front; it runs offline, in its own origin, and only
- * reaches the app through `window.OrthoTips`.
+ * Runs one HTML extension full screen. The page is the extension's own HTML
+ * with the host bridge injected in front; it runs in its own origin and only
+ * reaches the app through `window.OrthoTips`, limited to the permissions the
+ * extension was granted (extension guide, section 4).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExtensionRunnerScreen(
     repository: ExtensionRepository,
+    databaseAccess: ExtensionDatabaseAccess,
     extensionId: String,
     onNavigateBack: () -> Unit
 ) {
@@ -203,7 +219,7 @@ fun ExtensionRunnerScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = ready?.extension?.let { "${it.icon}  ${it.name}" }.orEmpty(),
+                        text = ready?.extension?.let { "${it.icon}  ${it.manifest.label()}" }.orEmpty(),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -284,13 +300,22 @@ fun ExtensionRunnerScreen(
                                 backgroundArgb = backgroundArgb,
                                 bridge = ExtensionBridge(
                                     storage = ExtensionStorage(viewContext, state.extension.id),
+                                    granted = state.extension.granted,
+                                    files = repository.privateFilesDir(state.extension.id)?.let(::ExtensionFiles),
+                                    contentDir = repository.contentDir(state.extension.id),
+                                    database = databaseAccess,
                                     infoJson = {
                                         JSONObject()
+                                            .put("bridgeVersion", ExtensionBridge.BRIDGE_VERSION)
                                             .put("extensionId", state.extension.id)
                                             .put("extensionVersion", state.extension.version)
                                             .put("appVersion", BuildConfig.VERSION_NAME)
                                             .put("language", host.language)
                                             .put("theme", host.theme)
+                                            .put(
+                                                "permissions",
+                                                JSONArray(ExtensionPermission.keys(state.extension.granted.filter { it.implemented }))
+                                            )
                                             .toString()
                                     },
                                     onToast = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() },
@@ -309,10 +334,18 @@ fun ExtensionRunnerScreen(
                                                 host.resolve(requestId, false)
                                             }
                                         }
-                                    }
+                                    },
+                                    onSettle = host::settle,
+                                    onDenied = { host.log(ConsoleLine(isError = true, text = it)) }
                                 ),
                                 onChooseFile = { mimeTypes ->
-                                    runCatching { openFile.launch(mimeTypes) }.isSuccess
+                                    // <input type="file"> is part of import_export (guide, section 4.1).
+                                    if (state.extension.has(ExtensionPermission.IMPORT_EXPORT)) {
+                                        runCatching { openFile.launch(mimeTypes) }.isSuccess
+                                    } else {
+                                        host.log(ConsoleLine(isError = true, text = "PermissionError: 'import_export' not granted"))
+                                        false
+                                    }
                                 }
                             )
                         },
@@ -320,6 +353,8 @@ fun ExtensionRunnerScreen(
                             host.fileCallback?.onReceiveValue(null)
                             host.fileCallback = null
                             if (host.webView === view) host.webView = null
+                            host.bridge?.dispose()
+                            host.bridge = null
                             view.stopLoading()
                             view.destroy()
                         },
@@ -354,6 +389,7 @@ private fun createExtensionWebView(
         domStorageEnabled = true
         allowFileAccess = false
         allowContentAccess = true // files picked through <input type="file">
+        // Without `internet`, requests fail as they would offline (guide, section 4.4).
         blockNetworkLoads = !extension.allowNetwork
         javaScriptCanOpenWindowsAutomatically = false
         mediaPlaybackRequiresUserGesture = true
@@ -367,6 +403,7 @@ private fun createExtensionWebView(
         }
     }
     setBackgroundColor(backgroundArgb)
+    host.bridge = bridge
     addJavascriptInterface(bridge, "OrthoTipsNative")
 
     val ownHost = Uri.parse(ExtensionRepository.baseUrl(extension.id)).host

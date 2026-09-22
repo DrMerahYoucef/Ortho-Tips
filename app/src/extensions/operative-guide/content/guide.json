@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "dataFormat": "bones-zip",
+  "data": {
+    "archive": ".zip",
+    "required": ["bones.json"],
+    "optional": ["bonesfr.json", "bones_fr.json", "bones-fr.json", "bones.fr.json", "<boneId>/<figure files>"]
+  }
+}

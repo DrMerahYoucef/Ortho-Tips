@@ -9,10 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.PeopleOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -47,8 +47,9 @@ import com.example.viewmodel.PatientListViewModel
 import com.example.viewmodel.ShiftsViewModel
 
 /**
- * The three top-level areas. Search, Saved and Settings are ordinary screens
- * pushed on top (with a back arrow), not hidden tabs.
+ * The three top-level areas: Agenda, Patients and Extensions (operative guides,
+ * classifications and tools, all installed as `.OTips` extensions). Search,
+ * Saved and Settings are ordinary screens pushed on top, not hidden tabs.
  */
 enum class MainTab(
     @StringRes val titleRes: Int,
@@ -56,9 +57,18 @@ enum class MainTab(
     val unselectedIcon: ImageVector,
     val testTag: String
 ) {
-    STUDIES(R.string.nav_studies, Icons.Filled.MenuBook, Icons.Outlined.MenuBook, "nav_home"),
+    // Declaration order is the order in the bottom bar.
     AGENDA(R.string.nav_agenda, Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth, "nav_agenda"),
-    PATIENTS(R.string.nav_patients, Icons.Filled.People, Icons.Outlined.PeopleOutline, "nav_patients")
+    PATIENTS(R.string.nav_patients, Icons.Filled.People, Icons.Outlined.PeopleOutline, "nav_patients"),
+    EXTENSIONS(R.string.nav_extensions, Icons.Filled.Extension, Icons.Outlined.Extension, "nav_home");
+
+    companion object {
+        /** Names saved by earlier versions, so the app still reopens on the same tab. */
+        private val LEGACY_NAMES = mapOf("STUDIES" to EXTENSIONS)
+
+        fun fromSaved(name: String?): MainTab? =
+            name?.let { saved -> entries.firstOrNull { it.name == saved } ?: LEGACY_NAMES[saved] }
+    }
 }
 
 private const val UI_PREFS = "ui_state"
@@ -72,6 +82,8 @@ fun MainScreen(
     onNavigateToImport: () -> Unit,
     onNavigateToClassificationChapter: (String) -> Unit,
     onNavigateToExtension: (String) -> Unit,
+    onNavigateToExtensionImport: () -> Unit,
+    onNavigateToClassificationEditor: () -> Unit,
     onNavigateToPatientDetail: (String) -> Unit,
     onNavigateToAddPatient: () -> Unit,
     onNavigateToSurgeonProfile: () -> Unit,
@@ -87,9 +99,7 @@ fun MainScreen(
     val prefs = remember { context.getSharedPreferences(UI_PREFS, Context.MODE_PRIVATE) }
     var selectedTab by rememberSaveable {
         mutableStateOf(
-            prefs.getString(KEY_LAST_TAB, null)
-                ?.let { saved -> MainTab.entries.firstOrNull { it.name == saved } }
-                ?: MainTab.STUDIES
+            MainTab.fromSaved(prefs.getString(KEY_LAST_TAB, null)) ?: MainTab.entries.first()
         )
     }
     fun select(tab: MainTab) {
@@ -143,8 +153,10 @@ fun MainScreen(
                 // launch. They live on the Main back-stack entry, so switching tabs
                 // keeps them.
                 when (tab) {
-                    MainTab.STUDIES -> HomeScreen(
-                        viewModel = viewModel(factory = HomeViewModel.provideFactory(appModule.orthoRepository)),
+                    MainTab.EXTENSIONS -> HomeScreen(
+                        viewModel = viewModel(
+                            factory = HomeViewModel.provideFactory(appModule.orthoRepository, appModule.extensionRepository)
+                        ),
                         classificationViewModel = viewModel<ClassificationViewModel>(
                             factory = ClassificationViewModel.provideFactory(appModule.classificationRepository)
                         ),
@@ -158,7 +170,9 @@ fun MainScreen(
                         onNavigateToImport = onNavigateToImport,
                         onNavigateToSettings = onNavigateToSettings,
                         onNavigateToClassificationChapter = onNavigateToClassificationChapter,
-                        onNavigateToExtension = onNavigateToExtension
+                        onNavigateToExtension = onNavigateToExtension,
+                        onNavigateToExtensionImport = onNavigateToExtensionImport,
+                        onNavigateToClassificationEditor = onNavigateToClassificationEditor
                     )
 
                     MainTab.AGENDA -> AgendaScreen(

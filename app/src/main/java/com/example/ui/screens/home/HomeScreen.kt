@@ -68,11 +68,14 @@ import com.example.ui.screens.classifications.ClassificationChaptersScreen
 import com.example.ui.screens.extensions.ExtensionsTab
 import com.example.viewmodel.ExtensionsViewModel
 import com.example.viewmodel.ClassificationViewModel
-import com.example.viewmodel.ClinicalStudiesTab
+import com.example.viewmodel.ExtensionsHubTab
 import com.example.viewmodel.HomeViewModel
 import com.example.data.local.displayDescription
 import com.example.data.local.displayTitle
 import androidx.compose.ui.res.stringResource
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import com.example.data.extensions.ExtensionKinds
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,10 +90,13 @@ fun HomeScreen(
     onNavigateToImport: () -> Unit,
     onNavigateToClassificationChapter: (String) -> Unit,
     onNavigateToExtension: (String) -> Unit,
+    onNavigateToExtensionImport: () -> Unit,
+    onNavigateToClassificationEditor: () -> Unit,
     onNavigateToSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -118,14 +124,14 @@ fun HomeScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
-                                    text = stringResource(R.string.home_clinical_studies),
+                                    text = stringResource(R.string.nav_extensions),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     letterSpacing = (-0.3).sp
                                 )
                                 Text(
-                                    text = stringResource(R.string.home_evidence_based_orthopedics_techniques),
+                                    text = stringResource(R.string.ext_hub_subtitle),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.Medium
@@ -163,14 +169,14 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Operative Guides / Classifications / Extensions sub-tabs
+            // Operative Guides / Classifications / Manage sub-tabs
             PrimaryTabRow(
-                selectedTabIndex = uiState.activeTab.ordinal,
+                selectedTabIndex = uiState.tabs.indexOf(uiState.activeTab).coerceAtLeast(0),
                 containerColor = MaterialTheme.colorScheme.background,
                 contentColor = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                ClinicalStudiesTab.entries.forEach { tab ->
+                uiState.tabs.forEach { tab ->
                     val isSelected = uiState.activeTab == tab
                     Tab(
                         selected = isSelected,
@@ -188,7 +194,7 @@ fun HomeScreen(
             }
 
             when (uiState.activeTab) {
-                ClinicalStudiesTab.OPERATIVE_GUIDES -> {
+                ExtensionsHubTab.OPERATIVE_GUIDES -> {
                     OperativeGuidesView(
                         uiState = uiState,
                         onNavigateToChapter = onNavigateToChapter,
@@ -196,21 +202,32 @@ fun HomeScreen(
                         onNavigateToSearch = onNavigateToSearch,
                         onNavigateToImport = onNavigateToImport,
                         onToggleBookmark = { viewModel.toggleBookmark(it) },
-                        onSwitchToClassifications = { viewModel.setActiveTab(ClinicalStudiesTab.CLASSIFICATIONS) }
+                        onSwitchToClassifications = { viewModel.setActiveTab(ExtensionsHubTab.CLASSIFICATIONS) }
                     )
                 }
 
-                ClinicalStudiesTab.CLASSIFICATIONS -> {
+                ExtensionsHubTab.CLASSIFICATIONS -> {
                     ClassificationChaptersScreen(
                         viewModel = classificationViewModel,
-                        onOpenChapter = { chapter -> onNavigateToClassificationChapter(chapter.file) }
+                        onOpenChapter = { chapter -> onNavigateToClassificationChapter(chapter.file) },
+                        onOpenEditor = onNavigateToClassificationEditor
                     )
                 }
 
-                ClinicalStudiesTab.EXTENSIONS -> {
+                ExtensionsHubTab.MANAGE -> {
                     ExtensionsTab(
                         viewModel = extensionsViewModel,
-                        onOpenExtension = onNavigateToExtension
+                        onOpenExtension = { extension ->
+                            // Each kind opens where it is shown; kinds this build
+                            // cannot display are listed but not opened.
+                            when (extension.kind) {
+                                ExtensionKinds.HTML -> onNavigateToExtension(extension.id)
+                                ExtensionKinds.OPERATIVE_GUIDE -> viewModel.setActiveTab(ExtensionsHubTab.OPERATIVE_GUIDES)
+                                ExtensionKinds.CLASSIFICATIONS -> viewModel.setActiveTab(ExtensionsHubTab.CLASSIFICATIONS)
+                                else -> Toast.makeText(context, R.string.ext_cannot_open, Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        onImport = onNavigateToExtensionImport
                     )
                 }
             }

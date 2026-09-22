@@ -13,7 +13,8 @@ import kotlinx.coroutines.launch
 
 /**
  * Backs both the chapters list (Home > Classifications tab) and the chapter detail screen.
- * All data comes from [ClassificationRepository], which reads static bundled JSON assets.
+ * All data comes from [ClassificationRepository], which reads the installed
+ * classification extensions. Installing or removing one reloads the index.
  */
 class ClassificationViewModel(
     private val repository: ClassificationRepository
@@ -32,6 +33,23 @@ class ClassificationViewModel(
         private set
 
     private var loadedChapterFile: String? = null
+
+    init {
+        // The first value only primes the flow; later ones mean packs changed.
+        viewModelScope.launch {
+            var first = true
+            repository.revision.collect {
+                if (first) {
+                    first = false
+                } else {
+                    chapters = emptyList()
+                    currentChapter = null
+                    loadedChapterFile = null
+                    loadIndex()
+                }
+            }
+        }
+    }
 
     /** No-ops if the index is already loaded, so re-entering the tab doesn't re-parse it. */
     fun loadIndex() {

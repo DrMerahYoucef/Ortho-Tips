@@ -2,26 +2,57 @@ package com.example.data.extensions
 
 import java.text.Normalizer
 
-/** One installed extension: a self-contained HTML program (see guide.md). */
-data class OrthoExtension(
-    /** Stable identity. Importing a file with the same id replaces it and keeps its data. */
-    val id: String,
-    val name: String,
-    val description: String,
-    val version: String,
-    /** A single emoji shown in the list. */
-    val icon: String,
-    val author: String,
-    /** Only true when the file asks for it with `ortho-ext-network="allow"`. */
-    val allowNetwork: Boolean,
-    val sizeBytes: Long,
-    val updatedAt: Long
-)
+/** Where an installed extension came from. */
+enum class ExtensionSource {
+    /** Shipped inside the app's assets and installed from there. */
+    BUNDLED,
+
+    /** Imported from an `.OTips` file the user picked. */
+    EXTERNAL,
+
+    /** Installed as a bare `.html` file before `.OTips` existed; migrated in place. */
+    LEGACY
+}
 
 /**
- * Reads the `<meta name="ortho-ext-…" content="…">` block from an extension's
- * `<head>`. Every field is optional: a plain HTML program with only a `<title>`
- * still imports, it just gets a default icon and an id made from its title.
+ * One installed extension.
+ *
+ * [manifest] is what the package declared; [granted] is what it may actually
+ * use. They differ only for extensions that predate the permission system,
+ * which keep the export capability they always had (see
+ * [ExtensionMetadata.Parsed.effectivePermissions]).
+ */
+data class OrthoExtension(
+    val manifest: ExtensionManifest,
+    val source: ExtensionSource,
+    val granted: Set<ExtensionPermission>,
+    val sizeBytes: Long,
+    val installedAt: Long,
+    val updatedAt: Long,
+    /** Hash of the installed package payload; null for migrated legacy installs. */
+    val payloadSha256: String?,
+    /** Whether an `.OTips` copy can be produced (content on disk, or shipped in the app). */
+    val exportable: Boolean
+) {
+    val id: String get() = manifest.id
+    val kind: String get() = manifest.kind
+    val name: String get() = manifest.name
+    val description: String get() = manifest.description
+    val version: String get() = manifest.version
+    val icon: String get() = manifest.icon
+    val author: String get() = manifest.author
+
+    val allowNetwork: Boolean get() = ExtensionPermission.INTERNET in granted
+
+    fun has(permission: ExtensionPermission): Boolean = permission in granted
+}
+
+/**
+ * Reads the `<meta name="ortho-ext-…" content="…">` block from an HTML
+ * program's `<head>` (extension guide, section 3). Used when an HTML program is
+ * packaged into an `.OTips` file and when migrating pre-`.OTips` installs.
+ * Every field is optional: a plain HTML program with only a `<title>` still
+ * packages, it just gets a default icon and an id made from its title.
  */
 object ExtensionMetadata {
 
@@ -32,8 +63,26 @@ object ExtensionMetadata {
         val version: String?,
         val icon: String?,
         val author: String?,
-        val allowNetwork: Boolean
-    )
+        /** Parsed `ortho-ext-permissions`; null when the tag is absent. */
+        val declaredPermissions: Set<ExtensionPermission>?,
+        /** Legacy `ortho-ext-network="allow"`, a synonym for `internet`. */
+        val legacyNetwork: Boolean
+    ) {
+        /**
+         * What the program may use once installed.
+         *
+         * With an `ortho-ext-permissions` tag: exactly what it lists (plus
+         * `internet` for the legacy network tag). Without one, the program was
+         * written before permissions existed, when `saveFile` and the file
+         * picker were available to everyone; it keeps `import_export` so its
+         * backup buttons — often the user's only copy of its data — still work.
+         */
+        val effectivePermissions: Set<ExtensionPermission>
+            get() {
+                val base = declaredPermissions ?: setOf(ExtensionPermission.IMPORT_EXPORT)
+                return if (legacyNetwork) base + ExtensionPermission.INTERNET else base
+            }
+    }
 
     const val MAX_ID_LENGTH = 48
     private const val PREFIX = "ortho-ext-"
@@ -71,7 +120,33 @@ object ExtensionMetadata {
             version = values["version"]?.takeIf { it.isNotEmpty() },
             icon = values["icon"]?.takeIf { it.isNotEmpty() },
             author = values["author"]?.takeIf { it.isNotEmpty() },
-            allowNetwork = values["network"].equals("allow", ignoreCase = true)
+            declaredPermissions = values["permissions"]?.let(ExtensionPermission::parseList),
+            legacyNetwork = values["network"].equals("allow", ignoreCase = true)
+        )
+    }
+
+    /**
+     * The manifest an HTML program gets when it is packaged into an `.OTips`
+     * file. The id falls back to the name, then to [fallbackName] (usually the
+     * file name), so a program without the metadata block still packages.
+     */
+    fun manifestFor(html: String, fallbackName: String?): ExtensionManifest {
+        val meta = parse(html)
+        val fileStem = fallbackName?.substringBeforeLast('.')?.trim()?.takeIf { it.isNotEmpty() }
+        val id = meta.id?.takeIf(::isValidId)
+            ?: meta.name?.let(::slug)?.takeIf(::isValidId)
+            ?: fileStem?.let(::slug)?.takeIf(::isValidId)
+            ?: ("extension-" + Integer.toHexString(html.hashCode()))
+        return ExtensionManifest(
+            id = id,
+            kind = ExtensionKinds.HTML,
+            name = meta.name ?: fileStem ?: id,
+            description = meta.description.orEmpty(),
+            version = meta.version ?: ExtensionManifest.DEFAULT_VERSION,
+            icon = meta.icon ?: ExtensionManifest.DEFAULT_ICON,
+            author = meta.author.orEmpty(),
+            permissions = meta.effectivePermissions,
+            entry = ExtensionManifest.DEFAULT_ENTRY
         )
     }
 

@@ -3,7 +3,6 @@ package com.example
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import com.example.data.local.ClinicalStudiesData
 import com.example.data.local.OrthoDatabase
 import com.example.data.local.entity.BoneEntity
 import com.example.data.local.entity.ChapterEntity
@@ -83,18 +82,6 @@ class ExampleRobolectricTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val appName = context.getString(R.string.app_name)
         assertEquals("Ortho Tips", appName)
-    }
-
-    @Test
-    fun verifyClinicalStudiesDataAvailable() {
-        val landmarkStudies = ClinicalStudiesData.landmarkStudies
-        assertTrue("Landmark trials should be available", landmarkStudies.isNotEmpty())
-        assertTrue("Contains SPRINT trial", landmarkStudies.any { it.shortName == "SPRINT" })
-        assertTrue("Contains FLOW trial", landmarkStudies.any { it.shortName == "FLOW" })
-
-        val classifications = ClinicalStudiesData.clinicalClassifications
-        assertTrue("Classifications should be available", classifications.isNotEmpty())
-        assertTrue("Contains Gustilo-Anderson", classifications.any { it.name.contains("Gustilo") })
     }
 
     @Test

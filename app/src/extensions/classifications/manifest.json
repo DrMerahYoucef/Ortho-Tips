@@ -1,0 +1,16 @@
+{
+  "id": "classifications",
+  "kind": "classifications",
+  "name": "Classifications",
+  "description": "Fracture and injury classifications by region, with figures. Also used when choosing a classification for a patient or a surgery.",
+  "version": "1.0",
+  "icon": "📋",
+  "author": "Ortho Tips",
+  "permissions": [],
+  "minAppVersionCode": 1,
+  "contentSchema": 1,
+  "attributes": {
+    "name.fr": "Classifications",
+    "description.fr": "Classifications des fractures et lésions par région, avec figures. Utilisées aussi pour choisir la classification d’un patient ou d’une intervention."
+  }
+}

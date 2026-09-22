@@ -64,20 +64,25 @@ import com.example.data.local.model.ClassificationBlock
 import com.example.data.local.model.ClassificationChapter
 import com.example.data.local.model.ClassificationEntry
 import com.example.data.repository.ClassificationRepository
+import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material3.FilledTonalIconButton
+import com.example.ui.components.ClassificationContentView
 import com.example.ui.components.OrthoSearchBar
 import com.example.viewmodel.ClassificationViewModel
 import com.example.R
 import androidx.compose.ui.res.stringResource
 
 /**
- * Level 1: list of classification chapters, read from assets/classifications/index.json.
+ * Level 1: list of classification chapters from the installed classification extensions.
  * Meant to be embedded as tab content (e.g. Home > Classifications) — no Scaffold/back button.
  */
 @Composable
 fun ClassificationChaptersScreen(
     viewModel: ClassificationViewModel,
     onOpenChapter: (ChapterRef) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Opens the classification editor; the button is hidden when null. */
+    onOpenEditor: (() -> Unit)? = null
 ) {
     LaunchedEffect(Unit) { viewModel.loadIndex() }
     var searchQuery by remember { mutableStateOf("") }
@@ -102,14 +107,29 @@ fun ClassificationChaptersScreen(
             }
             else -> {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    OrthoSearchBar(
-                        query = searchQuery,
-                        onQueryChange = { searchQuery = it },
-                        onSearch = { searchQuery = it },
-                        onClear = { searchQuery = "" },
-                        placeholderText = stringResource(R.string.classif_search_placeholder),
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
+                    ) {
+                        OrthoSearchBar(
+                            query = searchQuery,
+                            onQueryChange = { searchQuery = it },
+                            onSearch = { searchQuery = it },
+                            onClear = { searchQuery = "" },
+                            placeholderText = stringResource(R.string.classif_search_placeholder),
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (onOpenEditor != null) {
+                            FilledTonalIconButton(
+                                onClick = onOpenEditor,
+                                modifier = Modifier
+                                    .padding(start = 8.dp)
+                                    .testTag("classification_editor_open")
+                            ) {
+                                Icon(Icons.Filled.EditNote, contentDescription = stringResource(R.string.ced_open_editor))
+                            }
+                        }
+                    }
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -315,18 +335,21 @@ private fun ClassificationEntryCard(
             .testTag("classification_entry_${entry.id}")
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
-            Text(
-                text = entry.title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            HorizontalDivider(
-                modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
-            )
+            // Editor content may start without a classification title.
+            if (entry.title.isNotBlank()) {
+                Text(
+                    text = entry.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                HorizontalDivider(
+                    modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                )
+            }
 
             entry.images.forEach { path ->
-                val bitmap = remember(path) { repository.loadAssetImage(path) }
+                val bitmap = remember(path) { repository.loadImage(path) }
                 bitmap?.let {
                     ClassificationImage(bitmap = it, description = entry.title)
                 }
@@ -335,6 +358,9 @@ private fun ClassificationEntryCard(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 entry.blocks.forEach { block ->
                     ClassificationBlockView(block)
+                }
+                if (entry.content.isNotEmpty()) {
+                    ClassificationContentView(paragraphs = entry.content, loadImage = repository::loadImage)
                 }
             }
         }

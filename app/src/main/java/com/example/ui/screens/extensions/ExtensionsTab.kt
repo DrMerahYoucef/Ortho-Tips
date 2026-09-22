@@ -3,7 +3,6 @@ package com.example.ui.screens.extensions
 import android.text.format.Formatter
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +27,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material3.AlertDialog
@@ -58,22 +58,27 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
+import com.example.data.extensions.ExtensionKinds
 import com.example.data.extensions.OrthoExtension
+import com.example.data.extensions.otips.OTipsFormat
+import java.text.DateFormat
+import java.util.Date
 import com.example.viewmodel.ExtensionEvent
 import com.example.viewmodel.ExtensionsViewModel
 
 /**
- * The Extensions sub-tab of Clinical Studies: small HTML programs the surgeon
- * imports and opens full screen. Tap a card to open it; its menu exports the
- * file, clears its saved data or deletes it.
+ * The manager in the Extensions area: every installed `.OTips` extension,
+ * whatever its kind. Tap a card to open it; its menu shows what it may access,
+ * exports it, clears its saved data or deletes it. Installing happens on the
+ * import screen ([onImport]).
  */
 @Composable
 fun ExtensionsTab(
     viewModel: ExtensionsViewModel,
-    onOpenExtension: (String) -> Unit,
+    onOpenExtension: (OrthoExtension) -> Unit,
+    onImport: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -83,30 +88,20 @@ fun ExtensionsTab(
     var pendingDelete by remember { mutableStateOf<OrthoExtension?>(null) }
     var pendingClear by remember { mutableStateOf<OrthoExtension?>(null) }
     var pendingExport by remember { mutableStateOf<OrthoExtension?>(null) }
+    var details by remember { mutableStateOf<OrthoExtension?>(null) }
 
-    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let(viewModel::import)
-    }
     val exportLauncher = rememberLauncherForActivityResult(CreateDocumentWithType()) { uri ->
         val extension = pendingExport
         pendingExport = null
         if (uri != null && extension != null) viewModel.export(extension, uri)
     }
-    // Any file type: .html files shared from messaging apps often arrive as
-    // application/octet-stream, and the repository checks the content anyway.
-    val startImport = { importLauncher.launch(arrayOf("*/*")) }
+    val startImport = onImport
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             val message = when (event) {
-                is ExtensionEvent.Installed ->
-                    if (event.previousVersion == null) context.getString(R.string.ext_msg_installed, event.name)
-                    else context.getString(R.string.ext_msg_updated, event.name, event.version)
-                ExtensionEvent.ImportUnreadable -> context.getString(R.string.ext_msg_import_unreadable)
-                ExtensionEvent.ImportNotHtml -> context.getString(R.string.ext_msg_import_not_html)
-                ExtensionEvent.ImportTooLarge -> context.getString(R.string.ext_msg_import_too_large)
-                is ExtensionEvent.Deleted -> context.getString(R.string.ext_msg_deleted, event.name)
-                is ExtensionEvent.DataCleared -> context.getString(R.string.ext_msg_data_cleared, event.name)
+                is ExtensionEvent.Deleted -> context.getString(R.string.ext_msg_deleted, event.manifest.label(context))
+                is ExtensionEvent.DataCleared -> context.getString(R.string.ext_msg_data_cleared, event.manifest.label(context))
                 is ExtensionEvent.Exported ->
                     context.getString(if (event.ok) R.string.ext_msg_exported else R.string.ext_msg_export_failed)
             }
@@ -158,11 +153,12 @@ fun ExtensionsTab(
                 items(extensions, key = { it.id }) { extension ->
                     ExtensionCard(
                         extension = extension,
-                        onOpen = { onOpenExtension(extension.id) },
+                        onOpen = { onOpenExtension(extension) },
+                        onDetails = { details = extension },
                         onExport = {
                             pendingExport = extension
                             exportLauncher.launch(
-                                CreateDocumentWithType.Input("${extension.id}.html", "text/html")
+                                CreateDocumentWithType.Input(viewModel.exportFileName(extension), OTipsFormat.MIME_TYPE)
                             )
                         },
                         onClearData = { pendingClear = extension },
@@ -178,8 +174,12 @@ fun ExtensionsTab(
 
     pendingDelete?.let { extension ->
         ConfirmDialog(
-            title = stringResource(R.string.ext_delete_title, extension.name),
-            body = stringResource(R.string.ext_delete_body),
+            title = stringResource(R.string.ext_delete_title, extension.manifest.label()),
+            // Deleting the guide also deletes the data imported into it.
+            body = stringResource(
+                if (extension.kind == ExtensionKinds.OPERATIVE_GUIDE) R.string.ext_delete_body_operative_guide
+                else R.string.ext_delete_body
+            ),
             confirm = stringResource(R.string.ext_delete),
             onConfirm = {
                 pendingDelete = null
@@ -189,9 +189,13 @@ fun ExtensionsTab(
         )
     }
 
+    details?.let { extension ->
+        DetailsDialog(extension = extension, onDismiss = { details = null })
+    }
+
     pendingClear?.let { extension ->
         ConfirmDialog(
-            title = stringResource(R.string.ext_clear_title, extension.name),
+            title = stringResource(R.string.ext_clear_title, extension.manifest.label()),
             body = stringResource(R.string.ext_clear_body),
             confirm = stringResource(R.string.ext_clear),
             onConfirm = {
@@ -207,6 +211,7 @@ fun ExtensionsTab(
 private fun ExtensionCard(
     extension: OrthoExtension,
     onOpen: () -> Unit,
+    onDetails: () -> Unit,
     onExport: () -> Unit,
     onClearData: () -> Unit,
     onDelete: () -> Unit,
@@ -227,31 +232,24 @@ private fun ExtensionCard(
             modifier = Modifier.padding(start = 16.dp, top = 14.dp, bottom = 14.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.size(46.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(text = extension.icon, fontSize = 22.sp, maxLines = 1)
-                }
-            }
+            ExtensionIconTile(icon = extension.icon)
 
             Spacer(modifier = Modifier.width(14.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = extension.name,
+                    text = extension.manifest.label(),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (extension.description.isNotBlank()) {
+                val summary = extension.manifest.summary()
+                if (summary.isNotBlank()) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = extension.description,
+                        text = summary,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
@@ -261,7 +259,7 @@ private fun ExtensionCard(
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = stringResource(
+                        text = stringResource(extensionKindLabelRes(extension.kind)) + " · " + stringResource(
                             R.string.ext_meta,
                             extension.version,
                             Formatter.formatShortFileSize(context, extension.sizeBytes)
@@ -298,10 +296,17 @@ private fun ExtensionCard(
                         onClick = { menuOpen = false; onOpen() }
                     )
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.ext_action_export)) },
-                        leadingIcon = { Icon(Icons.Outlined.FileDownload, contentDescription = null) },
-                        onClick = { menuOpen = false; onExport() }
+                        text = { Text(stringResource(R.string.ext_action_details)) },
+                        leadingIcon = { Icon(Icons.Outlined.Tune, contentDescription = null) },
+                        onClick = { menuOpen = false; onDetails() }
                     )
+                    if (extension.exportable) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.ext_action_export)) },
+                            leadingIcon = { Icon(Icons.Outlined.FileDownload, contentDescription = null) },
+                            onClick = { menuOpen = false; onExport() }
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.ext_action_clear_data)) },
                         leadingIcon = { Icon(Icons.Outlined.DeleteSweep, contentDescription = null) },
@@ -383,6 +388,62 @@ private fun PrivacyNote(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.outline
         )
+    }
+}
+
+/** Extension Details (extension guide, section 4.3): identity, origin and granted access. */
+@Composable
+private fun DetailsDialog(extension: OrthoExtension, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { ExtensionIconTile(icon = extension.icon) },
+        title = { Text(extension.manifest.label()) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                val summary = extension.manifest.summary()
+                if (summary.isNotBlank()) {
+                    Text(summary, style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
+                DetailLine(stringResource(R.string.ext_details_kind), stringResource(extensionKindLabelRes(extension.kind)))
+                DetailLine(stringResource(R.string.ext_details_version), extension.version)
+                if (extension.author.isNotBlank()) DetailLine(stringResource(R.string.ext_details_author), extension.author)
+                DetailLine(stringResource(R.string.ext_details_source), stringResource(extension.source.labelRes()))
+                DetailLine(
+                    stringResource(R.string.ext_details_size),
+                    Formatter.formatShortFileSize(context, extension.sizeBytes)
+                )
+                DetailLine(
+                    stringResource(R.string.ext_details_updated),
+                    DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(extension.updatedAt))
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.ext_details_permissions),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                PermissionList(extension.granted)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.ext_close)) }
+        }
+    )
+}
+
+@Composable
+private fun DetailLine(label: String, value: String) {
+    Row {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.outline,
+            modifier = Modifier.width(110.dp)
+        )
+        Text(text = value, style = MaterialTheme.typography.bodySmall)
     }
 }
 

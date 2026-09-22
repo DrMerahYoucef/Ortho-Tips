@@ -29,6 +29,7 @@ class OrthoApplication : Application(), ImageLoaderFactory {
         // Resolved once per process: the language only changes with an activity
         // recreate, so every read below sees a stable value.
         ContentLocale.refresh(this)
+        prepareExtensions()
         restoreTelegramDriveSession()
         // When the app follows the phone's theme, recolour the widget as soon as
         // the phone switches between light and dark.
@@ -53,6 +54,23 @@ class OrthoApplication : Application(), ImageLoaderFactory {
         .components { add(DriveMediaInterceptor(appModule.patientMediaGateway)) }
         .crossfade(true)
         .build()
+
+    /**
+     * Scans installed extensions once at start-up, off the main thread. The
+     * first scan after an update also migrates extensions installed by older
+     * versions, so that happens silently whether or not the user opens the
+     * Extensions tab. Operative guide data imported before extensions existed
+     * gets its extension installed here too, so nothing needs re-importing.
+     * Failures are logged and retried on the next launch.
+     */
+    private fun prepareExtensions() {
+        applicationScope.launch {
+            runCatching {
+                appModule.extensionRepository.refresh()
+                appModule.operativeGuideMigration.run()
+            }.onFailure { android.util.Log.e(TAG, "Extension start-up failed", it) }
+        }
+    }
 
     /**
      * Brings the Telegram session back up after a cold start, but only when the

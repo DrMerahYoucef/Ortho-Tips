@@ -15,8 +15,14 @@ object OrthoDestinations {
     // Classifications module (static asset-backed reference)
     const val CLASSIFICATION_CHAPTER_DETAIL = "classification_chapter/{chapterFile}"
 
-    // Extensions: small HTML programs run full screen (see guide.md)
+    // Extensions: .OTips packages (see docs/extensions/guide.md)
     const val EXTENSION_RUNNER = "extension/{extensionId}"
+    const val EXTENSION_IMPORT = "extension_import"
+
+    // Classification editor (Word-style)
+    const val CLASSIFICATION_EDITOR = "classification_editor"
+    const val CLASSIFICATION_DRAFT = "classification_editor/{draftId}"
+    const val CLASSIFICATION_DOCUMENT = "classification_editor/{draftId}/document/{chapterFile}"
 
     // Patient management module
     const val PATIENT_DETAIL = "patient/{patientId}"
@@ -53,6 +59,11 @@ object OrthoDestinations {
     }
 
     fun extensionRunner(extensionId: String): String = "extension/${Uri.encode(extensionId)}"
+
+    fun classificationDraft(draftId: String): String = "classification_editor/${Uri.encode(draftId)}"
+
+    fun classificationDocument(draftId: String, chapterFile: String): String =
+        "classification_editor/${Uri.encode(draftId)}/document/${Uri.encode(chapterFile)}"
 
     fun patientDetail(patientId: String): String {
         return "patient/${Uri.encode(patientId)}"

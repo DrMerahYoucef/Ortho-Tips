@@ -47,6 +47,7 @@ import com.example.data.local.model.ChapterRef
 import com.example.data.local.model.ClassificationBlock
 import com.example.data.local.model.ClassificationChapter
 import com.example.data.local.model.ClassificationEntry
+import com.example.data.classification.ClassificationDocument
 import com.example.data.repository.ClassificationRepository
 import com.example.ui.components.OrthoSearchBar
 import com.example.R
@@ -366,6 +367,10 @@ private fun choicesForEntry(entry: ClassificationEntry): List<ClassificationChoi
                     row.firstOrNull()?.takeIf { it.isNotBlank() }?.let { add(ClassificationChoice(it)) }
                 }
             }
+        }
+        // Content written with the classification editor.
+        ClassificationDocument.pickerChoices(entry.content).forEach { (label, detail) ->
+            add(ClassificationChoice(label, detail))
         }
     }
     return choices.distinctBy { it.label }.ifEmpty { listOf(ClassificationChoice(entry.title)) }

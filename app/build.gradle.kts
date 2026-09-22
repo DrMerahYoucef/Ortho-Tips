@@ -161,3 +161,20 @@ dependencies {
   debugImplementation(libs.androidx.compose.ui.tooling)
   "ksp"(libs.androidx.room.compiler)
 }
+
+// Bundled extensions: src/extensions/<id>/ is packed into an .OTips package at
+// build time (buildSrc, using the app's own writer) and only the package is
+// added to the APK's assets, under bundled_extensions/.
+val packBundledExtensions = tasks.register<com.example.buildlogic.PackBundledExtensions>("packBundledExtensions") {
+    sources.set(layout.projectDirectory.dir("src/extensions"))
+    outputDir.set(layout.buildDirectory.dir("generated/bundledExtensions"))
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(
+            packBundledExtensions,
+            com.example.buildlogic.PackBundledExtensions::outputDir
+        )
+    }
+}

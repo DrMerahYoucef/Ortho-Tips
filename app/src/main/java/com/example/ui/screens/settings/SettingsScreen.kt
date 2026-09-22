@@ -38,9 +38,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
-import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.PersonRemove
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.WbIncandescent
@@ -84,7 +82,6 @@ import com.example.viewmodel.SettingsViewModel
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     onNavigateBack: () -> Unit,
-    onNavigateToImport: () -> Unit,
     onNavigateToTelegramDrive: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -95,7 +92,6 @@ fun SettingsScreen(
     val driveSubtitle = stringResource(R.string.settings_telegram_drive)
     val resetSubtitle = stringResource(R.string.settings_reinitialize_db)
     val deleteSubtitle = stringResource(R.string.settings_delete_patients)
-    val removeSubtitle = stringResource(R.string.settings_remove_db)
     // The lock switch itself is guarded whichever way it is moved, so someone
     // holding an unlocked phone cannot quietly turn the protection off.
     val protectSwitch = rememberProtectedAction(lockAvailable)
@@ -206,7 +202,6 @@ fun SettingsScreen(
                     text = stringResource(
                         when (action) {
                             DatabaseConfirmAction.REINITIALIZE -> R.string.settings_confirm_reinitialize_title
-                            DatabaseConfirmAction.REMOVE -> R.string.settings_confirm_remove_title
                             else -> R.string.settings_confirm_delete_patients_title
                         }
                     ),
@@ -217,7 +212,6 @@ fun SettingsScreen(
                 Text(
                     text = when (action) {
                         DatabaseConfirmAction.REINITIALIZE -> stringResource(R.string.settings_confirm_reinitialize_message)
-                        DatabaseConfirmAction.REMOVE -> stringResource(R.string.settings_confirm_remove_message)
                         else -> stringResource(R.string.settings_confirm_delete_patients_message, patients)
                     },
                     style = MaterialTheme.typography.bodySmall
@@ -232,7 +226,6 @@ fun SettingsScreen(
                         stringResource(
                             when (action) {
                                 DatabaseConfirmAction.REINITIALIZE -> R.string.settings_confirm_reinitialize_button
-                                DatabaseConfirmAction.REMOVE -> R.string.settings_confirm_remove_button
                                 else -> R.string.settings_confirm_delete_patients_button
                             }
                         )
@@ -255,7 +248,6 @@ fun SettingsScreen(
                     text = when {
                         raw.startsWith("PATIENTS_DELETED:") ->
                             stringResource(R.string.settings_patients_deleted, raw.substringAfter(':').toIntOrNull() ?: 0)
-                        raw == SettingsViewModel.MSG_DB_REMOVED -> stringResource(R.string.settings_db_removed)
                         raw == SettingsViewModel.MSG_DB_REINITIALIZED -> stringResource(R.string.settings_db_reinitialized)
                         else -> raw
                     },
@@ -455,12 +447,6 @@ fun SettingsScreen(
                         subtitle = stringResource(R.string.settings_restore_backup_subtitle),
                         onClick = { viewModel.openImportDialog() }
                     )
-                    SettingsActionRow(
-                        icon = Icons.Default.Download,
-                        title = stringResource(R.string.settings_import_guidelines),
-                        subtitle = stringResource(R.string.settings_import_guidelines_subtitle),
-                        onClick = onNavigateToImport
-                    )
                 }
             }
 
@@ -477,13 +463,6 @@ fun SettingsScreen(
                         title = stringResource(R.string.settings_reinitialize_db),
                         subtitle = stringResource(R.string.settings_reinitialize_db_subtitle),
                         onClick = { protect(resetSubtitle) { viewModel.requestReinitializeDatabase() } }
-                    )
-                    SettingsActionRow(
-                        destructive = true,
-                        icon = Icons.Default.DeleteForever,
-                        title = stringResource(R.string.settings_remove_db),
-                        subtitle = stringResource(R.string.settings_remove_db_subtitle),
-                        onClick = { protect(removeSubtitle) { viewModel.requestRemoveDatabase() } }
                     )
                     SettingsActionRow(
                         destructive = true,
