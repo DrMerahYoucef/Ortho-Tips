@@ -302,6 +302,21 @@
           .then(function (b64) { return decode(b64, as); });
       }
     },
+    // Requires `sms`: bank movements read from SMS (debits, credits, balances).
+    // Codes and all other messages are filtered out by the app.
+    sms: {
+      status: function () { return gated('sms', 'sms.status', {}); },
+      requestAccess: function () { return gated('sms', 'sms.requestAccess', {}); },
+      pending: function () { return gated('sms', 'sms.pending', {}); },
+      ack: function (upTo) { return gated('sms', 'sms.ack', { upTo: Number(upTo) || 0 }); },
+      history: function () { return gated('sms', 'sms.history', {}); },
+      onMessage: function (cb) {
+        if (typeof cb !== 'function' || !has('sms')) return;
+        window.addEventListener('orthotips:sms', function () {
+          try { cb(); } catch (e) { try { console.error(e); } catch (x) {} }
+        });
+      }
+    },
     // Requires `database`: read-only clinical reference data, never patients.
     database: {
       query: function (spec) { return gated('database', 'database.query', spec || {}); }

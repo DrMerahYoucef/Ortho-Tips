@@ -5,7 +5,6 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.util.Log
 import android.webkit.ConsoleMessage
 import android.webkit.ValueCallback
@@ -68,6 +67,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.BuildConfig
 import com.example.R
+import android.Manifest
+import android.os.Build
+import com.example.data.sms.BankSmsInbox
 import com.example.data.extensions.ExtensionDatabaseAccess
 import com.example.data.extensions.ExtensionFiles
 import com.example.data.extensions.ExtensionPermission
@@ -101,6 +103,7 @@ private class RunnerHost {
     var bridge: ExtensionBridge? = null
     var fileCallback: ValueCallback<Array<Uri>>? = null
     var pendingSave: PendingSave? = null
+    var pendingSmsRequest: String? = null
     val console = mutableStateListOf<ConsoleLine>()
 
     fun resolve(requestId: String, value: Boolean) {
@@ -192,6 +195,19 @@ fun ExtensionRunnerScreen(
                 Toast.LENGTH_SHORT
             ).show()
             host.resolve(pending.requestId, ok)
+        }
+    }
+
+    // Bank SMS (`sms` permission): Android's permission dialog, and live delivery.
+    val smsInbox = remember { BankSmsInbox(context) }
+    val smsPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        val id = host.pendingSmsRequest ?: return@rememberLauncherForActivityResult
+        host.pendingSmsRequest = null
+        host.settle(id, true, smsInbox.status().toString())
+    }
+    LaunchedEffect(smsInbox) {
+        BankSmsInbox.arrivals.collect {
+            host.webView?.evaluateJavascript("window.dispatchEvent(new Event('orthotips:sms'))", null)
         }
     }
 
@@ -336,7 +352,31 @@ fun ExtensionRunnerScreen(
                                         }
                                     },
                                     onSettle = host::settle,
-                                    onDenied = { host.log(ConsoleLine(isError = true, text = it)) }
+                                    onDenied = { host.log(ConsoleLine(isError = true, text = it)) },
+                                    sms = if (state.extension.has(ExtensionPermission.SMS)) {
+                                        val id = state.extension.id
+                                        object : ExtensionSmsAccess {
+                                            override fun status() = smsInbox.status()
+                                            override fun pending() = smsInbox.pending(id)
+                                            override fun ack(upTo: Long) = smsInbox.ack(id, upTo)
+                                            override fun history() = smsInbox.history()
+                                        }
+                                    } else {
+                                        null
+                                    },
+                                    onRequestSmsAccess = { requestId ->
+                                        host.pendingSmsRequest = requestId
+                                        val wanted = buildList {
+                                            add(Manifest.permission.RECEIVE_SMS)
+                                            add(Manifest.permission.READ_SMS)
+                                            if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
+                                        }
+                                        runCatching { smsPermissions.launch(wanted.toTypedArray()) }
+                                            .onFailure {
+                                                host.pendingSmsRequest = null
+                                                host.settle(requestId, true, smsInbox.status().toString())
+                                            }
+                                    }
                                 ),
                                 onChooseFile = { mimeTypes ->
                                     // <input type="file"> is part of import_export (guide, section 4.1).

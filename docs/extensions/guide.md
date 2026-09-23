@@ -114,6 +114,7 @@ permissions.
 | `storage` | `OrthoTips.files.*` (section 5) — a private on-disk folder for the extension, for data bigger than the ~2 MB key/value store is meant for. | Separate from the always-available `OrthoTips.storage` key/value API, which needs no permission. |
 | `assets` | `OrthoTips.assets.read(path)` (section 5) — read-only access to extra files bundled alongside the extension. | Only meaningful for multi-file extension packages; a single `.html` file has nothing to read here. |
 | `import_export` | `OrthoTips.saveFile(...)` and the file-picker `<input type="file">` flow (section 5). | Previously always available to every extension; now explicit like everything else. |
+| `sms` | `OrthoTips.sms.*`: bank movements read from SMS (debits, credits, reported balance), live and from the inbox history (section 5). | Android asks the user for SMS access the first time (`requestAccess()`). Only movement messages ever reach the extension; transfer codes and all other SMS are filtered out by the app. |
 | `notifications` *(reserved)* | Scheduling/showing Android notifications. | Not implemented yet. Declaring it is harmless and future-proofs the manifest. |
 | `background` *(reserved)* | Running work while the extension isn't in the foreground. | Not implemented yet, same as above. |
 
@@ -246,6 +247,38 @@ work as they would on any web page. Without it, they fail the same way they
 would offline. Rule 4 in section 2 still applies: the extension file itself
 must not *depend* on the network to load — only optional, in-use features
 (e.g. "fetch the latest guideline PDF") should reach for it.
+
+### Bank SMS — requires `sms`
+
+The app watches incoming SMS for **bank movements** (Algérie Poste format today:
+« Débité / Crédité de … DA … nouveau solde … DA ») and keeps them for the
+extensions holding `sms`, with a notification on arrival. Messages mentioning a
+code, a password or an OTP are refused before anything is stored, and nothing
+is kept while no installed extension holds `sms`.
+
+```js
+const st = await OrthoTips.sms.status();        // { available, granted, notifications }
+if (!st.granted) await OrthoTips.sms.requestAccess(); // Android's SMS dialog; resolves with the new status
+
+const past = await OrthoTips.sms.history();     // earlier movements from the inbox, oldest first
+const list = await OrthoTips.sms.pending();     // movements not acknowledged yet, oldest first
+// each: { id, seq?, kind: 'debit'|'credit', amount, balance|null, currency: 'DZD',
+//         sentAt, receivedAt, sender, text, fingerprint }
+// ...apply them, save, THEN acknowledge (a crash can repeat, never lose):
+await OrthoTips.sms.ack(Math.max(...list.map(m => m.seq || 0)));
+
+OrthoTips.sms.onMessage(() => { /* a movement arrived while open: read pending() */ });
+```
+
+- The same movement from `history()` and from `pending()` has the same
+  `fingerprint`: remember the fingerprints you applied to never count twice.
+- `balance` is what the bank reports after the movement; reconcile to it rather
+  than trusting your own running total (messages can be missed).
+- If Android shows **« Paramètre restreint »** when granting SMS access (apps
+  installed from a file on recent Android): *App info → ⋮ → Allow restricted
+  settings*, then grant again.
+- Google Play restricts SMS permissions; this is fine for builds installed
+  directly, but would need Play's approval to publish.
 
 ### Local database — requires `database`
 

@@ -54,6 +54,7 @@ internal fun ExtensionPermission.labelRes(): Int = when (this) {
     ExtensionPermission.STORAGE -> R.string.ext_perm_storage
     ExtensionPermission.ASSETS -> R.string.ext_perm_assets
     ExtensionPermission.IMPORT_EXPORT -> R.string.ext_perm_import_export
+    ExtensionPermission.SMS -> R.string.ext_perm_sms
     ExtensionPermission.NOTIFICATIONS -> R.string.ext_perm_notifications
     ExtensionPermission.BACKGROUND -> R.string.ext_perm_background
 }

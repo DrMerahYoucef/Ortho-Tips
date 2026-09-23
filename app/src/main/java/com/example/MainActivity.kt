@@ -331,6 +331,11 @@ fun OrthoAppNavHost(appModule: AppModule) {
             // Main is the start screen, so the appointment simply opens on top of it.
             navController.navigate(OrthoDestinations.timelineEventEdit(patientId, eventId))
         }
+        // A bank SMS notification opens the extension that handles it.
+        intent.getStringExtra(com.example.data.sms.BankSmsInbox.EXTRA_OPEN_EXTENSION)?.let { extensionId ->
+            intent.removeExtra(com.example.data.sms.BankSmsInbox.EXTRA_OPEN_EXTENSION)
+            navController.navigate(OrthoDestinations.extensionRunner(extensionId))
+        }
     }
 
     NavHost(

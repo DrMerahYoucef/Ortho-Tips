@@ -46,7 +46,9 @@ class ExtensionRepository(
     private val context: Context,
     private val handlers: ExtensionHandlerRegistry,
     private val appVersionCode: Int = BuildConfig.VERSION_CODE,
-    private val appVersionName: String = BuildConfig.VERSION_NAME
+    private val appVersionName: String = BuildConfig.VERSION_NAME,
+    /** Called with every new list of installed extensions (e.g. who may read bank SMS). */
+    private val onExtensionsChanged: (List<OrthoExtension>) -> Unit = {}
 ) {
 
     sealed interface InstallResult {
@@ -80,7 +82,7 @@ class ExtensionRepository(
                 cleanLeftovers()
                 migrated = true
             }
-            _extensions.value = scan()
+            publish(scan())
         }
     }
 
@@ -170,7 +172,7 @@ class ExtensionRepository(
                 writeRecord(staging, record)
                 commit(staging, File(root, manifest.id))
 
-                _extensions.value = scan()
+                publish(scan())
                 val installed = extensionDir(manifest.id)?.let(::describe)
                     ?: throw ExtensionInstallException(ExtensionError.STORAGE_FAILED, "Installed folder missing")
                 InstallResult.Installed(installed, previous?.version)
@@ -199,7 +201,7 @@ class ExtensionRepository(
                         .onFailure { Log.e(TAG, "Handler could not remove $id", it) }
                 }
                 dir.deleteRecursively()
-                _extensions.value = scan()
+                publish(scan())
             }
         }
         clearData(id)
@@ -410,6 +412,11 @@ class ExtensionRepository(
             ?.filter { it.name.startsWith(STAGING_PREFIX) || it.name.startsWith(TRASH_PREFIX) }
             ?.forEach { it.deleteRecursively() }
         File(context.cacheDir, WORK_DIR).deleteRecursively()
+    }
+
+    private fun publish(list: List<OrthoExtension>) {
+        _extensions.value = list
+        runCatching { onExtensionsChanged(list) }.onFailure { Log.e(TAG, "Extension listener failed", it) }
     }
 
     private fun extensionDir(id: String): File? =

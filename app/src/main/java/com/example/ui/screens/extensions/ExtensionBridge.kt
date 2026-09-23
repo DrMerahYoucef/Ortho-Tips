@@ -44,7 +44,11 @@ internal class ExtensionBridge(
     /** Settles a promise from [call]: `value` is a JSON literal, or an error message when `ok` is false. */
     private val onSettle: (requestId: String, ok: Boolean, value: String) -> Unit,
     /** A refused call, shown in the extension's console. */
-    private val onDenied: (String) -> Unit
+    private val onDenied: (String) -> Unit,
+    /** Bank SMS for this extension; null when it does not hold `sms`. */
+    private val sms: ExtensionSmsAccess? = null,
+    /** Shows Android's SMS permission dialog; the answer settles [requestId]. */
+    private val onRequestSmsAccess: (requestId: String) -> Unit = {}
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val worker: ExecutorService = Executors.newSingleThreadExecutor()
@@ -120,6 +124,11 @@ internal class ExtensionBridge(
             settle(id, false, "PermissionError: '${required.key}' not granted")
             return
         }
+        if (name == "sms.requestAccess") {
+            // A system dialog: must be launched from the UI, answered later.
+            main.post { onRequestSmsAccess(id) }
+            return
+        }
         worker.execute {
             val result = runCatching {
                 val args = if (argsJson.isNullOrBlank()) JSONObject() else JSONObject(argsJson)
@@ -144,6 +153,13 @@ internal class ExtensionBridge(
         "files.delete" -> requireFiles().delete(args.getString("path")).toString()
         "assets.read" -> readAsset(args.getString("path"))?.let(::base64Literal) ?: "null"
         "database.query" -> database.query(args).toString()
+        "sms.status" -> requireSms().status().toString()
+        "sms.pending" -> requireSms().pending().toString()
+        "sms.history" -> requireSms().history().toString()
+        "sms.ack" -> {
+            requireSms().ack(args.getLong("upTo"))
+            "true"
+        }
         else -> throw IllegalArgumentException("Unknown method '$method'")
     }
 
@@ -155,6 +171,8 @@ internal class ExtensionBridge(
     }
 
     private fun requireFiles(): ExtensionFiles = files ?: throw IllegalStateException("Storage is unavailable")
+
+    private fun requireSms(): ExtensionSmsAccess = sms ?: throw IllegalStateException("SMS is unavailable")
 
     private fun allowed(permission: ExtensionPermission): Boolean {
         if (permission in granted && permission.implemented) return true
@@ -188,9 +206,25 @@ internal class ExtensionBridge(
             "files.list" to ExtensionPermission.STORAGE,
             "files.delete" to ExtensionPermission.STORAGE,
             "assets.read" to ExtensionPermission.ASSETS,
-            "database.query" to ExtensionPermission.DATABASE
+            "database.query" to ExtensionPermission.DATABASE,
+            "sms.status" to ExtensionPermission.SMS,
+            "sms.requestAccess" to ExtensionPermission.SMS,
+            "sms.pending" to ExtensionPermission.SMS,
+            "sms.ack" to ExtensionPermission.SMS,
+            "sms.history" to ExtensionPermission.SMS
         )
     }
+}
+
+/**
+ * What the bridge needs for `OrthoTips.sms`, bound to one extension so it can
+ * only read and acknowledge its own queue.
+ */
+internal interface ExtensionSmsAccess {
+    fun status(): JSONObject
+    fun pending(): JSONArray
+    fun ack(upTo: Long)
+    fun history(): JSONArray
 }
 
 /** "Save as…" with a file name and type chosen at launch time. */
