@@ -155,7 +155,7 @@ fun MainScreen(
                 when (tab) {
                     MainTab.EXTENSIONS -> HomeScreen(
                         viewModel = viewModel(
-                            factory = HomeViewModel.provideFactory(appModule.orthoRepository, appModule.extensionRepository)
+                            factory = HomeViewModel.provideFactory(appModule.orthoRepository)
                         ),
                         classificationViewModel = viewModel<ClassificationViewModel>(
                             factory = ClassificationViewModel.provideFactory(appModule.classificationRepository)

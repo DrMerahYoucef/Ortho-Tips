@@ -15,8 +15,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -56,7 +65,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
@@ -69,13 +77,12 @@ import com.example.viewmodel.ExtensionEvent
 import com.example.viewmodel.ExtensionsViewModel
 
 /**
- * The manager in the Extensions area: every installed `.OTips` extension,
- * whatever its kind. Tap a card to open it; its menu shows what it may access,
- * exports it, clears its saved data or deletes it. Installing happens on the
- * import screen ([onImport]).
+ * The Extensions area: every installed extension as a tile — its icon and name —
+ * in a grid. A tap opens it; a long press shows its options (details, export,
+ * clear its data, delete). The last tile adds an extension (the import screen).
  */
 @Composable
-fun ExtensionsTab(
+fun ExtensionsGrid(
     viewModel: ExtensionsViewModel,
     onOpenExtension: (OrthoExtension) -> Unit,
     onImport: () -> Unit,
@@ -95,7 +102,6 @@ fun ExtensionsTab(
         pendingExport = null
         if (uri != null && extension != null) viewModel.export(extension, uri)
     }
-    val startImport = onImport
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
@@ -115,59 +121,47 @@ fun ExtensionsTab(
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
 
             extensions.isEmpty() ->
-                EmptyExtensions(onImport = startImport, modifier = Modifier.align(Alignment.Center))
+                EmptyExtensions(onImport = onImport, modifier = Modifier.align(Alignment.Center))
 
-            else -> LazyColumn(
+            else -> LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 96.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
                     .fillMaxSize()
-                    .testTag("extensions_list"),
-                contentPadding = PaddingValues(bottom = 24.dp)
+                    .testTag("extensions_grid")
             ) {
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 18.dp, end = 12.dp, top = 12.dp, bottom = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = stringResource(R.string.ext_your_extensions),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = extensions.size.toString(),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        FilledTonalButton(onClick = startImport, modifier = Modifier.testTag("extensions_import")) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(stringResource(R.string.ext_import))
-                        }
-                    }
-                }
-
                 items(extensions, key = { it.id }) { extension ->
-                    ExtensionCard(
+                    ExtensionTile(
                         extension = extension,
                         onOpen = { onOpenExtension(extension) },
                         onDetails = { details = extension },
-                        onExport = {
-                            pendingExport = extension
-                            exportLauncher.launch(
-                                CreateDocumentWithType.Input(viewModel.exportFileName(extension), OTipsFormat.MIME_TYPE)
-                            )
+                        onExport = if (extension.exportable) {
+                            {
+                                pendingExport = extension
+                                exportLauncher.launch(
+                                    CreateDocumentWithType.Input(viewModel.exportFileName(extension), OTipsFormat.MIME_TYPE)
+                                )
+                            }
+                        } else {
+                            null
                         },
                         onClearData = { pendingClear = extension },
-                        onDelete = { pendingDelete = extension },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.dp)
+                        onDelete = { pendingDelete = extension }
                     )
                 }
-
-                item { PrivacyNote(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) }
+                item(key = "add") { AddTile(onClick = onImport) }
+                item(key = "note", span = { GridItemSpan(maxLineSpan) }) {
+                    Column(modifier = Modifier.padding(top = 12.dp)) {
+                        Text(
+                            text = stringResource(R.string.ext_grid_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                        PrivacyNote(modifier = Modifier.padding(top = 10.dp))
+                    }
+                }
             }
         }
     }
@@ -207,121 +201,107 @@ fun ExtensionsTab(
     }
 }
 
+/** One extension: icon and name. Tap opens it; a long press opens its options. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ExtensionCard(
+private fun ExtensionTile(
     extension: OrthoExtension,
     onOpen: () -> Unit,
     onDetails: () -> Unit,
-    onExport: () -> Unit,
+    onExport: (() -> Unit)?,
     onClearData: () -> Unit,
-    onDelete: () -> Unit,
-    modifier: Modifier = Modifier
+    onDelete: () -> Unit
 ) {
-    val context = LocalContext.current
     var menuOpen by remember { mutableStateOf(false) }
-
-    Card(
-        onClick = onOpen,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        modifier = modifier
-            .fillMaxWidth()
-            .testTag("extension_card_${extension.id}")
-    ) {
-        Row(
-            modifier = Modifier.padding(start = 16.dp, top = 14.dp, bottom = 14.dp, end = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            ExtensionIconTile(icon = extension.icon)
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = extension.manifest.label(),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+    val haptics = LocalHapticFeedback.current
+    Box {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .combinedClickable(
+                    onClick = onOpen,
+                    onLongClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        menuOpen = true
+                    },
+                    onLongClickLabel = stringResource(R.string.ext_grid_options)
                 )
-                val summary = extension.manifest.summary()
-                if (summary.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = summary,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = stringResource(extensionKindLabelRes(extension.kind)) + " · " + stringResource(
-                            R.string.ext_meta,
-                            extension.version,
-                            Formatter.formatShortFileSize(context, extension.sizeBytes)
-                        ),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                    if (extension.allowNetwork) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(
-                            Icons.Outlined.Public,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.tertiary,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text(
-                            text = stringResource(R.string.ext_uses_internet),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.tertiary
-                        )
-                    }
-                }
+                .padding(horizontal = 4.dp, vertical = 10.dp)
+                .testTag("extension_tile_${extension.id}")
+        ) {
+            ExtensionIconTile(icon = extension.icon, size = 64.dp)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = extension.manifest.label(),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.ext_action_open)) },
+                leadingIcon = { Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null) },
+                onClick = { menuOpen = false; onOpen() }
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.ext_action_details)) },
+                leadingIcon = { Icon(Icons.Outlined.Tune, contentDescription = null) },
+                onClick = { menuOpen = false; onDetails() }
+            )
+            if (onExport != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.ext_action_export)) },
+                    leadingIcon = { Icon(Icons.Outlined.FileDownload, contentDescription = null) },
+                    onClick = { menuOpen = false; onExport() }
+                )
             }
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.ext_action_clear_data)) },
+                leadingIcon = { Icon(Icons.Outlined.DeleteSweep, contentDescription = null) },
+                onClick = { menuOpen = false; onClearData() }
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.ext_action_delete), color = MaterialTheme.colorScheme.error) },
+                leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                onClick = { menuOpen = false; onDelete() }
+            )
+        }
+    }
+}
 
-            Box {
-                IconButton(onClick = { menuOpen = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.ext_more))
-                }
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.ext_action_open)) },
-                        leadingIcon = { Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null) },
-                        onClick = { menuOpen = false; onOpen() }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.ext_action_details)) },
-                        leadingIcon = { Icon(Icons.Outlined.Tune, contentDescription = null) },
-                        onClick = { menuOpen = false; onDetails() }
-                    )
-                    if (extension.exportable) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.ext_action_export)) },
-                            leadingIcon = { Icon(Icons.Outlined.FileDownload, contentDescription = null) },
-                            onClick = { menuOpen = false; onExport() }
-                        )
-                    }
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.ext_action_clear_data)) },
-                        leadingIcon = { Icon(Icons.Outlined.DeleteSweep, contentDescription = null) },
-                        onClick = { menuOpen = false; onClearData() }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.ext_action_delete), color = MaterialTheme.colorScheme.error) },
-                        leadingIcon = {
-                            Icon(Icons.Outlined.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                        },
-                        onClick = { menuOpen = false; onDelete() }
-                    )
-                }
+/** The last tile: adds an extension (opens the import screen). */
+@Composable
+private fun AddTile(onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 10.dp)
+            .testTag("extensions_add_tile")
+    ) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.size(64.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(30.dp))
             }
         }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.ext_grid_add),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center
+        )
     }
 }
 

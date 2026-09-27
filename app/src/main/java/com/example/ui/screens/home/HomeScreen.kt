@@ -41,10 +41,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -65,14 +63,20 @@ import com.example.R
 import com.example.data.local.model.ChapterWithCount
 import com.example.ui.components.BoneRow
 import com.example.ui.screens.classifications.ClassificationChaptersScreen
-import com.example.ui.screens.extensions.ExtensionsTab
+import com.example.ui.screens.extensions.ExtensionsGrid
+import com.example.ui.screens.extensions.label
 import com.example.viewmodel.ExtensionsViewModel
 import com.example.viewmodel.ClassificationViewModel
-import com.example.viewmodel.ExtensionsHubTab
 import com.example.viewmodel.HomeViewModel
 import com.example.data.local.displayDescription
 import com.example.data.local.displayTitle
 import androidx.compose.ui.res.stringResource
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.activity.compose.BackHandler
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import com.example.data.extensions.ExtensionKinds
@@ -97,12 +101,37 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val extensions by extensionsViewModel.extensions.collectAsStateWithLifecycle()
+
+    // The extension shown inside this screen (the guide or the classifications);
+    // null shows the grid. Saved, so coming back from a procedure keeps it open.
+    var opened by rememberSaveable { mutableStateOf<String?>(null) }
+    val openedExtension = extensions.firstOrNull { it.kind == opened }
+    LaunchedEffect(extensions, opened) {
+        // Deleted while open: back to the grid.
+        if (opened != null && extensions.isNotEmpty() && openedExtension == null) opened = null
+    }
+    BackHandler(enabled = opened != null) { opened = null }
 
     Scaffold(
         topBar = {
             TopAppBar(
+                navigationIcon = {
+                    if (opened != null) {
+                        IconButton(onClick = { opened = null }, modifier = Modifier.testTag("extension_back_to_grid")) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.ext_grid_back))
+                        }
+                    }
+                },
                 title = {
-                    Row(
+                    if (openedExtension != null) {
+                        Text(
+                            text = openedExtension.icon + "  " + openedExtension.manifest.label(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            maxLines = 1
+                        )
+                    } else Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -164,72 +193,43 @@ fun HomeScreen(
         containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Operative Guides / Classifications / Manage sub-tabs
-            PrimaryTabRow(
-                selectedTabIndex = uiState.tabs.indexOf(uiState.activeTab).coerceAtLeast(0),
-                containerColor = MaterialTheme.colorScheme.background,
-                contentColor = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                uiState.tabs.forEach { tab ->
-                    val isSelected = uiState.activeTab == tab
-                    Tab(
-                        selected = isSelected,
-                        onClick = { viewModel.setActiveTab(tab) },
-                        text = {
-                            Text(
-                                text = stringResource(tab.labelRes),
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                            )
-                        },
-                        modifier = Modifier.testTag("tab_${tab.name.lowercase()}")
-                    )
-                }
-            }
+            when (opened) {
+                ExtensionKinds.OPERATIVE_GUIDE -> OperativeGuidesView(
+                    uiState = uiState,
+                    onNavigateToChapter = onNavigateToChapter,
+                    onNavigateToBoneDetail = onNavigateToBoneDetail,
+                    onNavigateToSearch = onNavigateToSearch,
+                    onNavigateToImport = onNavigateToImport,
+                    onToggleBookmark = { viewModel.toggleBookmark(it) },
+                    onSwitchToClassifications = {
+                        if (extensions.any { it.kind == ExtensionKinds.CLASSIFICATIONS }) opened = ExtensionKinds.CLASSIFICATIONS
+                    }
+                )
 
-            when (uiState.activeTab) {
-                ExtensionsHubTab.OPERATIVE_GUIDES -> {
-                    OperativeGuidesView(
-                        uiState = uiState,
-                        onNavigateToChapter = onNavigateToChapter,
-                        onNavigateToBoneDetail = onNavigateToBoneDetail,
-                        onNavigateToSearch = onNavigateToSearch,
-                        onNavigateToImport = onNavigateToImport,
-                        onToggleBookmark = { viewModel.toggleBookmark(it) },
-                        onSwitchToClassifications = { viewModel.setActiveTab(ExtensionsHubTab.CLASSIFICATIONS) }
-                    )
-                }
+                ExtensionKinds.CLASSIFICATIONS -> ClassificationChaptersScreen(
+                    viewModel = classificationViewModel,
+                    onOpenChapter = { chapter -> onNavigateToClassificationChapter(chapter.file) },
+                    onOpenEditor = onNavigateToClassificationEditor
+                )
 
-                ExtensionsHubTab.CLASSIFICATIONS -> {
-                    ClassificationChaptersScreen(
-                        viewModel = classificationViewModel,
-                        onOpenChapter = { chapter -> onNavigateToClassificationChapter(chapter.file) },
-                        onOpenEditor = onNavigateToClassificationEditor
-                    )
-                }
-
-                ExtensionsHubTab.MANAGE -> {
-                    ExtensionsTab(
-                        viewModel = extensionsViewModel,
-                        onOpenExtension = { extension ->
-                            // Each kind opens where it is shown; kinds this build
-                            // cannot display are listed but not opened.
-                            when (extension.kind) {
-                                ExtensionKinds.HTML -> onNavigateToExtension(extension.id)
-                                ExtensionKinds.OPERATIVE_GUIDE -> viewModel.setActiveTab(ExtensionsHubTab.OPERATIVE_GUIDES)
-                                ExtensionKinds.CLASSIFICATIONS -> viewModel.setActiveTab(ExtensionsHubTab.CLASSIFICATIONS)
-                                else -> Toast.makeText(context, R.string.ext_cannot_open, Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        onImport = onNavigateToExtensionImport
-                    )
-                }
+                else -> ExtensionsGrid(
+                    viewModel = extensionsViewModel,
+                    onOpenExtension = { extension ->
+                        // Web tools run full screen; the guide and the classifications
+                        // are shown here. Kinds this build cannot display are not opened.
+                        when (extension.kind) {
+                            ExtensionKinds.HTML -> onNavigateToExtension(extension.id)
+                            ExtensionKinds.OPERATIVE_GUIDE, ExtensionKinds.CLASSIFICATIONS -> opened = extension.kind
+                            else -> Toast.makeText(context, R.string.ext_cannot_open, Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onImport = onNavigateToExtensionImport
+                )
             }
         }
     }
