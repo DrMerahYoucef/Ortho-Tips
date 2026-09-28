@@ -91,6 +91,9 @@ class AppModule(private val context: Context) {
             onExtensionEvent = { id, granted ->
                 if (granted == null || ExtensionPermission.NOTIFICATIONS !in granted) extensionReminders.cancelAll(id)
             },
+            onExtensionsChanged = { list ->
+                bankSmsInbox.setConsumers(list.filter { it.has(ExtensionPermission.SMS) }.map { it.id })
+            },
             handlers = ExtensionHandlerRegistry(
                 listOf(
                     HtmlExtensionHandler(),
@@ -109,6 +112,11 @@ class AppModule(private val context: Context) {
     /** Drafts of the classification editor; published as classification extensions. */
     val classificationDraftRepository: com.example.data.classification.ClassificationDraftRepository by lazy {
         com.example.data.classification.ClassificationDraftRepository(context, extensionRepository)
+    }
+
+    /** Bank movements from SMS for extensions holding the `sms` permission. */
+    val bankSmsInbox: com.example.data.sms.BankSmsInbox by lazy {
+        com.example.data.sms.BankSmsInbox(context)
     }
 
     /** Reminders scheduled by extensions (`notifications` permission), shown as Android notifications. */

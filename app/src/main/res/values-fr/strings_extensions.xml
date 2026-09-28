@@ -87,6 +87,7 @@
     <string name="ext_perm_storage">Enregistrement de fichiers sur ce téléphone</string>
     <string name="ext_perm_assets">Lecture de ses propres fichiers intégrés</string>
     <string name="ext_perm_import_export">Import et export de fichiers</string>
+    <string name="ext_perm_sms">Lecture des SMS bancaires : débits, crédits et soldes (jamais les codes)</string>
     <string name="ext_perm_notifications">Notifications — rappels affichés même application fermée</string>
     <string name="ext_perm_background">Exécution en arrière-plan (pas encore disponible)</string>
 
@@ -114,4 +115,10 @@
     <string name="ext_not_found">Cette extension n’est plus installée.</string>
     <string name="ext_file_saved">Fichier enregistré</string>
     <string name="ext_file_save_failed">Impossible d’enregistrer le fichier</string>
+    <!-- Bank SMS notifications -->
+    <string name="sms_notif_channel">Opérations bancaires par SMS</string>
+    <string name="sms_notif_debit">Dépense CCP : −%1$s DA</string>
+    <string name="sms_notif_credit">Revenu CCP : +%1$s DA</string>
+    <string name="sms_notif_balance">Nouveau solde : %1$s DA</string>
+    <string name="sms_notif_open">Touchez pour ouvrir</string>
 </resources>
