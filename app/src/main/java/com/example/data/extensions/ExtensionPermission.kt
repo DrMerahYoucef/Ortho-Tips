@@ -21,7 +21,8 @@ enum class ExtensionPermission(val key: String, val implemented: Boolean) {
     STORAGE("storage", implemented = true),
     ASSETS("assets", implemented = true),
     IMPORT_EXPORT("import_export", implemented = true),
-    NOTIFICATIONS("notifications", implemented = false),
+    /** Reminders the app shows as notifications, even when it is closed. */
+    NOTIFICATIONS("notifications", implemented = true),
     BACKGROUND("background", implemented = false);
 
     companion object {

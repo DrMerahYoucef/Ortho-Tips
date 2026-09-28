@@ -9,6 +9,7 @@ import com.example.data.crypto.WrappedKeyRepository
 import com.example.data.extensions.ClassificationsExtensionHandler
 import com.example.data.extensions.ExtensionDatabaseAccess
 import com.example.data.extensions.ExtensionHandlerRegistry
+import com.example.data.extensions.ExtensionPermission
 import com.example.data.extensions.ExtensionRepository
 import com.example.data.extensions.HtmlExtensionHandler
 import com.example.data.extensions.OperativeGuideExtensionHandler
@@ -86,6 +87,10 @@ class AppModule(private val context: Context) {
     val extensionRepository: ExtensionRepository by lazy {
         ExtensionRepository(
             context = context,
+            // Deleted, data cleared, or updated without `notifications`: its reminders go.
+            onExtensionEvent = { id, granted ->
+                if (granted == null || ExtensionPermission.NOTIFICATIONS !in granted) extensionReminders.cancelAll(id)
+            },
             handlers = ExtensionHandlerRegistry(
                 listOf(
                     HtmlExtensionHandler(),
@@ -104,6 +109,11 @@ class AppModule(private val context: Context) {
     /** Drafts of the classification editor; published as classification extensions. */
     val classificationDraftRepository: com.example.data.classification.ClassificationDraftRepository by lazy {
         com.example.data.classification.ClassificationDraftRepository(context, extensionRepository)
+    }
+
+    /** Reminders scheduled by extensions (`notifications` permission), shown as Android notifications. */
+    val extensionReminders: com.example.data.reminders.ExtensionReminders by lazy {
+        com.example.data.reminders.ExtensionReminders(context) { id -> extensionRepository.get(id) }
     }
 
     /** Read-only reference data for extensions holding the `database` permission. */

@@ -87,7 +87,7 @@
     <string name="ext_perm_storage">Enregistrement de fichiers sur ce téléphone</string>
     <string name="ext_perm_assets">Lecture de ses propres fichiers intégrés</string>
     <string name="ext_perm_import_export">Import et export de fichiers</string>
-    <string name="ext_perm_notifications">Notifications (pas encore disponible)</string>
+    <string name="ext_perm_notifications">Notifications — rappels affichés même application fermée</string>
     <string name="ext_perm_background">Exécution en arrière-plan (pas encore disponible)</string>
 
     <string name="ext_error_unreadable">Impossible de lire ce fichier.</string>

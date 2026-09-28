@@ -46,7 +46,12 @@ class ExtensionRepository(
     private val context: Context,
     private val handlers: ExtensionHandlerRegistry,
     private val appVersionCode: Int = BuildConfig.VERSION_CODE,
-    private val appVersionName: String = BuildConfig.VERSION_NAME
+    private val appVersionName: String = BuildConfig.VERSION_NAME,
+    /**
+     * An extension was deleted or its data cleared ([granted] null), or it was
+     * installed or updated with [granted] permissions. Used to drop its reminders.
+     */
+    private val onExtensionEvent: (id: String, granted: Set<ExtensionPermission>?) -> Unit = { _, _ -> }
 ) {
 
     sealed interface InstallResult {
@@ -169,6 +174,8 @@ class ExtensionRepository(
                 if (!handler.keepsContent) content.deleteRecursively()
                 writeRecord(staging, record)
                 commit(staging, File(root, manifest.id))
+                runCatching { onExtensionEvent(manifest.id, manifest.permissions) }
+                    .onFailure { Log.e(TAG, "Extension listener failed", it) }
 
                 _extensions.value = scan()
                 val installed = extensionDir(manifest.id)?.let(::describe)
@@ -209,6 +216,7 @@ class ExtensionRepository(
     suspend fun clearData(id: String) {
         if (!ExtensionMetadata.isValidId(id)) return
         withContext(Dispatchers.IO) {
+            runCatching { onExtensionEvent(id, null) }.onFailure { Log.e(TAG, "Extension listener failed", it) }
             ExtensionStorage.clear(context, id)
             File(File(root, id), FILES_DIR).deleteRecursively()
         }

@@ -92,7 +92,7 @@
     <string name="ext_perm_storage">Storing files on this phone</string>
     <string name="ext_perm_assets">Reading its own bundled files</string>
     <string name="ext_perm_import_export">Importing and exporting files</string>
-    <string name="ext_perm_notifications">Notifications (not available yet)</string>
+    <string name="ext_perm_notifications">Notifications — reminders shown even when the app is closed</string>
     <string name="ext_perm_background">Running in the background (not available yet)</string>
 
     <string name="ext_error_unreadable">This file could not be read.</string>

@@ -44,7 +44,11 @@ internal class ExtensionBridge(
     /** Settles a promise from [call]: `value` is a JSON literal, or an error message when `ok` is false. */
     private val onSettle: (requestId: String, ok: Boolean, value: String) -> Unit,
     /** A refused call, shown in the extension's console. */
-    private val onDenied: (String) -> Unit
+    private val onDenied: (String) -> Unit,
+    /** Reminders of this extension; null when it does not hold `notifications`. */
+    private val notifications: ExtensionNotificationAccess? = null,
+    /** Shows Android's notification permission dialog (or settings); the answer settles [requestId]. */
+    private val onRequestNotificationAccess: (requestId: String) -> Unit = {}
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val worker: ExecutorService = Executors.newSingleThreadExecutor()
@@ -120,6 +124,11 @@ internal class ExtensionBridge(
             settle(id, false, "PermissionError: '${required.key}' not granted")
             return
         }
+        if (name == "notifications.requestAccess") {
+            // A system dialog or the settings screen: launched from the UI, answered later.
+            main.post { onRequestNotificationAccess(id) }
+            return
+        }
         worker.execute {
             val result = runCatching {
                 val args = if (argsJson.isNullOrBlank()) JSONObject() else JSONObject(argsJson)
@@ -144,6 +153,11 @@ internal class ExtensionBridge(
         "files.delete" -> requireFiles().delete(args.getString("path")).toString()
         "assets.read" -> readAsset(args.getString("path"))?.let(::base64Literal) ?: "null"
         "database.query" -> database.query(args).toString()
+        "notifications.status" -> requireNotifications().status().toString()
+        "notifications.schedule" -> requireNotifications().schedule(args).toString()
+        "notifications.cancel" -> requireNotifications().cancel(args.getString("id")).toString()
+        "notifications.cancelAll" -> requireNotifications().cancelAll().toString()
+        "notifications.list" -> requireNotifications().list().toString()
         else -> throw IllegalArgumentException("Unknown method '$method'")
     }
 
@@ -153,6 +167,9 @@ internal class ExtensionBridge(
         require(ExtensionManifest.isSafeRelativePath(clean)) { "Invalid path '$path'" }
         return File(root, clean).takeIf { it.isFile }?.readBytes()
     }
+
+    private fun requireNotifications(): ExtensionNotificationAccess =
+        notifications ?: throw IllegalStateException("Notifications are unavailable")
 
     private fun requireFiles(): ExtensionFiles = files ?: throw IllegalStateException("Storage is unavailable")
 
@@ -179,7 +196,7 @@ internal class ExtensionBridge(
 
     companion object {
         /** Bridge API version exposed as `OrthoTips.bridgeVersion`. */
-        const val BRIDGE_VERSION = 2
+        const val BRIDGE_VERSION = 3
 
         /** Method → permission it needs. Anything absent is refused. */
         private val REQUIRED = mapOf(
@@ -188,9 +205,27 @@ internal class ExtensionBridge(
             "files.list" to ExtensionPermission.STORAGE,
             "files.delete" to ExtensionPermission.STORAGE,
             "assets.read" to ExtensionPermission.ASSETS,
-            "database.query" to ExtensionPermission.DATABASE
+            "database.query" to ExtensionPermission.DATABASE,
+            "notifications.status" to ExtensionPermission.NOTIFICATIONS,
+            "notifications.requestAccess" to ExtensionPermission.NOTIFICATIONS,
+            "notifications.schedule" to ExtensionPermission.NOTIFICATIONS,
+            "notifications.cancel" to ExtensionPermission.NOTIFICATIONS,
+            "notifications.cancelAll" to ExtensionPermission.NOTIFICATIONS,
+            "notifications.list" to ExtensionPermission.NOTIFICATIONS
         )
     }
+}
+
+/**
+ * What the bridge needs for `OrthoTips.notifications`, bound to one extension:
+ * it only sees, replaces and cancels its own reminders.
+ */
+internal interface ExtensionNotificationAccess {
+    fun status(): JSONObject
+    fun schedule(args: JSONObject): JSONObject
+    fun cancel(id: String): Boolean
+    fun cancelAll(): Int
+    fun list(): JSONArray
 }
 
 /** "Save as…" with a file name and type chosen at launch time. */

@@ -135,11 +135,20 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
         super.attachBaseContext(AppLocale.wrap(newBase))
     }
 
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // An extension's notification tapped while the app is running.
+        com.example.ui.screens.extensions.ExtensionNotificationRouter.post(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         val appModule = (application as OrthoApplication).appModule
+        // Opened by tapping an extension's notification.
+        if (savedInstanceState == null) com.example.ui.screens.extensions.ExtensionNotificationRouter.post(intent)
 
         // The home-screen widget cannot read the DataStore in time, so hand it the
         // theme choice each time it changes (and once at launch for older installs).
@@ -320,6 +329,15 @@ fun OrthoAppNavHost(appModule: AppModule) {
     val navController = rememberNavController()
 
     // The widget's note button asks for one appointment; open it once the graph exists.
+    // A tapped extension notification: to the open extension, or open it with `launch`.
+    LaunchedEffect(navController) {
+        com.example.ui.screens.extensions.ExtensionNotificationRouter.pending.collect { tap ->
+            if (!com.example.ui.screens.extensions.ExtensionNotificationRouter.deliverToOpen(tap)) {
+                com.example.ui.screens.extensions.ExtensionNotificationRouter.setLaunch(tap)
+                navController.navigate(OrthoDestinations.extensionRunner(tap.extensionId))
+            }
+        }
+    }
     val hostActivity = currentFragmentActivity()
     LaunchedEffect(hostActivity) {
         val intent = hostActivity?.intent ?: return@LaunchedEffect

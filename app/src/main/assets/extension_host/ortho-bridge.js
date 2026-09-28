@@ -1,5 +1,5 @@
 /*
- * Ortho Tips — extension host bridge (API version 2).
+ * Ortho Tips — extension host bridge (API version 3).
  *
  * Injected as the first script of every extension page, before any of the
  * page's own code. It turns the raw Android interface `OrthoTipsNative` into:
@@ -256,6 +256,12 @@
 
   // ---- theme, back, misc -----------------------------------------------------
   var themeListeners = [];
+  var notificationListeners = [];
+  // Set when the app opened this extension because a notification was tapped.
+  var launch = null;
+  if (info.launch && info.launch.source === 'notification' && has('notifications')) {
+    launch = { id: String(info.launch.id || ''), data: info.launch.data == null ? null : String(info.launch.data) };
+  }
   var backHandlers = [];
 
   function markTheme(t) {
@@ -263,7 +269,7 @@
   }
 
   var api = {
-    bridgeVersion: 2,
+    bridgeVersion: 3,
     extensionId: String(info.extensionId || ''),
     extensionVersion: String(info.extensionVersion || ''),
     appVersion: String(info.appVersion || ''),
@@ -302,6 +308,31 @@
           .then(function (b64) { return decode(b64, as); });
       }
     },
+    // Requires `notifications`: reminders scheduled and shown by the app, even
+    // when Ortho Tips is closed. The app keeps them across reboots and cancels
+    // them when the extension is deleted or loses the permission.
+    notifications: {
+      launch: launch,
+      status: function () { return gated('notifications', 'notifications.status', {}); },
+      requestAccess: function () { return gated('notifications', 'notifications.requestAccess', {}); },
+      schedule: function (n) {
+        n = n || {};
+        return gated('notifications', 'notifications.schedule', {
+          id: String(n.id == null ? '' : n.id),
+          title: String(n.title == null ? '' : n.title),
+          body: n.body == null ? '' : String(n.body),
+          at: Number(n.at),
+          repeatDays: Math.max(0, Math.floor(Number(n.repeatDays) || 0)),
+          data: n.data == null ? null : String(n.data)
+        });
+      },
+      cancel: function (id) { return gated('notifications', 'notifications.cancel', { id: String(id) }); },
+      cancelAll: function () { return gated('notifications', 'notifications.cancelAll', {}); },
+      list: function () { return gated('notifications', 'notifications.list', {}); },
+      onOpen: function (cb) {
+        if (typeof cb === 'function' && has('notifications')) notificationListeners.push(cb);
+      }
+    },
     // Requires `database`: read-only clinical reference data, never patients.
     database: {
       query: function (spec) { return gated('database', 'database.query', spec || {}); }
@@ -323,6 +354,12 @@
       markTheme(theme);
       themeListeners.forEach(function (cb) { try { cb(theme); } catch (e) {} });
       try { window.dispatchEvent(new CustomEvent('orthotips:theme', { detail: theme })); } catch (e) {}
+    },
+    // A notification of this extension was tapped while it is already open.
+    __notificationOpened: function (id, data) {
+      var ev = { id: String(id || ''), data: data == null ? null : String(data) };
+      notificationListeners.forEach(function (cb) { try { cb(ev); } catch (e) { try { console.error(e); } catch (x) {} } });
+      try { window.dispatchEvent(new CustomEvent('orthotips:notification', { detail: ev })); } catch (e) {}
     },
     __handleBack: function () {
       for (var i = backHandlers.length - 1; i >= 0; i--) {
