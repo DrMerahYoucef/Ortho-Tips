@@ -1,10 +1,20 @@
 package com.example.ui.screens.extensions
 
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.Lifecycle
+import androidx.core.content.ContextCompat
+import androidx.core.app.ActivityCompat
+import android.provider.Settings
+import android.content.pm.PackageManager
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import android.webkit.ConsoleMessage
 import android.webkit.ValueCallback
@@ -67,9 +77,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.BuildConfig
 import com.example.R
-import android.Manifest
-import android.os.Build
-import com.example.data.sms.BankSmsInbox
 import com.example.data.extensions.ExtensionDatabaseAccess
 import com.example.data.extensions.ExtensionFiles
 import com.example.data.extensions.ExtensionPermission
@@ -103,7 +110,9 @@ private class RunnerHost {
     var bridge: ExtensionBridge? = null
     var fileCallback: ValueCallback<Array<Uri>>? = null
     var pendingSave: PendingSave? = null
-    var pendingSmsRequest: String? = null
+    var pendingNotificationRequest: String? = null
+    var notificationAskedAt = 0L
+    var awaitingNotificationSettings = false
     val console = mutableStateListOf<ConsoleLine>()
 
     fun resolve(requestId: String, value: Boolean) {
@@ -198,18 +207,52 @@ fun ExtensionRunnerScreen(
         }
     }
 
-    // Bank SMS (`sms` permission): Android's permission dialog, and live delivery.
-    val smsInbox = remember { BankSmsInbox(context) }
-    val smsPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        val id = host.pendingSmsRequest ?: return@rememberLauncherForActivityResult
-        host.pendingSmsRequest = null
-        host.settle(id, true, smsInbox.status().toString())
-    }
-    LaunchedEffect(smsInbox) {
-        BankSmsInbox.arrivals.collect {
-            host.webView?.evaluateJavascript("window.dispatchEvent(new Event('orthotips:sms'))", null)
+    // Notifications (`notifications` permission): Android's dialog, or its settings
+    // screen once it will not ask again; answered when the user comes back.
+    val reminders = remember { (context.applicationContext as com.example.OrthoApplication).appModule.extensionReminders }
+    val answerNotificationRequest = {
+        host.pendingNotificationRequest?.let { requestId ->
+            host.pendingNotificationRequest = null
+            host.awaitingNotificationSettings = false
+            host.settle(requestId, true, reminders.status().toString())
         }
     }
+    val openNotificationSettings = {
+        host.awaitingNotificationSettings = true
+        val settings = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (runCatching { context.startActivity(settings) }.isFailure) answerNotificationRequest()
+    }
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        val activity = context.findActivity()
+        // Answered in a blink without a dialog: Android will not ask any more.
+        val noDialog = System.currentTimeMillis() - host.notificationAskedAt < 400
+        if (!granted && noDialog && Build.VERSION.SDK_INT >= 33 && activity != null &&
+            !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.POST_NOTIFICATIONS)
+        ) openNotificationSettings() else answerNotificationRequest()
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME && host.awaitingNotificationSettings) answerNotificationRequest()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    // A tapped notification of this extension while it is open → onOpen(…).
+    DisposableEffect(extensionId) {
+        val handler: (ExtensionNotificationRouter.Tap) -> Unit = { tap ->
+            host.webView?.evaluateJavascript(
+                "window.OrthoTips&&OrthoTips.__notificationOpened(${JSONObject.quote(tap.id)},${tap.data?.let(JSONObject::quote) ?: "null"})",
+                null
+            )
+        }
+        ExtensionNotificationRouter.register(extensionId, handler)
+        onDispose { ExtensionNotificationRouter.unregister(extensionId, handler) }
+    }
+    // Set when this opening comes from tapping one of its notifications; given to info() once.
+    val launch = remember(extensionId) { ExtensionNotificationRouter.takeLaunch(extensionId) }
 
     // The app's theme changed while the extension is open.
     LaunchedEffect(theme) {
@@ -332,6 +375,7 @@ fun ExtensionRunnerScreen(
                                                 "permissions",
                                                 JSONArray(ExtensionPermission.keys(state.extension.granted.filter { it.implemented }))
                                             )
+                                            .put("launch", launch ?: JSONObject.NULL)
                                             .toString()
                                     },
                                     onToast = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() },
@@ -353,29 +397,33 @@ fun ExtensionRunnerScreen(
                                     },
                                     onSettle = host::settle,
                                     onDenied = { host.log(ConsoleLine(isError = true, text = it)) },
-                                    sms = if (state.extension.has(ExtensionPermission.SMS)) {
+                                    notifications = if (state.extension.has(ExtensionPermission.NOTIFICATIONS)) {
                                         val id = state.extension.id
-                                        object : ExtensionSmsAccess {
-                                            override fun status() = smsInbox.status()
-                                            override fun pending() = smsInbox.pending(id)
-                                            override fun ack(upTo: Long) = smsInbox.ack(id, upTo)
-                                            override fun history() = smsInbox.history()
+                                        object : ExtensionNotificationAccess {
+                                            override fun status() = reminders.status()
+                                            override fun schedule(args: JSONObject) = reminders.schedule(id, args)
+                                            override fun cancel(id2: String) = reminders.cancel(id, id2)
+                                            override fun cancelAll() = reminders.cancelAll(id)
+                                            override fun list() = reminders.list(id)
                                         }
                                     } else {
                                         null
                                     },
-                                    onRequestSmsAccess = { requestId ->
-                                        host.pendingSmsRequest = requestId
-                                        val wanted = buildList {
-                                            add(Manifest.permission.RECEIVE_SMS)
-                                            add(Manifest.permission.READ_SMS)
-                                            if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
-                                        }
-                                        runCatching { smsPermissions.launch(wanted.toTypedArray()) }
-                                            .onFailure {
-                                                host.pendingSmsRequest = null
-                                                host.settle(requestId, true, smsInbox.status().toString())
+                                    onRequestNotificationAccess = { requestId ->
+                                        host.pendingNotificationRequest = requestId
+                                        when {
+                                            reminders.notificationsEnabled() -> answerNotificationRequest()
+                                            Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(
+                                                context, Manifest.permission.POST_NOTIFICATIONS
+                                            ) != PackageManager.PERMISSION_GRANTED -> {
+                                                host.notificationAskedAt = System.currentTimeMillis()
+                                                runCatching { notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS) }
+                                                    .onFailure { answerNotificationRequest() }
                                             }
+                                            // Allowed but switched off (or the channel blocked): only settings can fix it.
+                                            Build.VERSION.SDK_INT >= 26 -> openNotificationSettings()
+                                            else -> answerNotificationRequest()
+                                        }
                                     }
                                 ),
                                 onChooseFile = { mimeTypes ->
@@ -545,4 +593,14 @@ private fun ConsoleDialog(
             }
         }
     )
+}
+
+/** The Activity behind a Compose context, for permission rationale checks. */
+private fun Context.findActivity(): android.app.Activity? {
+    var c: Context? = this
+    while (c is android.content.ContextWrapper) {
+        if (c is android.app.Activity) return c
+        c = c.baseContext
+    }
+    return null
 }

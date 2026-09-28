@@ -45,10 +45,10 @@ internal class ExtensionBridge(
     private val onSettle: (requestId: String, ok: Boolean, value: String) -> Unit,
     /** A refused call, shown in the extension's console. */
     private val onDenied: (String) -> Unit,
-    /** Bank SMS for this extension; null when it does not hold `sms`. */
-    private val sms: ExtensionSmsAccess? = null,
-    /** Shows Android's SMS permission dialog; the answer settles [requestId]. */
-    private val onRequestSmsAccess: (requestId: String) -> Unit = {}
+    /** Reminders of this extension; null when it does not hold `notifications`. */
+    private val notifications: ExtensionNotificationAccess? = null,
+    /** Shows Android's notification permission dialog (or settings); the answer settles [requestId]. */
+    private val onRequestNotificationAccess: (requestId: String) -> Unit = {}
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val worker: ExecutorService = Executors.newSingleThreadExecutor()
@@ -124,9 +124,9 @@ internal class ExtensionBridge(
             settle(id, false, "PermissionError: '${required.key}' not granted")
             return
         }
-        if (name == "sms.requestAccess") {
-            // A system dialog: must be launched from the UI, answered later.
-            main.post { onRequestSmsAccess(id) }
+        if (name == "notifications.requestAccess") {
+            // A system dialog or the settings screen: launched from the UI, answered later.
+            main.post { onRequestNotificationAccess(id) }
             return
         }
         worker.execute {
@@ -153,13 +153,11 @@ internal class ExtensionBridge(
         "files.delete" -> requireFiles().delete(args.getString("path")).toString()
         "assets.read" -> readAsset(args.getString("path"))?.let(::base64Literal) ?: "null"
         "database.query" -> database.query(args).toString()
-        "sms.status" -> requireSms().status().toString()
-        "sms.pending" -> requireSms().pending().toString()
-        "sms.history" -> requireSms().history().toString()
-        "sms.ack" -> {
-            requireSms().ack(args.getLong("upTo"))
-            "true"
-        }
+        "notifications.status" -> requireNotifications().status().toString()
+        "notifications.schedule" -> requireNotifications().schedule(args).toString()
+        "notifications.cancel" -> requireNotifications().cancel(args.getString("id")).toString()
+        "notifications.cancelAll" -> requireNotifications().cancelAll().toString()
+        "notifications.list" -> requireNotifications().list().toString()
         else -> throw IllegalArgumentException("Unknown method '$method'")
     }
 
@@ -170,9 +168,10 @@ internal class ExtensionBridge(
         return File(root, clean).takeIf { it.isFile }?.readBytes()
     }
 
-    private fun requireFiles(): ExtensionFiles = files ?: throw IllegalStateException("Storage is unavailable")
+    private fun requireNotifications(): ExtensionNotificationAccess =
+        notifications ?: throw IllegalStateException("Notifications are unavailable")
 
-    private fun requireSms(): ExtensionSmsAccess = sms ?: throw IllegalStateException("SMS is unavailable")
+    private fun requireFiles(): ExtensionFiles = files ?: throw IllegalStateException("Storage is unavailable")
 
     private fun allowed(permission: ExtensionPermission): Boolean {
         if (permission in granted && permission.implemented) return true
@@ -197,7 +196,7 @@ internal class ExtensionBridge(
 
     companion object {
         /** Bridge API version exposed as `OrthoTips.bridgeVersion`. */
-        const val BRIDGE_VERSION = 2
+        const val BRIDGE_VERSION = 3
 
         /** Method → permission it needs. Anything absent is refused. */
         private val REQUIRED = mapOf(
@@ -207,24 +206,26 @@ internal class ExtensionBridge(
             "files.delete" to ExtensionPermission.STORAGE,
             "assets.read" to ExtensionPermission.ASSETS,
             "database.query" to ExtensionPermission.DATABASE,
-            "sms.status" to ExtensionPermission.SMS,
-            "sms.requestAccess" to ExtensionPermission.SMS,
-            "sms.pending" to ExtensionPermission.SMS,
-            "sms.ack" to ExtensionPermission.SMS,
-            "sms.history" to ExtensionPermission.SMS
+            "notifications.status" to ExtensionPermission.NOTIFICATIONS,
+            "notifications.requestAccess" to ExtensionPermission.NOTIFICATIONS,
+            "notifications.schedule" to ExtensionPermission.NOTIFICATIONS,
+            "notifications.cancel" to ExtensionPermission.NOTIFICATIONS,
+            "notifications.cancelAll" to ExtensionPermission.NOTIFICATIONS,
+            "notifications.list" to ExtensionPermission.NOTIFICATIONS
         )
     }
 }
 
 /**
- * What the bridge needs for `OrthoTips.sms`, bound to one extension so it can
- * only read and acknowledge its own queue.
+ * What the bridge needs for `OrthoTips.notifications`, bound to one extension:
+ * it only sees, replaces and cancels its own reminders.
  */
-internal interface ExtensionSmsAccess {
+internal interface ExtensionNotificationAccess {
     fun status(): JSONObject
-    fun pending(): JSONArray
-    fun ack(upTo: Long)
-    fun history(): JSONArray
+    fun schedule(args: JSONObject): JSONObject
+    fun cancel(id: String): Boolean
+    fun cancelAll(): Int
+    fun list(): JSONArray
 }
 
 /** "Save as…" with a file name and type chosen at launch time. */

@@ -47,8 +47,11 @@ class ExtensionRepository(
     private val handlers: ExtensionHandlerRegistry,
     private val appVersionCode: Int = BuildConfig.VERSION_CODE,
     private val appVersionName: String = BuildConfig.VERSION_NAME,
-    /** Called with every new list of installed extensions (e.g. who may read bank SMS). */
-    private val onExtensionsChanged: (List<OrthoExtension>) -> Unit = {}
+    /**
+     * An extension was deleted or its data cleared ([granted] null), or it was
+     * installed or updated with [granted] permissions. Used to drop its reminders.
+     */
+    private val onExtensionEvent: (id: String, granted: Set<ExtensionPermission>?) -> Unit = { _, _ -> }
 ) {
 
     sealed interface InstallResult {
@@ -82,7 +85,7 @@ class ExtensionRepository(
                 cleanLeftovers()
                 migrated = true
             }
-            publish(scan())
+            _extensions.value = scan()
         }
     }
 
@@ -171,8 +174,10 @@ class ExtensionRepository(
                 if (!handler.keepsContent) content.deleteRecursively()
                 writeRecord(staging, record)
                 commit(staging, File(root, manifest.id))
+                runCatching { onExtensionEvent(manifest.id, manifest.permissions) }
+                    .onFailure { Log.e(TAG, "Extension listener failed", it) }
 
-                publish(scan())
+                _extensions.value = scan()
                 val installed = extensionDir(manifest.id)?.let(::describe)
                     ?: throw ExtensionInstallException(ExtensionError.STORAGE_FAILED, "Installed folder missing")
                 InstallResult.Installed(installed, previous?.version)
@@ -201,7 +206,7 @@ class ExtensionRepository(
                         .onFailure { Log.e(TAG, "Handler could not remove $id", it) }
                 }
                 dir.deleteRecursively()
-                publish(scan())
+                _extensions.value = scan()
             }
         }
         clearData(id)
@@ -211,6 +216,7 @@ class ExtensionRepository(
     suspend fun clearData(id: String) {
         if (!ExtensionMetadata.isValidId(id)) return
         withContext(Dispatchers.IO) {
+            runCatching { onExtensionEvent(id, null) }.onFailure { Log.e(TAG, "Extension listener failed", it) }
             ExtensionStorage.clear(context, id)
             File(File(root, id), FILES_DIR).deleteRecursively()
         }
@@ -412,11 +418,6 @@ class ExtensionRepository(
             ?.filter { it.name.startsWith(STAGING_PREFIX) || it.name.startsWith(TRASH_PREFIX) }
             ?.forEach { it.deleteRecursively() }
         File(context.cacheDir, WORK_DIR).deleteRecursively()
-    }
-
-    private fun publish(list: List<OrthoExtension>) {
-        _extensions.value = list
-        runCatching { onExtensionsChanged(list) }.onFailure { Log.e(TAG, "Extension listener failed", it) }
     }
 
     private fun extensionDir(id: String): File? =

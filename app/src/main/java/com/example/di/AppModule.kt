@@ -87,8 +87,9 @@ class AppModule(private val context: Context) {
     val extensionRepository: ExtensionRepository by lazy {
         ExtensionRepository(
             context = context,
-            onExtensionsChanged = { list ->
-                bankSmsInbox.setConsumers(list.filter { it.has(ExtensionPermission.SMS) }.map { it.id })
+            // Deleted, data cleared, or updated without `notifications`: its reminders go.
+            onExtensionEvent = { id, granted ->
+                if (granted == null || ExtensionPermission.NOTIFICATIONS !in granted) extensionReminders.cancelAll(id)
             },
             handlers = ExtensionHandlerRegistry(
                 listOf(
@@ -110,9 +111,9 @@ class AppModule(private val context: Context) {
         com.example.data.classification.ClassificationDraftRepository(context, extensionRepository)
     }
 
-    /** Bank movements from SMS for extensions holding the `sms` permission. */
-    val bankSmsInbox: com.example.data.sms.BankSmsInbox by lazy {
-        com.example.data.sms.BankSmsInbox(context)
+    /** Reminders scheduled by extensions (`notifications` permission), shown as Android notifications. */
+    val extensionReminders: com.example.data.reminders.ExtensionReminders by lazy {
+        com.example.data.reminders.ExtensionReminders(context) { id -> extensionRepository.get(id) }
     }
 
     /** Read-only reference data for extensions holding the `database` permission. */

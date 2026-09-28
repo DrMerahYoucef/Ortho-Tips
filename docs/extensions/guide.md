@@ -114,8 +114,7 @@ permissions.
 | `storage` | `OrthoTips.files.*` (section 5) — a private on-disk folder for the extension, for data bigger than the ~2 MB key/value store is meant for. | Separate from the always-available `OrthoTips.storage` key/value API, which needs no permission. |
 | `assets` | `OrthoTips.assets.read(path)` (section 5) — read-only access to extra files bundled alongside the extension. | Only meaningful for multi-file extension packages; a single `.html` file has nothing to read here. |
 | `import_export` | `OrthoTips.saveFile(...)` and the file-picker `<input type="file">` flow (section 5). | Previously always available to every extension; now explicit like everything else. |
-| `sms` | `OrthoTips.sms.*`: bank movements read from SMS (debits, credits, reported balance), live and from the inbox history (section 5). | Android asks the user for SMS access the first time (`requestAccess()`). Only movement messages ever reach the extension; transfer codes and all other SMS are filtered out by the app. |
-| `notifications` *(reserved)* | Scheduling/showing Android notifications. | Not implemented yet. Declaring it is harmless and future-proofs the manifest. |
+| `notifications` | `OrthoTips.notifications.*`: reminders the app shows as Android notifications, even when Ortho Tips is closed (section 5). | Android asks the user the first time (Android 13+). Reminders survive reboots and are removed with the extension. |
 | `background` *(reserved)* | Running work while the extension isn't in the foreground. | Not implemented yet, same as above. |
 
 Adding a capability later should mean adding one row here and one value to the
@@ -171,7 +170,7 @@ The host must check permissions on every gated call, not just at import:
   capabilities. This is also what makes every extension written before this
   section fully backward compatible.
 - **Explicit, per-capability declaration** — no "allow everything" option.
-- **Future-proof**: unknown/reserved values (`notifications`, `background`) can
+- **Future-proof**: unknown/reserved values (`background`) can
   be declared now and simply do nothing until implemented, instead of needing a
   manifest-format change later.
 - When writing a new extension, only request what it actually calls — it keeps
@@ -194,7 +193,7 @@ const HOST = window.OrthoTips || null;   // always feature-detect
 
 | Property | Type | Notes |
 |---|---|---|
-| `bridgeVersion` | number | `2` for this guide (raised from `1` for the permission system). |
+| `bridgeVersion` | number | `3` for this guide (`2` added the permission system, `3` notifications). |
 | `extensionId` | string | The `ortho-ext-id` of this file. |
 | `extensionVersion` | string | The installed version. |
 | `appVersion` | string | Ortho Tips version name. |
@@ -248,37 +247,60 @@ would offline. Rule 4 in section 2 still applies: the extension file itself
 must not *depend* on the network to load — only optional, in-use features
 (e.g. "fetch the latest guideline PDF") should reach for it.
 
-### Bank SMS — requires `sms`
+### Notifications — requires `notifications`
 
-The app watches incoming SMS for **bank movements** (Algérie Poste format today:
-« Débité / Crédité de … DA … nouveau solde … DA ») and keeps them for the
-extensions holding `sms`, with a notification on arrival. Messages mentioning a
-code, a password or an OTP are refused before anything is stored, and nothing
-is kept while no installed extension holds `sms`.
+Reminders scheduled by the extension and **shown by the app**, even when Ortho
+Tips is closed or swiped away. The app keeps them across reboots, clock and
+time-zone changes, and removes them when the extension is deleted, its data is
+cleared, or an update no longer declares `notifications`. An extension only
+sees, replaces and cancels **its own** reminders.
 
 ```js
-const st = await OrthoTips.sms.status();        // { available, granted, notifications }
-if (!st.granted) await OrthoTips.sms.requestAccess(); // Android's SMS dialog; resolves with the new status
-
-const past = await OrthoTips.sms.history();     // earlier movements from the inbox, oldest first
-const list = await OrthoTips.sms.pending();     // movements not acknowledged yet, oldest first
-// each: { id, seq?, kind: 'debit'|'credit', amount, balance|null, currency: 'DZD',
-//         sentAt, receivedAt, sender, text, fingerprint }
-// ...apply them, save, THEN acknowledge (a crash can repeat, never lose):
-await OrthoTips.sms.ack(Math.max(...list.map(m => m.seq || 0)));
-
-OrthoTips.sms.onMessage(() => { /* a movement arrived while open: read pending() */ });
+OrthoTips.notifications.status()        // → { available: true, granted }  (granted: the app may notify)
+OrthoTips.notifications.requestAccess() // → { available, granted }  Android 13+: the system dialog,
+                                        //   or its settings screen once it will not ask again
+OrthoTips.notifications.schedule({ id, title, body, at, repeatDays, data })  // → { id, at }
+OrthoTips.notifications.cancel(id)      // → true if it existed
+OrthoTips.notifications.cancelAll()     // → how many were cancelled
+OrthoTips.notifications.list()          // → [{ id, title, body, at, repeatDays, data }] sorted by at
+OrthoTips.notifications.onOpen(cb)      // cb({ id, data }): one of its notifications tapped while open
+OrthoTips.notifications.launch          // { id, data } if this opening came from a tapped notification, else null
 ```
 
-- The same movement from `history()` and from `pending()` has the same
-  `fingerprint`: remember the fingerprints you applied to never count twice.
-- `balance` is what the bank reports after the movement; reconcile to it rather
-  than trusting your own running total (messages can be missed).
-- If Android shows **« Paramètre restreint »** when granting SMS access (apps
-  installed from a file on recent Android): *App info → ⋮ → Allow restricted
-  settings*, then grant again.
-- Google Play restricts SMS permissions; this is fine for builds installed
-  directly, but would need Play's approval to publish.
+- `schedule` **creates or replaces** (same `id`). `id`: 1–64 characters
+  `[A-Za-z0-9._:-]`; `title`: 1–100; `body`: 0–300; `data`: optional string,
+  max 1000, given back on tap. Title and body are **plain text**, never HTML.
+- `at` is epoch **milliseconds**. In the past, it is shown within about a minute.
+  Delivery is accurate to a few minutes (the phone's battery saver decides).
+- `repeatDays`: 0 = once; N = again every N days at the **same local time**
+  (09:00 stays 09:00 across daylight-saving changes; after the phone was off,
+  it fires once, then continues).
+- `list()` gives each reminder's **next** time in `at`, exactly as stored.
+- At most **64 reminders per extension** (replacing one does not count).
+  Invalid input rejects with a clear `Error` (`Too many notifications (max 64)`,
+  `Invalid notification id`, …).
+
+```js
+const N = window.OrthoTips && OrthoTips.notifications;   // absent on older apps: hide the feature
+async function syncReminders(plants) {
+  if (!N || !(await N.status()).granted) return;
+  const want = plants.map(p => ({ id: 'water:' + p.id, title: 'Arroser ' + p.name,
+                                  body: p.amount || '', at: p.nextWatering, repeatDays: p.everyDays || 0,
+                                  data: JSON.stringify({ plant: p.id }) }));
+  const have = new Map((await N.list()).map(r => [r.id, r]));
+  for (const r of want) {                        // reschedule only what changed
+    const h = have.get(r.id);
+    if (!h || h.at !== r.at || h.title !== r.title || h.body !== r.body || h.repeatDays !== r.repeatDays) await N.schedule(r);
+    have.delete(r.id);
+  }
+  for (const id of have.keys()) await N.cancel(id); // plants that no longer exist
+}
+// Open the right screen, whether the app opened us from a notification or we were already open.
+if (N && N.launch) showPlant(JSON.parse(N.launch.data).plant);
+if (N) N.onOpen(ev => showPlant(JSON.parse(ev.data).plant));
+// Ask only after a user gesture, e.g. an « Autoriser les notifications » button:
+button.onclick = async () => { const s = await N.requestAccess(); updateUi(s.granted); };
+```
 
 ### Local database — requires `database`
 
@@ -475,7 +497,7 @@ in-page UI or `toast` for non-blocking messages.
 | Building the file so it *needs* a CDN script, web font, or remote image just to load | Rule 4 (section 2) is unconditional — inline everything, even with `internet` granted. Reach for the network only for optional, in-use features once the page has already loaded. |
 | `window.open`, `target="_blank"` for internal pages, multi-page links | One page only. External `https://` links open in the phone's browser, which is fine for references. |
 | `<form>` submitting to a URL | Use `addEventListener('submit', e => e.preventDefault())` and handle it in JS. |
-| Service workers, `Notification`, geolocation, camera, microphone, clipboard read | Not available in the extension sandbox (the reserved `notifications` permission, section 4, will cover notifications once implemented). |
+| Service workers, the web `Notification` API, geolocation, camera, microphone, clipboard read | Not available in the extension sandbox. For notifications use `OrthoTips.notifications` (permission `notifications`, section 5). |
 | IndexedDB, cookies, Cache Storage | Not managed by the app. Use `OrthoTips.storage`, or `OrthoTips.files` with `storage`. |
 | `<input type="file" multiple>` | One file at a time. |
 | Assuming a desktop width | Design for 360 px first. |
@@ -777,7 +799,8 @@ render();
 | `data/extensions/ExtensionRepository.kt` | Inspect, install (atomic, verified), update, delete, export, HTML → `.OTips`, legacy migration. Layout: `filesDir/extensions/<id>/{install.json,content/,files/}`. |
 | `data/extensions/*ExtensionHandler*`, `OperativeGuideExtension.kt`, `ClassificationsExtension.kt` | Kind-specific validation and activation. |
 | `OperativeGuideMigration` (in `OperativeGuideExtension.kt`) | For updates only: guide data already on the phone gets its extension installed silently. Nothing is ever installed automatically on a new installation; bundled extensions are installed by the user from the import screen. |
-| `ui/screens/extensions/ExtensionBridge.kt` + `assets/extension_host/ortho-bridge.js` | `window.OrthoTips` (bridge v2); permissions enforced on every call. |
+| `ui/screens/extensions/ExtensionBridge.kt` + `assets/extension_host/ortho-bridge.js` | `window.OrthoTips` (bridge v3); permissions enforced on every call. |
+| `data/reminders/*` + `ui/screens/extensions/ExtensionNotificationRouter.kt` | `OrthoTips.notifications`: rules and storage (`ReminderRules`, `ExtensionReminderStore`), alarms and notifications (`ExtensionReminders`), boot/alarm receivers, taps routed to `onOpen` / `launch`. |
 | `ui/screens/extensions/ExtensionImportScreen.kt` | Bundled / updates / external / installed, and the import-time review (4.3). |
 | `ui/screens/extensions/ExtensionsTab.kt` | Manager: open, details (granted permissions), export, clear data, delete. |
 | `app/src/extensions/<id>/` + `buildSrc` (`packBundledExtensions`) | Sources of bundled extensions, packed into encrypted `.OTips` assets at build time. |

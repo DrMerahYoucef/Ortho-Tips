@@ -92,8 +92,7 @@
     <string name="ext_perm_storage">Storing files on this phone</string>
     <string name="ext_perm_assets">Reading its own bundled files</string>
     <string name="ext_perm_import_export">Importing and exporting files</string>
-    <string name="ext_perm_sms">Reading bank SMS: debits, credits and balances (never codes)</string>
-    <string name="ext_perm_notifications">Notifications (not available yet)</string>
+    <string name="ext_perm_notifications">Notifications — reminders shown even when the app is closed</string>
     <string name="ext_perm_background">Running in the background (not available yet)</string>
 
     <string name="ext_error_unreadable">This file could not be read.</string>
@@ -121,10 +120,4 @@
     <string name="ext_not_found">This extension is no longer installed.</string>
     <string name="ext_file_saved">File saved</string>
     <string name="ext_file_save_failed">Could not save the file</string>
-    <!-- Bank SMS notifications -->
-    <string name="sms_notif_channel">Bank movements by SMS</string>
-    <string name="sms_notif_debit">CCP expense: −%1$s DA</string>
-    <string name="sms_notif_credit">CCP income: +%1$s DA</string>
-    <string name="sms_notif_balance">New balance: %1$s DA</string>
-    <string name="sms_notif_open">Tap to open</string>
 </resources>
