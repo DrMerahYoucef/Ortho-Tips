@@ -12,4 +12,6 @@
     <cache-path name="shared_figures" path="shared_figures/" />
     <!-- Freshly recorded videos handed to the camera app: cacheDir/captures/ -->
     <cache-path name="captures" path="captures/" />
+    <!-- Photos taken for extension file inputs (capture): cacheDir/extension_camera/ -->
+    <cache-path name="extension_camera" path="extension_camera/" />
 </paths>

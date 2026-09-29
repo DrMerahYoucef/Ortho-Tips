@@ -1,5 +1,7 @@
 package com.example.ui.screens.extensions
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import java.io.File
 import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.LifecycleEventObserver
@@ -117,6 +119,13 @@ private class RunnerHost {
     var pendingSmsRequest: String? = null
     val console = mutableStateListOf<ConsoleLine>()
 
+    /** Answers the page's file input exactly once; later answers are ignored. */
+    fun answerFile(value: Array<Uri>?) {
+        val callback = fileCallback
+        fileCallback = null
+        callback?.onReceiveValue(value)
+    }
+
     fun resolve(requestId: String, value: Boolean) {
         webView?.evaluateJavascript(
             "window.OrthoTips&&OrthoTips.__resolve(${JSONObject.quote(requestId)},$value)",
@@ -181,9 +190,57 @@ fun ExtensionRunnerScreen(
 
     // <input type="file"> in the page.
     val openFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        val callback = host.fileCallback
-        host.fileCallback = null
-        callback?.onReceiveValue(uri?.let { arrayOf(it) })
+        host.answerFile(uri?.let { arrayOf(it) })
+    }
+
+    // <input type="file" accept="image/*" capture> in the page: the camera. The photo's
+    // path survives the activity being recreated; a result for a page that is gone
+    // (its input was already answered) is simply dropped.
+    var cameraFile by rememberSaveable { mutableStateOf<String?>(null) }
+    val takePicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
+        val file = cameraFile?.let(::File)
+        cameraFile = null
+        if (saved && file != null && file.length() > 0) {
+            host.answerFile(arrayOf(ExtensionCamera.uriFor(context, file)))
+        } else {
+            file?.delete()
+            host.answerFile(null)
+        }
+    }
+    val launchCamera: () -> Unit = {
+        try {
+            val file = ExtensionCamera.newCaptureFile(context)
+            cameraFile = file.path
+            takePicture.launch(ExtensionCamera.uriFor(context, file))
+        } catch (e: ActivityNotFoundException) {
+            cameraFile?.let { File(it).delete() }
+            cameraFile = null
+            // No camera app: the picker, images only.
+            if (runCatching { openFile.launch(arrayOf("image/*")) }.isFailure) host.answerFile(null)
+        } catch (e: Exception) {
+            Log.w(TAG, "Camera could not start", e)
+            cameraFile = null
+            host.answerFile(null)
+        }
+    }
+    val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        // The page was rebuilt meanwhile (e.g. rotation): its input was already answered.
+        if (host.fileCallback == null) return@rememberLauncherForActivityResult
+        if (granted) {
+            launchCamera()
+        } else {
+            host.answerFile(null)
+            Toast.makeText(context, R.string.ext_camera_permission_denied, Toast.LENGTH_LONG).show()
+        }
+    }
+    /** Always answers the input itself (now or later), so it reports handled. */
+    val startCamera: () -> Boolean = {
+        if (ExtensionCamera.needsCameraPermission(context)) {
+            if (runCatching { cameraPermission.launch(Manifest.permission.CAMERA) }.isFailure) host.answerFile(null)
+        } else {
+            launchCamera()
+        }
+        true
     }
 
     // OrthoTips.saveFile and <a download> in the page.
@@ -465,10 +522,11 @@ fun ExtensionRunnerScreen(
                                             }
                                     }
                                 ),
-                                onChooseFile = { mimeTypes ->
+                                onChooseFile = { request ->
                                     // <input type="file"> is part of import_export (guide, section 4.1).
                                     if (state.extension.has(ExtensionPermission.IMPORT_EXPORT)) {
-                                        runCatching { openFile.launch(mimeTypes) }.isSuccess
+                                        if (request.camera) startCamera()
+                                        else runCatching { openFile.launch(request.mimeTypes.toTypedArray()) }.isSuccess
                                     } else {
                                         host.log(ConsoleLine(isError = true, text = "PermissionError: 'import_export' not granted"))
                                         false
@@ -477,8 +535,8 @@ fun ExtensionRunnerScreen(
                             )
                         },
                         onRelease = { view ->
-                            host.fileCallback?.onReceiveValue(null)
-                            host.fileCallback = null
+                            // A page that goes away never leaves its file input waiting.
+                            host.answerFile(null)
                             if (host.webView === view) host.webView = null
                             host.bridge?.dispose()
                             host.bridge = null
@@ -509,7 +567,7 @@ private fun createExtensionWebView(
     host: RunnerHost,
     backgroundArgb: Int,
     bridge: ExtensionBridge,
-    onChooseFile: (Array<String>) -> Boolean
+    onChooseFile: (FileRequest) -> Boolean
 ): WebView = WebView(context).apply {
     settings.apply {
         javaScriptEnabled = true
@@ -558,12 +616,14 @@ private fun createExtensionWebView(
             filePathCallback: ValueCallback<Array<Uri>>?,
             fileChooserParams: FileChooserParams?
         ): Boolean {
-            host.fileCallback?.onReceiveValue(null)
+            host.answerFile(null)   // a previous input still waiting
             host.fileCallback = filePathCallback
-            if (!onChooseFile(pickerMimeTypes(fileChooserParams?.acceptTypes))) {
-                host.fileCallback = null
-                filePathCallback?.onReceiveValue(null)
-            }
+            val accept = fileChooserParams?.acceptTypes
+            val request = FileRequest(
+                mimeTypes = pickerMimeTypes(accept).toList(),
+                camera = ExtensionCamera.wantsCamera(fileChooserParams?.isCaptureEnabled == true, accept)
+            )
+            if (!onChooseFile(request)) host.answerFile(null)
             return true
         }
 

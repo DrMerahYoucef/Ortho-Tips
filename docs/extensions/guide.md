@@ -113,7 +113,7 @@ permissions.
 | `database` | `OrthoTips.database.*` (section 5) — read access to Ortho Tips' local clinical reference data (bones, regions, chapters, figures — see the `clinical-bones-app` data model). | Patient records stay out of scope regardless of this permission; extensions are study/reference tools (section 8). |
 | `storage` | `OrthoTips.files.*` (section 5) — a private on-disk folder for the extension, for data bigger than the ~2 MB key/value store is meant for. | Separate from the always-available `OrthoTips.storage` key/value API, which needs no permission. |
 | `assets` | `OrthoTips.assets.read(path)` (section 5) — read-only access to extra files bundled alongside the extension. | Only meaningful for multi-file extension packages; a single `.html` file has nothing to read here. |
-| `import_export` | `OrthoTips.saveFile(...)` and the file-picker `<input type="file">` flow (section 5). | Previously always available to every extension; now explicit like everything else. |
+| `import_export` | `OrthoTips.saveFile(...)` and the `<input type="file">` flow: file picker, or the camera for `capture` inputs (section 5). | Previously always available to every extension; now explicit like everything else. |
 | `sms` | `OrthoTips.sms.*`: bank movements read from SMS (debits, credits, reported balance), live and from the inbox history (section 5). | Android asks the user for SMS access the first time (`requestAccess()`). Only movement messages ever reach the extension; transfer codes and all other SMS are filtered out by the app. |
 | `notifications` | `OrthoTips.notifications.*`: reminders the app shows as Android notifications, even when Ortho Tips is closed (section 5). | Android asks the user the first time (Android 13+). Reminders survive reboots and are removed with the extension. |
 | `background` *(reserved)* | Running work while the extension isn't in the foreground. | Not implemented yet, same as above. |
@@ -398,6 +398,8 @@ const ok = await OrthoTips.saveFile('backup-2026-09-19.json', jsonString, 'appli
 - **Opening a file**: use a normal `<input type="file">`. The app shows Android's
   file picker (one file at a time). Read it with `await file.text()`. Do not rely
   on `accept` to filter non-media files; validate the content instead.
+  `<input type="file" accept="image/*" capture="environment">` opens the camera;
+  without `capture`, the file picker.
 - The usual browser download trick (`<a download href="blob:…">` and `.click()`)
   also works in the app; it is routed to `saveFile`. Calling `saveFile` directly
   gives you the true/false result.
@@ -530,7 +532,7 @@ in-page UI or `toast` for non-blocking messages.
 | Building the file so it *needs* a CDN script, web font, or remote image just to load | Rule 4 (section 2) is unconditional — inline everything, even with `internet` granted. Reach for the network only for optional, in-use features once the page has already loaded. |
 | `window.open`, `target="_blank"` for internal pages, multi-page links | One page only. External `https://` links open in the phone's browser, which is fine for references. |
 | `<form>` submitting to a URL | Use `addEventListener('submit', e => e.preventDefault())` and handle it in JS. |
-| Service workers, the web `Notification` API, geolocation, camera, microphone, clipboard read | Not available in the extension sandbox. For notifications use `OrthoTips.notifications` (permission `notifications`, section 5). |
+| Service workers, the web `Notification` API, geolocation, live camera access (`getUserMedia`), microphone, clipboard read | Not available in the extension sandbox. For notifications use `OrthoTips.notifications` (permission `notifications`, section 5). Taking a **photo** does work, through a file input: `<input type="file" accept="image/*" capture="environment">` opens the camera (section 5, needs `import_export`). |
 | IndexedDB, cookies, Cache Storage | Not managed by the app. Use `OrthoTips.storage`, or `OrthoTips.files` with `storage`. |
 | `<input type="file" multiple>` | One file at a time. |
 | Assuming a desktop width | Design for 360 px first. |

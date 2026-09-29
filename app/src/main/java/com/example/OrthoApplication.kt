@@ -64,6 +64,10 @@ class OrthoApplication : Application(), ImageLoaderFactory {
      * Failures are logged and retried on the next launch.
      */
     private fun prepareExtensions() {
+        // Photos taken for extension file inputs are only needed briefly.
+        applicationScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            com.example.ui.screens.extensions.ExtensionCamera.cleanOldCaptures(this@OrthoApplication)
+        }
         applicationScope.launch {
             runCatching {
                 appModule.extensionRepository.refresh()
