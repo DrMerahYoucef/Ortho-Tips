@@ -116,6 +116,11 @@ class AppModule(private val context: Context) {
         com.example.data.reminders.ExtensionReminders(context) { id -> extensionRepository.get(id) }
     }
 
+    /** Patient records for extensions holding the `patients` permission (never deletion). */
+    val extensionPatients: com.example.data.extensions.ExtensionPatients by lazy {
+        com.example.data.extensions.ExtensionPatients(context, patientRepository)
+    }
+
     /** Read-only reference data for extensions holding the `database` permission. */
     val extensionDatabaseAccess: ExtensionDatabaseAccess by lazy {
         ExtensionDatabaseAccess(database)

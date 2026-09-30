@@ -111,6 +111,7 @@ permissions.
 |---|---|---|
 | `internet` | `fetch`, `XMLHttpRequest`, `WebSocket`, and loading remote images/fonts at runtime. | Does **not** relax rule 4 in section 2 — the file itself must still ship complete and inline. This is about what the *running* page may reach out to, e.g. calling a public API for reference data. |
 | `database` | `OrthoTips.database.*` (section 5) — read access to Ortho Tips' local clinical reference data (bones, regions, chapters, figures — see the `clinical-bones-app` data model). | Patient records stay out of scope regardless of this permission; extensions are study/reference tools (section 8). |
+| `patients` | `OrthoTips.patients.*`: search, read, **create and update** patient records and add their photos/videos (section 5). Never delete. | **Sensitive data.** The import review says so. Combined with `internet`, the extension can send records off the phone: only install extensions you trust. |
 | `storage` | `OrthoTips.files.*` (section 5) — a private on-disk folder for the extension, for data bigger than the ~2 MB key/value store is meant for. | Separate from the always-available `OrthoTips.storage` key/value API, which needs no permission. |
 | `assets` | `OrthoTips.assets.read(path)` (section 5) — read-only access to extra files bundled alongside the extension. | Only meaningful for multi-file extension packages; a single `.html` file has nothing to read here. |
 | `import_export` | `OrthoTips.saveFile(...)` and the `<input type="file">` flow: file picker, or the camera for `capture` inputs (section 5). | Previously always available to every extension; now explicit like everything else. |
@@ -193,7 +194,7 @@ const HOST = window.OrthoTips || null;   // always feature-detect
 
 | Property | Type | Notes |
 |---|---|---|
-| `bridgeVersion` | number | `3` for this guide (`2` added the permission system, `3` notifications). |
+| `bridgeVersion` | number | `4` for this guide (`2` added the permission system, `3` notifications, `4` patients). |
 | `extensionId` | string | The `ortho-ext-id` of this file. |
 | `extensionVersion` | string | The installed version. |
 | `appVersion` | string | Ortho Tips version name. |
@@ -246,6 +247,61 @@ work as they would on any web page. Without it, they fail the same way they
 would offline. Rule 4 in section 2 still applies: the extension file itself
 must not *depend* on the network to load — only optional, in-use features
 (e.g. "fetch the latest guideline PDF") should reach for it.
+
+### Patients — requires `patients`
+
+Read, create and update patient records and add their photos and videos,
+exactly as if they were entered in the app: the patient list refreshes, and
+Telegram Drive syncs (and encrypts) them like any other record. Extensions only
+exchange plain values — **no encryption to handle**. They can **never delete**
+a patient or a media (the user does that in the app).
+
+```js
+await OrthoTips.patients.search('karim', { limit: 20 }) // → [{ id, patientCode, fullName, dateOfBirth, diagnosis, bodyRegion, side, isArchived, updatedAt }]
+                                                         //   '' → most recently updated patients; limit 1–200 (default 50)
+await OrthoTips.patients.get(id)          // → the full record + media: [{ id, category, mediaType, capturedAt, notes }], or null
+await OrthoTips.patients.getByCode('P-0042') // → the full record, or null (avoid duplicates when importing)
+await OrthoTips.patients.create(fields)   // → { id, patientCode }   fullName required; no patientCode → next "P-0043"
+await OrthoTips.patients.update(id, fields) // → { id, patientCode }  only the fields given change
+await OrthoTips.patients.addMedia(id, { data, mimeType, category, capturedAt, notes }) // → { id, mediaType }
+```
+
+**Fields** (all optional except `fullName` on create; anything else is refused):
+
+| Kind | Fields |
+|---|---|
+| Identity | `patientCode` (unique), `fullName`, `gender`, `dateOfBirth` |
+| Contact | `phone`, `email`, `address`, `emergencyContactName`, `emergencyContactPhone` |
+| Insurance | `insuranceProvider`, `insuranceNumber` |
+| History | `medicalHistory`, `allergies`, `chronicDiseases`, `previousSurgeries`, `medications`, `generalNotes` |
+| Orthopedics | `diagnosis`, `bodyRegion`, `side`, `injuryDate`, `traumaMechanism`, `fractureClassification`, `imagingFindings`, `treatmentPlan` |
+
+- Text fields take strings (long texts up to 20 000 characters; names 200).
+- `dateOfBirth`, `injuryDate`: epoch milliseconds, `"YYYY-MM-DD"`, or `null`.
+- `side`: `LEFT`, `RIGHT`, `BILATERAL`, `NOT_APPLICABLE` (also `gauche`, `droite`, `bilatéral`).
+- `id`, `createdAt`, `updatedAt`, `isArchived` are read-only.
+- `addMedia`: `data` is a `Blob`, `ArrayBuffer` or `Uint8Array` (not a base64
+  string); `mimeType` `image/…` (JPEG, PNG, WebP, GIF, HEIC… not SVG) or
+  `video/…` (MP4, WebM, 3GP, MOV); max **30 MB**. `category`: `RADIOLOGY`,
+  `CLINICAL_PHOTO`, `DOCUMENT_SCAN` or `OTHER` (default). Images are compressed,
+  get a thumbnail and OCR like the app's camera; `capturedAt` defaults to the
+  image's EXIF date. An image the phone cannot decode (e.g. EMF/WMF drawings
+  from a PowerPoint) is refused with a clear error.
+- Errors reject with a clear message (`Unknown patient field 'age'`,
+  `Patient code 'P-0042' is already used`, `fullName is required`, …).
+
+```js
+// Import one patient, without creating a duplicate.
+const P = OrthoTips.patients;
+const existing = await P.getByCode(extracted.patientCode);
+const { id } = existing
+  ? await P.update(existing.id, extracted)
+  : await P.create(extracted);
+for (const img of images) await P.addMedia(id, { data: img.blob, mimeType: img.type, category: 'RADIOLOGY' });
+```
+
+Show the user what will be written **before** writing it (a review screen), and
+say which records were created or updated afterwards.
 
 ### Notifications — requires `notifications`
 
@@ -503,7 +559,7 @@ in-page UI or `toast` for non-blocking messages.
 | IndexedDB, cookies, Cache Storage | Not managed by the app. Use `OrthoTips.storage`, or `OrthoTips.files` with `storage`. |
 | `<input type="file" multiple>` | One file at a time. |
 | Assuming a desktop width | Design for 360 px first. |
-| Patient-identifying data | Extensions are for study and reference tools. Even with `database`, patient records stay out of scope — keep them in the app itself. |
+| Deleting patients or media | Extensions can read, create and update patient records (permission `patients`, section 5) but never delete; the user does that in the app. |
 | `autofocus` / `focus()` when a sheet or dialog opens | Opens the keyboard mid-animation; in the app's WebView the panel is left stuck off-screen. Let the user tap the field (section 6, point 8). |
 | `vh` / `100vh` to size fixed panels | Not updated for the keyboard in a WebView. Use the visible height from `visualViewport` (section 6, point 8). |
 | Panels shown only by a `transition` started in `requestAnimationFrame` | If the frame or transition does not run, the panel stays hidden. Make the visible position the resting style and animate with `@keyframes`. |
@@ -802,6 +858,7 @@ render();
 | `data/extensions/*ExtensionHandler*`, `OperativeGuideExtension.kt`, `ClassificationsExtension.kt` | Kind-specific validation and activation. |
 | `OperativeGuideMigration` (in `OperativeGuideExtension.kt`) | For updates only: guide data already on the phone gets its extension installed silently. Nothing is ever installed automatically on a new installation; bundled extensions are installed by the user from the import screen. |
 | `ui/screens/extensions/ExtensionBridge.kt` + `assets/extension_host/ortho-bridge.js` | `window.OrthoTips` (bridge v3); permissions enforced on every call. |
+| `data/extensions/ExtensionPatients.kt` + `ExtensionPatientRules.kt` | `OrthoTips.patients`: field whitelist and validation, records and media written through `PatientRepository` (never deleted). |
 | `data/reminders/*` + `ui/screens/extensions/ExtensionNotificationRouter.kt` | `OrthoTips.notifications`: rules and storage (`ReminderRules`, `ExtensionReminderStore`), alarms and notifications (`ExtensionReminders`), boot/alarm receivers, taps routed to `onOpen` / `launch`. |
 | `ui/screens/extensions/ExtensionImportScreen.kt` | Bundled / updates / external / installed, and the import-time review (4.3). |
 | `ui/screens/extensions/ExtensionsTab.kt` | Manager: open, details (granted permissions), export, clear data, delete. |
