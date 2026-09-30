@@ -1,5 +1,5 @@
 /*
- * Ortho Tips — extension host bridge (API version 3).
+ * Ortho Tips — extension host bridge (API version 4).
  *
  * Injected as the first script of every extension page, before any of the
  * page's own code. It turns the raw Android interface `OrthoTipsNative` into:
@@ -269,7 +269,7 @@
   }
 
   var api = {
-    bridgeVersion: 3,
+    bridgeVersion: 4,
     extensionId: String(info.extensionId || ''),
     extensionVersion: String(info.extensionVersion || ''),
     appVersion: String(info.appVersion || ''),
@@ -320,6 +320,33 @@
         if (typeof cb !== 'function' || !has('sms')) return;
         window.addEventListener('orthotips:sms', function () {
           try { cb(); } catch (e) { try { console.error(e); } catch (x) {} }
+        });
+      }
+    },
+    // Requires `patients`: read, create and update patient records and add their
+    // media (never delete). The app stores them as if entered by hand.
+    patients: {
+      search: function (query, options) {
+        var limit = Math.floor(Number((options || {}).limit) || 50);
+        return gated('patients', 'patients.search', { query: query == null ? '' : String(query), limit: Math.max(1, Math.min(200, limit)) });
+      },
+      get: function (id) { return gated('patients', 'patients.get', { id: String(id) }); },
+      getByCode: function (code) { return gated('patients', 'patients.getByCode', { code: String(code) }); },
+      create: function (fields) { return gated('patients', 'patients.create', { fields: fields || {} }); },
+      update: function (id, fields) { return gated('patients', 'patients.update', { id: String(id), fields: fields || {} }); },
+      addMedia: function (patientId, media) {
+        if (!has('patients')) return denied('patients');
+        media = media || {};
+        if (media.data == null) return Promise.reject(new Error('Missing media data'));
+        return toBytes(media.data).then(function (bytes) {
+          return call('patients.addMedia', {
+            patientId: String(patientId),
+            base64: toBase64(bytes),
+            mimeType: String(media.mimeType || (media.data && media.data.type) || ''),
+            category: media.category == null ? null : String(media.category),
+            capturedAt: media.capturedAt == null ? null : Number(media.capturedAt),
+            notes: media.notes == null ? '' : String(media.notes)
+          });
         });
       }
     },

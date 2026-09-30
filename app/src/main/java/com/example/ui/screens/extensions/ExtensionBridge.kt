@@ -52,7 +52,9 @@ internal class ExtensionBridge(
     /** Reminders of this extension; null when it does not hold `notifications`. */
     private val notifications: ExtensionNotificationAccess? = null,
     /** Shows Android's notification permission dialog (or settings); the answer settles [requestId]. */
-    private val onRequestNotificationAccess: (requestId: String) -> Unit = {}
+    private val onRequestNotificationAccess: (requestId: String) -> Unit = {},
+    /** Patient records; null when the extension does not hold `patients`. */
+    private val patients: ExtensionPatientAccess? = null
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val worker: ExecutorService = Executors.newSingleThreadExecutor()
@@ -174,6 +176,12 @@ internal class ExtensionBridge(
         "notifications.cancel" -> requireNotifications().cancel(args.getString("id")).toString()
         "notifications.cancelAll" -> requireNotifications().cancelAll().toString()
         "notifications.list" -> requireNotifications().list().toString()
+        "patients.search" -> requirePatients().search(args.optString("query"), args.optInt("limit", 50)).toString()
+        "patients.get" -> (requirePatients().get(args.getString("id")) ?: JSONObject.NULL).toString()
+        "patients.getByCode" -> (requirePatients().getByCode(args.getString("code")) ?: JSONObject.NULL).toString()
+        "patients.create" -> requirePatients().create(args.optJSONObject("fields") ?: JSONObject()).toString()
+        "patients.update" -> requirePatients().update(args.getString("id"), args.optJSONObject("fields") ?: JSONObject()).toString()
+        "patients.addMedia" -> requirePatients().addMedia(args.getString("patientId"), args).toString()
         else -> throw IllegalArgumentException("Unknown method '$method'")
     }
 
@@ -186,6 +194,9 @@ internal class ExtensionBridge(
 
     private fun requireNotifications(): ExtensionNotificationAccess =
         notifications ?: throw IllegalStateException("Notifications are unavailable")
+
+    private fun requirePatients(): ExtensionPatientAccess =
+        patients ?: throw IllegalStateException("Patient records are unavailable")
 
     private fun requireFiles(): ExtensionFiles = files ?: throw IllegalStateException("Storage is unavailable")
 
@@ -214,7 +225,7 @@ internal class ExtensionBridge(
 
     companion object {
         /** Bridge API version exposed as `OrthoTips.bridgeVersion`. */
-        const val BRIDGE_VERSION = 3
+        const val BRIDGE_VERSION = 4
 
         /** Method → permission it needs. Anything absent is refused. */
         private val REQUIRED = mapOf(
@@ -224,6 +235,12 @@ internal class ExtensionBridge(
             "files.delete" to ExtensionPermission.STORAGE,
             "assets.read" to ExtensionPermission.ASSETS,
             "database.query" to ExtensionPermission.DATABASE,
+            "patients.search" to ExtensionPermission.PATIENTS,
+            "patients.get" to ExtensionPermission.PATIENTS,
+            "patients.getByCode" to ExtensionPermission.PATIENTS,
+            "patients.create" to ExtensionPermission.PATIENTS,
+            "patients.update" to ExtensionPermission.PATIENTS,
+            "patients.addMedia" to ExtensionPermission.PATIENTS,
             "notifications.status" to ExtensionPermission.NOTIFICATIONS,
             "notifications.requestAccess" to ExtensionPermission.NOTIFICATIONS,
             "notifications.schedule" to ExtensionPermission.NOTIFICATIONS,
@@ -260,6 +277,16 @@ internal interface ExtensionNotificationAccess {
     fun cancel(id: String): Boolean
     fun cancelAll(): Int
     fun list(): JSONArray
+}
+
+/** What the bridge needs for `OrthoTips.patients`: read, create, update, add media — never delete. */
+internal interface ExtensionPatientAccess {
+    fun search(query: String, limit: Int): JSONArray
+    fun get(id: String): JSONObject?
+    fun getByCode(code: String): JSONObject?
+    fun create(fields: JSONObject): JSONObject
+    fun update(id: String, fields: JSONObject): JSONObject
+    fun addMedia(patientId: String, args: JSONObject): JSONObject
 }
 
 /** "Save as…" with a file name and type chosen at launch time. */

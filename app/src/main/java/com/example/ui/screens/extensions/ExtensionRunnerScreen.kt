@@ -469,6 +469,19 @@ fun ExtensionRunnerScreen(
                                     },
                                     onSettle = host::settle,
                                     onDenied = { host.log(ConsoleLine(isError = true, text = it)) },
+                                    patients = if (state.extension.has(ExtensionPermission.PATIENTS)) {
+                                        val records = (context.applicationContext as com.example.OrthoApplication).appModule.extensionPatients
+                                        object : ExtensionPatientAccess {
+                                            override fun search(query: String, limit: Int) = records.search(query, limit)
+                                            override fun get(id: String) = records.get(id)
+                                            override fun getByCode(code: String) = records.getByCode(code)
+                                            override fun create(fields: JSONObject) = records.create(fields)
+                                            override fun update(id: String, fields: JSONObject) = records.update(id, fields)
+                                            override fun addMedia(patientId: String, args: JSONObject) = records.addMedia(patientId, args)
+                                        }
+                                    } else {
+                                        null
+                                    },
                                     notifications = if (state.extension.has(ExtensionPermission.NOTIFICATIONS)) {
                                         val id = state.extension.id
                                         object : ExtensionNotificationAccess {

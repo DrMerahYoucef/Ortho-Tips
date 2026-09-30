@@ -18,6 +18,9 @@ package com.example.data.extensions
 enum class ExtensionPermission(val key: String, val implemented: Boolean) {
     INTERNET("internet", implemented = true),
     DATABASE("database", implemented = true),
+
+    /** Read, create and update patient records and add media (never delete). */
+    PATIENTS("patients", implemented = true),
     STORAGE("storage", implemented = true),
     ASSETS("assets", implemented = true),
     IMPORT_EXPORT("import_export", implemented = true),
