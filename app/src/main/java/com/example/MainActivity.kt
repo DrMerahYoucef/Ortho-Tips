@@ -441,7 +441,35 @@ fun OrthoAppNavHost(appModule: AppModule) {
                 onNavigateBack = { navController.popFrom(entry) },
                 onNavigateToTelegramDrive = {
                     navController.navigateFrom(entry, OrthoDestinations.TELEGRAM_DRIVE_SETTINGS)
-                }
+                },
+                onNavigateToGemini = { navController.navigateFrom(entry, OrthoDestinations.GEMINI_SETTINGS) }
+            )
+        }
+
+        composable(OrthoDestinations.GEMINI_SETTINGS) { entry ->
+            com.example.ui.screens.ai.GeminiSettingsScreen(
+                viewModel = viewModel(
+                    key = "gemini_settings",
+                    factory = com.example.viewmodel.GeminiSettingsViewModel.provideFactory(appModule.geminiService)
+                ),
+                onNavigateBack = { navController.popFrom(entry) }
+            )
+        }
+
+        composable(
+            route = OrthoDestinations.PATIENT_ASSISTANT,
+            arguments = listOf(navArgument("patientId") { type = NavType.StringType })
+        ) { entry ->
+            val patientId = entry.arguments?.getString("patientId")?.let { Uri.decode(it) } ?: ""
+            com.example.ui.screens.ai.PatientAssistantScreen(
+                viewModel = viewModel(
+                    key = "patient_assistant_$patientId",
+                    factory = com.example.viewmodel.PatientAssistantViewModel.provideFactory(
+                        appModule.patientRepository, appModule.geminiService, patientId
+                    )
+                ),
+                onNavigateBack = { navController.popFrom(entry) },
+                onOpenGeminiSettings = { navController.navigateFrom(entry, OrthoDestinations.GEMINI_SETTINGS) }
             )
         }
 
@@ -561,6 +589,7 @@ fun OrthoAppNavHost(appModule: AppModule) {
                 viewModel = detailViewModel,
                 onNavigateBack = { navController.popFrom(entry) },
                 onNavigateToEdit = { navController.navigateFrom(entry, OrthoDestinations.patientEdit(patientId)) },
+                onOpenAssistant = { navController.navigateFrom(entry, OrthoDestinations.patientAssistant(patientId)) },
                 onNavigateToAddTimelineEvent = { navController.navigateFrom(entry, OrthoDestinations.timelineEventEdit(patientId)) },
                 onNavigateToEditTimelineEvent = { eventId ->
                     navController.navigateFrom(entry, OrthoDestinations.timelineEventEdit(patientId, eventId))
