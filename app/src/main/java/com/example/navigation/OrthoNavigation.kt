@@ -26,6 +26,8 @@ object OrthoDestinations {
 
     // Patient management module
     const val PATIENT_DETAIL = "patient/{patientId}"
+    const val PATIENT_ASSISTANT = "patient/{patientId}/assistant"
+    const val GEMINI_SETTINGS = "settings/gemini"
     const val PATIENT_EDIT = "patient_edit?patientId={patientId}"
     const val TIMELINE_EVENT_EDIT = "patient/{patientId}/timeline_edit?eventId={eventId}"
     const val SURGERY_EDIT = "patient/{patientId}/surgery_edit?surgeryId={surgeryId}"
@@ -64,6 +66,8 @@ object OrthoDestinations {
 
     fun classificationDocument(draftId: String, chapterFile: String): String =
         "classification_editor/${Uri.encode(draftId)}/document/${Uri.encode(chapterFile)}"
+
+    fun patientAssistant(patientId: String): String = "patient/${Uri.encode(patientId)}/assistant"
 
     fun patientDetail(patientId: String): String {
         return "patient/${Uri.encode(patientId)}"

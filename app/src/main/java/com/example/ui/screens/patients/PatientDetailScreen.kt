@@ -1,5 +1,7 @@
 package com.example.ui.screens.patients
 
+import androidx.compose.ui.platform.testTag
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -101,6 +103,7 @@ fun PatientDetailScreen(
     viewModel: PatientDetailViewModel,
     onNavigateBack: () -> Unit,
     onNavigateToEdit: () -> Unit,
+    onOpenAssistant: () -> Unit = {},
     onNavigateToAddTimelineEvent: () -> Unit,
     onNavigateToEditTimelineEvent: (String) -> Unit,
     onNavigateToAddSurgery: () -> Unit,
@@ -145,6 +148,9 @@ fun PatientDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onOpenAssistant, modifier = Modifier.testTag("patient_assistant_button")) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(R.string.patient_detail_assistant))
+                    }
                     IconButton(onClick = { menuExpanded = true }) {
                         Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.patient_detail_more_options))
                     }

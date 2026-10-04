@@ -116,6 +116,9 @@ class AppModule(private val context: Context) {
         com.example.data.reminders.ExtensionReminders(context) { id -> extensionRepository.get(id) }
     }
 
+    /** Gemini (Réglages → Gemini) and the patient AI assistant. */
+    val geminiService: com.example.data.ai.GeminiService by lazy { com.example.data.ai.GeminiService(context) }
+
     /** Patient records for extensions holding the `patients` permission (never deletion). */
     val extensionPatients: com.example.data.extensions.ExtensionPatients by lazy {
         com.example.data.extensions.ExtensionPatients(context, patientRepository)

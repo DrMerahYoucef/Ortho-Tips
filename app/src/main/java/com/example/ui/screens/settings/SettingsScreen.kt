@@ -1,5 +1,6 @@
 package com.example.ui.screens.settings
 
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
@@ -83,6 +84,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel,
     onNavigateBack: () -> Unit,
     onNavigateToTelegramDrive: () -> Unit,
+    onNavigateToGemini: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
@@ -90,6 +92,7 @@ fun SettingsScreen(
     val lockAvailable = AppLock.isAvailable(LocalContext.current)
     val protect = rememberProtectedAction(settings.appLockEnabled && lockAvailable)
     val driveSubtitle = stringResource(R.string.settings_telegram_drive)
+    val geminiSubtitle = stringResource(R.string.settings_gemini)
     val resetSubtitle = stringResource(R.string.settings_reinitialize_db)
     val deleteSubtitle = stringResource(R.string.settings_delete_patients)
     // The lock switch itself is guarded whichever way it is moved, so someone
@@ -429,6 +432,17 @@ fun SettingsScreen(
                         title = stringResource(R.string.settings_telegram_drive),
                         subtitle = stringResource(R.string.settings_telegram_drive_subtitle),
                         onClick = { protect(driveSubtitle, onNavigateToTelegramDrive) }
+                    )
+                }
+            }
+
+            item {
+                SettingsSection(title = stringResource(R.string.settings_section_ai)) {
+                    SettingsActionRow(
+                        icon = Icons.Default.AutoAwesome,
+                        title = stringResource(R.string.settings_gemini),
+                        subtitle = stringResource(R.string.settings_gemini_subtitle),
+                        onClick = { protect(geminiSubtitle, onNavigateToGemini) }
                     )
                 }
             }
