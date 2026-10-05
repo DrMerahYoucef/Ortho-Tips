@@ -52,13 +52,20 @@ internal class ExtensionBridge(
     /** Patient records; null when the extension does not hold `patients`. */
     private val patients: ExtensionPatientAccess? = null,
     /** Audio in the app's media service; null when the extension does not hold `background`. */
-    private val media: ExtensionMediaAccess? = null
+    private val media: ExtensionMediaAccess? = null,
+    /** Gemini through the app's key; null when the extension does not hold `gemini`. */
+    private val gemini: ExtensionGeminiAccess? = null,
+    /** Opens Réglages → Gemini (OrthoTips.gemini.openSettings). */
+    private val onOpenGeminiSettings: () -> Unit = {}
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val worker: ExecutorService = Executors.newSingleThreadExecutor()
+    /** Gemini calls can take a minute: their own threads, so storage and files never wait. */
+    private val slow: ExecutorService = Executors.newCachedThreadPool()
 
     fun dispose() {
         worker.shutdownNow()
+        slow.shutdownNow()
         // The page goes away: its controller goes, the media service keeps playing.
         media?.release()
     }
@@ -128,6 +135,27 @@ internal class ExtensionBridge(
         }
         if (!allowed(required)) {
             settle(id, false, "PermissionError: '${required.key}' not granted")
+            return
+        }
+        if (name.startsWith("gemini.")) {
+            val access = gemini ?: run { settle(id, false, "Gemini is unavailable"); return }
+            if (name == "gemini.openSettings") {
+                main.post { onOpenGeminiSettings() }
+                settle(id, true, "true")
+                return
+            }
+            val args = runCatching { if (argsJson.isNullOrBlank()) JSONObject() else JSONObject(argsJson) }
+                .getOrElse { settle(id, false, "Invalid arguments"); return }
+            slow.execute {
+                try {
+                    settle(id, true, (if (name == "gemini.status") access.status() else access.generate(args)).toString())
+                } catch (e: com.example.data.ai.GeminiException) {
+                    // The page gets an Error with name 'GeminiError' and kind 'quota', 'key', 'network'…
+                    settle(id, false, "GeminiError(${e.kind.name.lowercase()}): ${e.message}")
+                } catch (e: Exception) {
+                    settle(id, false, e.message ?: e.javaClass.simpleName)
+                }
+            }
             return
         }
         if (name.startsWith("media.")) {
@@ -219,7 +247,7 @@ internal class ExtensionBridge(
 
     companion object {
         /** Bridge API version exposed as `OrthoTips.bridgeVersion`. */
-        const val BRIDGE_VERSION = 5
+        const val BRIDGE_VERSION = 6
 
         /** Method → permission it needs. Anything absent is refused. */
         private val REQUIRED = mapOf(
@@ -229,6 +257,9 @@ internal class ExtensionBridge(
             "files.delete" to ExtensionPermission.STORAGE,
             "assets.read" to ExtensionPermission.ASSETS,
             "database.query" to ExtensionPermission.DATABASE,
+            "gemini.status" to ExtensionPermission.GEMINI,
+            "gemini.generate" to ExtensionPermission.GEMINI,
+            "gemini.openSettings" to ExtensionPermission.GEMINI,
             "media.play" to ExtensionPermission.BACKGROUND,
             "media.pause" to ExtensionPermission.BACKGROUND,
             "media.resume" to ExtensionPermission.BACKGROUND,
@@ -261,6 +292,14 @@ internal interface ExtensionNotificationAccess {
     fun cancel(id: String): Boolean
     fun cancelAll(): Int
     fun list(): JSONArray
+}
+
+/** What the bridge needs for `OrthoTips.gemini`: the app's key stays in the app. Blocking calls. */
+internal interface ExtensionGeminiAccess {
+    /** `{ available, configured, model }` */
+    fun status(): JSONObject
+    /** `{ model, response }`: Google's answer to `args.body`. Throws GeminiException. */
+    fun generate(args: JSONObject): JSONObject
 }
 
 /** What the bridge needs for `OrthoTips.media` (permission `background`): answers on the main thread. */

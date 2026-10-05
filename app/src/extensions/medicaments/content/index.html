@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="ortho-ext-id" content="medicaments">
+<meta name="ortho-ext-name" content="Médicaments">
+<meta name="ortho-ext-description" content="Fiche structurée de n'importe quel médicament avec Gemini : indications, contre-indications, posologie, interactions, noms commerciaux et remboursement en Algérie.">
+<meta name="ortho-ext-version" content="1.1">
+<meta name="ortho-ext-icon" content="💊">
+<meta name="ortho-ext-author" content="Ortho Tips">
+<meta name="ortho-ext-permissions" content="internet, import_export, gemini">
+<title>Médicaments</title>
+<style>
+:root{
+  --bg:#f6f7f9;--surface:#fff;--surface2:#eef1f6;--text:#1b1d22;--muted:#5f6b76;--line:#e1e5eb;
+  --accent:#1f5fbf;--on-accent:#ffffff;--accent-soft:#e6eefb;--good:#1e7b4f;--good-soft:#e2f4ea;
+  --bad:#c62828;--bad-soft:#fdecec;--warn:#9a5b00;--warn-soft:#fff3dc;--radius:16px;--nav:64px;
+}
+html[data-theme="dark"]{
+  --bg:#121417;--surface:#1c1f24;--surface2:#262a31;--text:#e6e9ee;--muted:#a3adb8;--line:#30353d;
+  --accent:#8db4ff;--on-accent:#0f1420;--accent-soft:#22304a;--good:#6fd3a0;--good-soft:#173527;
+  --bad:#ff8a80;--bad-soft:#3d2020;--warn:#ffc46b;--warn-soft:#3a2e17;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,Roboto,sans-serif}
+body{padding-bottom:calc(var(--nav) + env(safe-area-inset-bottom))}
+button,input,select,textarea{font:inherit;color:inherit}
+main{padding:12px 16px 24px;max-width:720px;margin:0 auto}
+h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:18px 2px 8px;font-weight:600}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px}
+.muted{color:var(--muted)}.small{font-size:13px}.tiny{font-size:12px}
+.row{display:flex;align-items:center;gap:10px}.grow{flex:1;min-width:0}
+.input,textarea.input,select.input{width:100%;min-height:46px;border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:10px 12px;outline:none}
+.input:focus{border-color:var(--accent)}
+label.f{display:block;margin:10px 0 4px;font-size:13px;color:var(--muted);font-weight:600}
+.btn{border:0;border-radius:12px;min-height:44px;padding:0 16px;background:var(--accent);color:var(--on-accent);font-weight:600;cursor:pointer}
+.btn.ghost{background:var(--surface2);color:var(--text)}
+.btn.danger{background:var(--bad-soft);color:var(--bad)}
+.btn.block{width:100%}
+.btn:disabled{opacity:.5}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.btns .btn{flex:1}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;min-height:36px;cursor:pointer;font-size:13px}
+.pill{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
+.pill.good{background:var(--good-soft);color:var(--good)}.pill.bad{background:var(--bad-soft);color:var(--bad)}.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.notice{background:var(--warn-soft);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:13px}
+.error{background:var(--bad-soft);color:var(--bad);border-radius:12px;padding:10px 12px;font-size:14px;margin-bottom:12px}
+.med h3{margin:0;font-size:20px}
+.sec{margin-top:12px}
+.sec h4{margin:0 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.03em;color:var(--accent)}
+.sec ul{margin:0;padding-left:20px}.sec li{margin:2px 0}
+.kv{display:flex;gap:8px;padding:5px 0;border-top:1px dashed var(--line);font-size:14px}.kv:first-child{border-top:0}
+.kv b{min-width:120px;color:var(--muted);font-weight:600}
+.list .item{display:flex;align-items:center;gap:12px;padding:10px 2px;border-top:1px solid var(--line);cursor:pointer;min-height:52px}
+.list .item:first-child{border-top:0}
+.empty{text-align:center;padding:26px 12px;color:var(--muted)}.empty .e{font-size:38px}
+.spinner{width:22px;height:22px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;height:calc(var(--nav) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);z-index:10}
+nav.tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--muted);cursor:pointer}
+nav.tabs button span{font-size:20px;line-height:1;padding:3px 14px;border-radius:99px}
+nav.tabs button.on{color:var(--accent);font-weight:600}nav.tabs button.on span{background:var(--accent-soft)}
+.toast{position:fixed;left:50%;bottom:calc(var(--nav) + 24px);transform:translateX(-50%);background:#323232;color:#fff;padding:10px 16px;border-radius:12px;z-index:40;font-size:14px;max-width:90vw}
+.keyrow{display:flex;gap:8px;align-items:center}
+.icon-btn{min-width:44px;min-height:44px;border:0;background:transparent;font-size:20px;cursor:pointer;border-radius:12px}
+.log{font-family:ui-monospace,monospace;font-size:12px;white-space:pre-wrap;word-break:break-word}
+</style>
+</head>
+<body>
+<main id="view" aria-live="polite"></main>
+<nav class="tabs" id="tabs"></nav>
+<script>
+'use strict';
+/* =====================================================================
+   Médicaments — extension Ortho Tips (.OTips)
+   Structured drug summaries from Gemini, for a doctor practising in
+   Algeria. Key, history and favourites stay in the extension's storage.
+   ===================================================================== */
+const HOST = window.OrthoTips || null;
+const KEY = 'medicaments:state';
+const SCHEMA_VERSION = 1;
+const API = 'https://generativelanguage.googleapis.com/v1beta';
+
+/* ---------- state (with migration; unreadable data is never overwritten) ---------- */
+function defaults(){
+  return { v:SCHEMA_VERSION, keyMode:'app', apiKey:'', preference:'auto:flash', models:[], modelsAt:0, lastModel:'',
+           history:[], favorites:[], log:[] };
+}
+function migrate(d){
+  const base = defaults();
+  if(!d || typeof d !== 'object') return base;
+  const out = Object.assign(base, d);
+  for(const k of ['models','history','favorites','log']) if(!Array.isArray(out[k])) out[k] = [];
+  if(out.keyMode !== 'own') out.keyMode = 'app';   // the app's key is the default
+  out.v = SCHEMA_VERSION;
+  return out;
+}
+let loadFailed = false;
+function storeGet(){ try{ return HOST ? HOST.storage.get(KEY) : localStorage.getItem(KEY); }catch(e){ return null; } }
+function storeSet(v){ if(loadFailed) return; try{ HOST ? HOST.storage.set(KEY, v) : localStorage.setItem(KEY, v); }catch(e){ toast('⚠️ ' + e.message); } }
+let state;
+{ const raw = storeGet();
+  try{ state = migrate(JSON.parse(raw || 'null')); }
+  catch(e){ state = defaults(); loadFailed = !!raw; } }
+function save(){ storeSet(JSON.stringify(state)); }
+
+/* The app's Gemini key (bridge v6, permission `gemini`): the key never reaches this page. */
+const APP_GEMINI = HOST && HOST.gemini && HOST.permissions && HOST.permissions.has('gemini') ? HOST.gemini : null;
+let appStatus = null;   // { configured, model } once read
+async function readAppStatus(){
+  if(!APP_GEMINI) return null;
+  try{ appStatus = await APP_GEMINI.status(); }catch(e){ appStatus = null; }
+  return appStatus;
+}
+/** Which key a request will use now: 'app', 'own' or null (none available). */
+function keySource(){
+  if(state.keyMode === 'app' && APP_GEMINI && appStatus && appStatus.configured) return 'app';
+  if(state.apiKey) return 'own';
+  return null;
+}
+const ui = { tab:'search', busy:false, error:'', query:'', context:'', current:null, showKey:false, keyInput:'', msg:'', msgErr:false };
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(m){ if(HOST && HOST.toast) return HOST.toast(m); const el = document.createElement('div'); el.className='toast'; el.textContent=m; document.body.appendChild(el); setTimeout(()=>el.remove(), 2200); }
+function fmtDate(ms){ return new Date(ms).toLocaleString('fr-FR', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}); }
+function logError(where, message, model){
+  state.log.unshift({ at:Date.now(), where, model:model || '', message:String(message).slice(0, 500) });
+  state.log = state.log.slice(0, 50); save();
+}
+
+/* ---------- Gemini models: newest of the chosen family, with fallbacks ---------- */
+const FAMILIES = ['flash-lite','flash','pro'];
+const PATTERN = /^gemini-(\d+(?:\.\d+)?)-(flash-lite|flash|pro)(.*)$/;
+const EXCLUDED = /tts|image|audio|live|embedding|computer|robotics|exp|thinking|customtools/;
+function parseModel(name){
+  const id = String(name).replace(/^models\//, '');
+  const m = id.match(PATTERN); if(!m || EXCLUDED.test(m[3])) return null;
+  return { id, family:m[2], version:parseFloat(m[1]), preview:m[3].includes('preview') };
+}
+function sortModels(list){
+  return list.slice().sort((a,b)=> b.version - a.version || (a.preview - b.preview) || (a.id.length - b.id.length) || (a.id < b.id ? -1 : 1));
+}
+function candidates(models, pref){
+  const out = [];
+  const add = id => { if(!out.includes(id)) out.push(id); };
+  const fam = pref.startsWith('auto:') ? pref.slice(5) : null;
+  if(!fam && pref) add(pref);
+  const first = fam || (models.find(m => m.id === pref) || {}).family || 'flash';
+  const order = [first].concat({ 'flash-lite':['flash','pro'], 'flash':['flash-lite','pro'], 'pro':['flash','flash-lite'] }[first]);
+  const sorted = sortModels(models);
+  for(const f of order) sorted.filter(m => m.family === f && !m.preview).forEach(m => add(m.id));
+  for(const f of order) sorted.filter(m => m.family === f && m.preview).forEach(m => add(m.id));
+  order.forEach(f => add('gemini-' + f + '-latest'));
+  return out.slice(0, 9);
+}
+function prefLabel(p){ return { 'auto:flash-lite':'Flash-Lite le plus récent', 'auto:flash':'Flash le plus récent', 'auto:pro':'Pro le plus récent' }[p] || p; }
+
+class GeminiError extends Error { constructor(kind, message){ super(message); this.kind = kind; } }
+async function call(url, options){
+  let res;
+  try{ res = await fetch(url, options); }
+  catch(e){ throw new GeminiError('network', 'Pas de connexion à Google. Vérifiez Internet et réessayez.'); }
+  let body = null; try{ body = await res.json(); }catch(e){}
+  if(res.ok) return body || {};
+  const msg = (body && body.error && body.error.message) || '';
+  if(res.status === 400 && /api key/i.test(msg) || res.status === 401 || res.status === 403) throw new GeminiError('key', 'Clé Gemini refusée par Google. Vérifiez-la dans Réglages.');
+  if(res.status === 404) throw new GeminiError('model', 'Modèle indisponible.');
+  if(res.status === 429) throw new GeminiError('quota', 'Limite d’utilisation Gemini atteinte. Réessayez plus tard.');
+  if(res.status >= 500) throw new GeminiError('server', 'Google est surchargé. Réessayez dans un instant.');
+  throw new GeminiError('format', 'Requête refusée par Google (' + res.status + '). ' + msg.slice(0, 160));
+}
+async function refreshModels(force){
+  if(!state.apiKey) throw new GeminiError('nokey', 'Aucune clé Gemini enregistrée.');
+  if(!force && state.models.length && Date.now() - state.modelsAt < 12 * 3600e3) return state.models;
+  let found = [], page = '';
+  do{
+    const j = await call(API + '/models?pageSize=1000' + (page ? '&pageToken=' + encodeURIComponent(page) : ''), { headers:{ 'x-goog-api-key':state.apiKey } });
+    for(const m of j.models || []){
+      if((m.supportedGenerationMethods || []).includes('generateContent')){ const p = parseModel(m.name); if(p) found.push(p); }
+    }
+    page = j.nextPageToken || '';
+  } while(page);
+  state.models = sortModels(found); state.modelsAt = Date.now(); save();
+  return state.models;
+}
+async function generate(system, userText, schema){
+  if(state.keyMode === 'app' && APP_GEMINI && !appStatus) await readAppStatus();
+  if(keySource() === 'app'){
+    const body = {
+      systemInstruction:{ parts:[{ text:system }] },
+      contents:[{ role:'user', parts:[{ text:userText }] }],
+      generationConfig:{ responseMimeType:'application/json', responseSchema:schema, temperature:0.2 }
+    };
+    let res;
+    try{ res = await APP_GEMINI.generate({ body }); }
+    catch(e){ throw new GeminiError(e.kind || 'server', e.message || String(e)); }
+    const j = res.response || {};
+    if(j.promptFeedback && j.promptFeedback.blockReason) throw new GeminiError('blocked', 'Demande bloquée par Google. Reformulez.');
+    const c = (j.candidates || [])[0];
+    if(!c) throw new GeminiError('format', 'Gemini n’a rien répondu.');
+    if(['SAFETY','PROHIBITED_CONTENT','BLOCKLIST'].includes(c.finishReason)) throw new GeminiError('blocked', 'Réponse bloquée par Google. Reformulez.');
+    const text = ((c.content || {}).parts || []).map(p => p.text || '').join('');
+    if(!text.trim()) throw new GeminiError('format', 'Gemini n’a rien répondu.');
+    state.lastModel = res.model; save();
+    return { model:res.model, text };
+  }
+  if(!state.apiKey) throw new GeminiError('nokey', state.keyMode === 'app'
+    ? 'Configurez Gemini dans les Réglages de l’app (ou choisissez « Ma propre clé » ici).'
+    : 'Aucune clé Gemini enregistrée.');
+  try{ await refreshModels(false); }catch(e){ logError('Liste des modèles', e.message); }
+  const body = JSON.stringify({
+    systemInstruction:{ parts:[{ text:system }] },
+    contents:[{ role:'user', parts:[{ text:userText }] }],
+    generationConfig:{ responseMimeType:'application/json', responseSchema:schema, temperature:0.2 }
+  });
+  let last = null;
+  for(const model of candidates(state.models, state.preference)){
+    try{
+      const j = await call(API + '/models/' + model + ':generateContent', { method:'POST', headers:{ 'x-goog-api-key':state.apiKey, 'Content-Type':'application/json' }, body });
+      if(j.promptFeedback && j.promptFeedback.blockReason) throw new GeminiError('blocked', 'Demande bloquée par Google. Reformulez.');
+      const c = (j.candidates || [])[0];
+      if(!c) throw new GeminiError('format', 'Gemini n’a rien répondu.');
+      if(['SAFETY','PROHIBITED_CONTENT','BLOCKLIST'].includes(c.finishReason)) throw new GeminiError('blocked', 'Réponse bloquée par Google. Reformulez.');
+      const text = ((c.content || {}).parts || []).map(p => p.text || '').join('');
+      if(!text.trim()) throw new GeminiError('format', 'Gemini n’a rien répondu.');
+      state.lastModel = model; save();
+      return { model, text };
+    }catch(e){
+      last = e;
+      if(!(e instanceof GeminiError) || !['model','server','quota'].includes(e.kind)) throw e;
+      logError('Repli de modèle', e.message, model);
+    }
+  }
+  throw last || new GeminiError('model', 'Aucun modèle Gemini disponible.');
+}
+
+/* ---------- the drug summary ---------- */
+const SYSTEM = `Tu es un pharmacien clinicien qui aide un médecin exerçant en Algérie. Réponds en français, de façon précise et concise.
+Règles :
+1. Identifie le médicament demandé (DCI ou nom commercial). S'il n'existe pas ou n'est pas identifiable, found = false et explique-le dans notes.
+2. Donne la DCI, la classe, les formes et dosages, et les noms commerciaux disponibles en Algérie (laisse la liste vide si tu n'es pas sûr : n'invente jamais un nom commercial).
+3. Indications, contre-indications (absolues puis relatives), posologies : adulte, enfant (en mg/kg si pertinent), insuffisance rénale, insuffisance hépatique, sujet âgé. Mets "—" quand non applicable.
+4. Effets indésirables principaux, interactions majeures, grossesse, allaitement, surveillance.
+5. Si le médecin donne des précisions sur son patient (âge, poids, fonction rénale, grossesse…), adapte la posologie et signale ce qui ne convient pas dans warnings.
+6. Remboursement : "remboursable" seulement si, à ta connaissance, le médicament figure sur la nomenclature des médicaments remboursables par la sécurité sociale algérienne (CNAS / CASNOS) ; "non_remboursable" si tu sais qu'il n'y figure pas ; sinon "a_verifier". Dans le doute : "a_verifier". Explique dans reimbursementDetails (taux, conditions, tarif de référence) seulement ce que tu sais.
+7. availableInAlgeria : "oui", "non" ou "incertain".
+8. Mets dans toVerify tout ce que le médecin doit vérifier (doses, remboursement, disponibilité).`;
+
+function S(desc){ const o = { type:'STRING' }; if(desc) o.description = desc; return o; }
+function A(items){ return { type:'ARRAY', items }; }
+function E(...v){ return { type:'STRING', enum:v }; }
+function O(properties, required){ return { type:'OBJECT', properties, required }; }
+const MED_SCHEMA = O({
+  found:{ type:'BOOLEAN' }, dci:S(), drugClass:S(),
+  brandsAlgeria:A(O({ name:S(), forms:S() }, ['name','forms'])),
+  forms:A(S()), indications:A(S()), contraindications:A(S()),
+  posology:O({ adult:S(), child:S(), renal:S(), hepatic:S(), elderly:S() }, ['adult','child','renal','hepatic','elderly']),
+  sideEffects:A(S()), interactions:A(S()), pregnancy:S(), breastfeeding:S(), monitoring:A(S()),
+  reimbursement:E('remboursable','non_remboursable','a_verifier'), reimbursementDetails:S(),
+  availableInAlgeria:E('oui','non','incertain'), warnings:A(S()), toVerify:A(S()), notes:S()
+}, ['found','dci','drugClass','brandsAlgeria','forms','indications','contraindications','posology','sideEffects','interactions',
+    'pregnancy','breastfeeding','monitoring','reimbursement','reimbursementDetails','availableInAlgeria','warnings','toVerify','notes']);
+
+/** Reads Gemini's answer into a safe shape (missing pieces become empty). */
+function readMed(text){
+  let j;
+  try{ j = JSON.parse(String(text).trim().replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```$/, '')); }
+  catch(e){ throw new GeminiError('format', 'Réponse illisible de Gemini. Réessayez.'); }
+  const arr = v => Array.isArray(v) ? v.map(x => typeof x === 'string' ? x.trim() : x).filter(Boolean) : [];
+  const str = v => (typeof v === 'string' ? v : '').trim();
+  const p = j.posology || {};
+  return {
+    found: j.found !== false, dci:str(j.dci), drugClass:str(j.drugClass),
+    brands: arr(j.brandsAlgeria).filter(b => b && typeof b === 'object').map(b => ({ name:str(b.name), forms:str(b.forms) })).filter(b => b.name),
+    forms:arr(j.forms), indications:arr(j.indications), contraindications:arr(j.contraindications),
+    posology:{ adult:str(p.adult), child:str(p.child), renal:str(p.renal), hepatic:str(p.hepatic), elderly:str(p.elderly) },
+    sideEffects:arr(j.sideEffects), interactions:arr(j.interactions), pregnancy:str(j.pregnancy), breastfeeding:str(j.breastfeeding),
+    monitoring:arr(j.monitoring),
+    reimbursement: ['remboursable','non_remboursable','a_verifier'].includes(j.reimbursement) ? j.reimbursement : 'a_verifier',
+    reimbursementDetails:str(j.reimbursementDetails),
+    available: ['oui','non','incertain'].includes(j.availableInAlgeria) ? j.availableInAlgeria : 'incertain',
+    warnings:arr(j.warnings), toVerify:arr(j.toVerify), notes:str(j.notes)
+  };
+}
+
+async function search(){
+  const q = ui.query.trim(); if(!q || ui.busy) return;
+  ui.busy = true; ui.error = ''; ui.current = null; render();
+  const prompt = 'Médicament demandé : ' + q + (ui.context.trim() ? '\nPrécisions sur le patient : ' + ui.context.trim() : '');
+  try{
+    const r = await generate(SYSTEM, prompt, MED_SCHEMA);
+    const med = readMed(r.text);
+    const entry = { id:'h' + Date.now(), query:q, context:ui.context.trim(), at:Date.now(), model:r.model, med };
+    state.history = [entry].concat(state.history.filter(h => !(h.query.toLowerCase() === q.toLowerCase() && h.context === entry.context))).slice(0, 60);
+    save();
+    ui.current = entry;
+  }catch(e){
+    ui.error = e.message || String(e);
+    logError('Recherche « ' + q + ' »', ui.error, state.lastModel);
+  }
+  ui.busy = false; render();
+}
+
+/* ---------- rendering ---------- */
+const TABS = [['search','🔎','Rechercher'],['favorites','⭐','Favoris'],['history','🕘','Historique'],['settings','⚙️','Réglages']];
+function render(){
+  $('#tabs').innerHTML = TABS.map(([k,e,l]) => `<button data-act="tab" data-tab="${k}" class="${ui.tab===k?'on':''}"><span>${e}</span>${esc(l)}</button>`).join('');
+  $('#view').innerHTML = ({ search:viewSearch, favorites:viewFavorites, history:viewHistory, settings:viewSettings })[ui.tab]();
+}
+function reimbursementPill(v){
+  return v === 'remboursable' ? '<span class="pill good">✓ Remboursable</span>'
+       : v === 'non_remboursable' ? '<span class="pill bad">✗ Non remboursable</span>'
+       : '<span class="pill warn">? Remboursement à vérifier</span>';
+}
+function list(title, items){
+  return items && items.length ? `<div class="sec"><h4>${esc(title)}</h4><ul>${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul></div>` : '';
+}
+function text(title, value){ return value && value !== '—' ? `<div class="sec"><h4>${esc(title)}</h4><div>${esc(value)}</div></div>` : ''; }
+function medCard(entry){
+  const m = entry.med, fav = state.favorites.some(f => f.id === entry.id);
+  if(!m.found) return `<div class="card"><b>${esc(entry.query)}</b><p class="muted">${esc(m.notes || 'Médicament non identifié.')}</p></div>`;
+  const pos = m.posology;
+  const posRows = [['Adulte',pos.adult],['Enfant',pos.child],['Insuffisance rénale',pos.renal],['Insuffisance hépatique',pos.hepatic],['Sujet âgé',pos.elderly]]
+    .filter(r => r[1] && r[1] !== '—').map(r => `<div class="kv"><b>${esc(r[0])}</b><span>${esc(r[1])}</span></div>`).join('');
+  return `<div class="card med">
+    <div class="row"><div class="grow"><h3>${esc(m.dci || entry.query)}</h3><div class="muted small">${esc(m.drugClass)}</div></div>
+      <button class="icon-btn" data-act="fav" data-id="${esc(entry.id)}" aria-label="Favori">${fav ? '★' : '☆'}</button></div>
+    <div class="chips" style="margin-top:8px">${reimbursementPill(m.reimbursement)}
+      <span class="pill ${m.available==='oui'?'good':m.available==='non'?'bad':'warn'}">Algérie : ${esc({oui:'disponible',non:'non disponible',incertain:'disponibilité à vérifier'}[m.available])}</span></div>
+    ${m.reimbursementDetails ? `<div class="small muted" style="margin-top:6px">${esc(m.reimbursementDetails)}</div>` : ''}
+    ${m.brands.length ? `<div class="sec"><h4>Noms commerciaux en Algérie</h4><ul>${m.brands.map(b => `<li><b>${esc(b.name)}</b>${b.forms ? ' — ' + esc(b.forms) : ''}</li>`).join('')}</ul></div>` : ''}
+    ${list('Formes et dosages', m.forms)}
+    ${list('Indications', m.indications)}
+    ${list('Contre-indications', m.contraindications)}
+    ${posRows ? `<div class="sec"><h4>Posologie</h4>${posRows}</div>` : ''}
+    ${list('Mises en garde pour ce patient', m.warnings)}
+    ${list('Effets indésirables', m.sideEffects)}
+    ${list('Interactions', m.interactions)}
+    ${text('Grossesse', m.pregnancy)}${text('Allaitement', m.breastfeeding)}
+    ${list('Surveillance', m.monitoring)}
+    ${list('À vérifier', m.toVerify)}
+    ${text('Remarques', m.notes)}
+    <div class="tiny muted" style="margin-top:12px">${esc(fmtDate(entry.at))} · ${esc(entry.model)}${entry.context ? ' · ' + esc(entry.context) : ''}</div>
+    <div class="btns"><button class="btn ghost" data-act="copy" data-id="${esc(entry.id)}">📋 Copier</button><button class="btn ghost" data-act="export" data-id="${esc(entry.id)}">💾 Exporter</button></div>
+  </div>`;
+}
+function viewSearch(){
+  return `
+  <div class="notice">Fiches générées par IA, à vérifier : elles ne remplacent pas le RCP ni votre jugement. Remboursement CNAS/CASNOS à confirmer.</div>
+  ${!keySource() ? `<div class="card" style="margin-top:12px"><p>Configurez d’abord Gemini : la clé de l’app (Réglages → Gemini) ou votre propre clé.</p>
+    <div class="btns">${APP_GEMINI ? `<button class="btn" data-act="openAppSettings">Réglages Gemini de l’app</button>` : ''}<button class="btn ghost" data-act="tab" data-tab="settings">Ma propre clé</button></div></div>` : ''}
+  <div class="card" style="margin-top:12px">
+    <label class="f" for="q">Médicament (DCI ou nom commercial)</label>
+    <input class="input" id="q" data-input="query" value="${esc(ui.query)}" placeholder="ex. Amoxicilline, Doliprane, Lovenox…" autocomplete="off">
+    <label class="f" for="ctx">Précisions sur le patient (facultatif)</label>
+    <input class="input" id="ctx" data-input="context" value="${esc(ui.context)}" placeholder="ex. enfant 20 kg, clairance 35 ml/min, grossesse">
+    <div class="btns"><button class="btn" data-act="search" ${!keySource() || ui.busy ? 'disabled' : ''}>🔎 Rechercher</button></div>
+  </div>
+  ${ui.busy ? `<div class="row card"><div class="spinner"></div><span>Gemini prépare la fiche…</span></div>` : ''}
+  ${ui.error ? `<div class="error">${esc(ui.error)}</div>` : ''}
+  ${ui.current ? medCard(ui.current) : ''}`;
+}
+function entryRow(e){
+  return `<div class="item" data-act="open" data-id="${esc(e.id)}"><div class="grow"><b>${esc(e.med.dci || e.query)}</b>
+    <div class="tiny muted">${esc(e.query)}${e.context ? ' · ' + esc(e.context) : ''} · ${esc(fmtDate(e.at))}</div></div>${reimbursementPill(e.med.reimbursement)}</div>`;
+}
+function viewFavorites(){
+  if(!state.favorites.length) return `<div class="card empty"><div class="e">⭐</div><p>Aucun favori. Touchez ☆ sur une fiche pour la garder ici, consultable hors ligne.</p></div>`;
+  return `<div class="card list">${state.favorites.map(entryRow).join('')}</div>`;
+}
+function viewHistory(){
+  if(!state.history.length) return `<div class="card empty"><div class="e">🕘</div><p>Aucune recherche pour l’instant.</p></div>`;
+  return `<div class="card list">${state.history.map(entryRow).join('')}</div>
+    <button class="btn danger block" data-act="clearHistory">Effacer l’historique</button>`;
+}
+function viewSettings(){
+  const current = candidates(state.models, state.preference)[0];
+  const options = ['auto:flash-lite','auto:flash','auto:pro'].map(p => `<option value="${p}" ${state.preference===p?'selected':''}>${esc(prefLabel(p))}</option>`).join('')
+    + state.models.map(m => `<option value="${esc(m.id)}" ${state.preference===m.id?'selected':''}>${esc(m.id)}${m.preview?' (préversion)':''}</option>`).join('');
+  const appCard = APP_GEMINI ? `
+  <div class="card">
+    <label class="f">Clé utilisée</label>
+    <div class="chips">
+      <button class="chip ${state.keyMode==='app'?'on':''}" data-act="keyMode" data-mode="app" style="${state.keyMode==='app'?'border-color:var(--accent);color:var(--accent);font-weight:700':''}">Clé de l’app (par défaut)</button>
+      <button class="chip ${state.keyMode==='own'?'on':''}" data-act="keyMode" data-mode="own" style="${state.keyMode==='own'?'border-color:var(--accent);color:var(--accent);font-weight:700':''}">Ma propre clé</button>
+    </div>
+    ${state.keyMode==='app' ? (appStatus && appStatus.configured
+      ? `<div class="small" style="margin-top:10px">✓ La clé des Réglages → Gemini de l’app est utilisée (modèle : <b>${esc(appStatus.model || '')}</b>). Cette extension ne la voit jamais.</div>`
+      : `<div class="notice" style="margin-top:10px">Aucune clé Gemini n’est configurée dans l’app.${state.apiKey ? ' Votre propre clé est utilisée en attendant.' : ''}</div>`)
+      + `<div class="btns"><button class="btn ghost" data-act="openAppSettings">⚙️ Réglages Gemini de l’app</button><button class="btn ghost" data-act="testKey">Tester</button></div>`
+      + (ui.msg ? `<div class="${ui.msgErr?'error':'small'}" style="margin-top:10px">${esc(ui.msg)}</div>` : '')
+      : ''}
+  </div>` : '';
+  if(APP_GEMINI && state.keyMode === 'app') return `<h2>Gemini</h2>${appCard}${logCard()}`;
+  return `
+  <h2>Gemini</h2>${appCard}
+  <div class="card">
+    <label class="f" for="key">Clé API Gemini</label>
+    <div class="keyrow"><input class="input" id="key" data-input="keyInput" type="${ui.showKey?'text':'password'}" value="${esc(ui.keyInput)}"
+      placeholder="${state.apiKey ? 'Clé enregistrée (saisissez-en une autre pour la remplacer)' : 'Collez votre clé'}" autocomplete="off">
+      <button class="icon-btn" data-act="toggleKey" aria-label="Afficher la clé">${ui.showKey?'🙈':'👁️'}</button></div>
+    <div class="small muted" style="margin-top:6px">Clé gratuite sur aistudio.google.com/apikey. Elle reste dans cette extension, sur ce téléphone, et n’est envoyée qu’à Google.</div>
+    <div class="btns"><button class="btn" data-act="saveKey">Enregistrer la clé</button><button class="btn ghost" data-act="testKey" ${state.apiKey?'':'disabled'}>Tester</button>
+      <button class="btn danger" data-act="removeKey" ${state.apiKey?'':'disabled'}>Retirer la clé</button></div>
+    ${ui.msg ? `<div class="${ui.msgErr?'error':'small'}" style="margin-top:10px">${esc(ui.msg)}</div>` : ''}
+    <label class="f" for="pref">Modèle</label>
+    <select class="input" id="pref" data-input="preference">${options}</select>
+    <div class="small" style="margin-top:8px">Modèle actuel : <b>${esc(current)}</b>${state.modelsAt ? ' · <span class="muted">liste vérifiée le ' + esc(fmtDate(state.modelsAt)) + '</span>' : ''}</div>
+    <div class="small muted" style="margin-top:6px">La liste des modèles est lue chez Google au plus toutes les 12 h : le plus récent est utilisé, et si un modèle échoue le suivant est essayé.</div>
+    <button class="btn ghost block" data-act="refreshModels" style="margin-top:10px" ${state.apiKey?'':'disabled'}>🔄 Actualiser les modèles</button>
+  </div>
+  ${logCard()}`;
+}
+function logCard(){
+  return `<h2>Journal</h2>
+  <div class="card">${state.log.length ? state.log.map(l => `<div class="log">${esc(fmtDate(l.at))} · ${esc(l.where)}${l.model ? ' · ' + esc(l.model) : ''}\n${esc(l.message)}</div>`).join('<hr style="border:0;border-top:1px solid var(--line)">')
+    + `<button class="btn ghost block" data-act="clearLog" style="margin-top:10px">Effacer le journal</button>` : '<div class="muted small">Aucun problème enregistré.</div>'}</div>`;
+}
+
+/* ---------- actions ---------- */
+function findEntry(id){ return state.history.find(e => e.id === id) || state.favorites.find(e => e.id === id) || (ui.current && ui.current.id === id ? ui.current : null); }
+function medText(e){
+  const m = e.med, out = [];
+  out.push((m.dci || e.query) + (m.drugClass ? ' — ' + m.drugClass : ''));
+  out.push({ remboursable:'Remboursable', non_remboursable:'Non remboursable', a_verifier:'Remboursement à vérifier' }[m.reimbursement] + (m.reimbursementDetails ? ' (' + m.reimbursementDetails + ')' : ''));
+  const sec = (t, items) => { if(items && items.length){ out.push('', t + ' :'); items.forEach(i => out.push('- ' + i)); } };
+  sec('Noms commerciaux en Algérie', m.brands.map(b => b.name + (b.forms ? ' — ' + b.forms : '')));
+  sec('Formes et dosages', m.forms); sec('Indications', m.indications); sec('Contre-indications', m.contraindications);
+  const p = m.posology;
+  sec('Posologie', [['Adulte',p.adult],['Enfant',p.child],['Insuffisance rénale',p.renal],['Insuffisance hépatique',p.hepatic],['Sujet âgé',p.elderly]]
+    .filter(r => r[1] && r[1] !== '—').map(r => r[0] + ' : ' + r[1]));
+  sec('Mises en garde', m.warnings); sec('Effets indésirables', m.sideEffects); sec('Interactions', m.interactions);
+  if(m.pregnancy) out.push('', 'Grossesse : ' + m.pregnancy);
+  if(m.breastfeeding) out.push('Allaitement : ' + m.breastfeeding);
+  sec('Surveillance', m.monitoring); sec('À vérifier', m.toVerify);
+  out.push('', 'Fiche générée par IA (' + e.model + '), à vérifier — ' + fmtDate(e.at));
+  return out.join('\n');
+}
+async function copyText(t){
+  try{ await navigator.clipboard.writeText(t); toast('Fiche copiée'); }
+  catch(e){ const a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select(); try{ document.execCommand('copy'); toast('Fiche copiée'); }catch(x){} a.remove(); }
+}
+const ACT = {
+  tab:d => { ui.tab = d.tab; ui.msg = ''; render(); window.scrollTo(0,0); },
+  search:() => search(),
+  open:d => { const e = findEntry(d.id); if(e){ ui.current = e; ui.query = e.query; ui.context = e.context; ui.error = ''; ui.tab = 'search'; render(); } },
+  fav:d => {
+    const e = findEntry(d.id); if(!e) return;
+    if(state.favorites.some(f => f.id === e.id)){ state.favorites = state.favorites.filter(f => f.id !== e.id); toast('Retiré des favoris'); }
+    else { state.favorites.unshift(e); toast('Ajouté aux favoris'); }
+    save(); render();
+  },
+  copy:d => { const e = findEntry(d.id); if(e) copyText(medText(e)); },
+  export:async d => {
+    const e = findEntry(d.id); if(!e) return;
+    const name = (e.med.dci || e.query).replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '').toLowerCase() + '.txt';
+    if(HOST && HOST.saveFile){ const ok = await HOST.saveFile(name, medText(e), 'text/plain'); toast(ok ? 'Fiche enregistrée' : 'Fiche non enregistrée'); }
+    else { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([medText(e)], { type:'text/plain' })); a.download = name; a.click(); }
+  },
+  clearHistory:() => { if(!confirm('Effacer tout l’historique ? Les favoris sont conservés.')) return; state.history = []; save(); render(); },
+  clearLog:() => { state.log = []; save(); render(); },
+  toggleKey:() => { ui.showKey = !ui.showKey; render(); },
+  saveKey:async () => {
+    const k = ui.keyInput.trim(); if(!k){ ui.msg = 'Collez d’abord votre clé.'; ui.msgErr = true; return render(); }
+    state.apiKey = k; state.models = []; state.modelsAt = 0; save(); ui.keyInput = '';
+    await ACT.testKey();
+  },
+  keyMode:async d => { state.keyMode = d.mode === 'own' ? 'own' : 'app'; save(); ui.msg = ''; await readAppStatus(); render(); },
+  openAppSettings:async () => { if(APP_GEMINI){ try{ await APP_GEMINI.openSettings(); }catch(e){ toast(e.message); } } },
+  testKey:async () => {
+    ui.msg = 'Test en cours…'; ui.msgErr = false; render();
+    try{
+      if(keySource() !== 'app') await refreshModels(true);
+      const r = await generate('Réponds uniquement en JSON.', 'Réponds ok = true.', O({ ok:{ type:'BOOLEAN' } }, ['ok']));
+      ui.msg = 'La clé fonctionne (modèle : ' + r.model + ').'; ui.msgErr = false;
+    }catch(e){ ui.msg = e.message; ui.msgErr = true; logError('Test de la clé', e.message); }
+    render();
+  },
+  removeKey:() => { if(!confirm('Retirer la clé Gemini de cette extension ?')) return; state.apiKey = ''; state.models = []; state.modelsAt = 0; save(); ui.msg = 'Clé retirée.'; ui.msgErr = false; render(); },
+  refreshModels:async () => {
+    try{ await refreshModels(true); ui.msg = 'Liste des modèles actualisée.'; ui.msgErr = false; }
+    catch(e){ ui.msg = e.message; ui.msgErr = true; logError('Liste des modèles', e.message); }
+    render();
+  }
+};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if(!el) return;
+  const fn = ACT[el.dataset.act]; if(fn){ e.preventDefault(); fn(el.dataset, el); }
+});
+document.addEventListener('input', e => {
+  const k = e.target.dataset && e.target.dataset.input; if(!k) return;
+  if(k === 'query') ui.query = e.target.value;
+  if(k === 'context') ui.context = e.target.value;
+  if(k === 'keyInput') ui.keyInput = e.target.value;
+});
+document.addEventListener('change', e => {
+  if(e.target.dataset && e.target.dataset.input === 'preference'){ state.preference = e.target.value; save(); render(); }
+});
+document.addEventListener('keydown', e => { if(e.key === 'Enter' && e.target.id === 'q'){ e.preventDefault(); search(); } });
+
+/* ---------- host: theme & back ---------- */
+function applyTheme(t){ document.documentElement.dataset.theme = t === 'dark' ? 'dark' : 'light'; }
+if(HOST){
+  applyTheme(HOST.theme); if(HOST.onThemeChange) HOST.onThemeChange(applyTheme);
+  if(HOST.onBack) HOST.onBack(() => {
+    if(ui.tab === 'search' && ui.current){ ui.current = null; render(); return true; }
+    if(ui.tab !== 'search'){ ui.tab = 'search'; render(); return true; }
+    return false;
+  });
+} else {
+  const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  applyTheme(mq && mq.matches ? 'dark' : 'light');
+}
+if(loadFailed) setTimeout(() => toast('⚠️ Données illisibles : rien ne sera écrasé.'), 300);
+render();
+if(APP_GEMINI){
+  readAppStatus().then(render);
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') readAppStatus().then(render); });
+}
+</script>
+</body>
+</html>

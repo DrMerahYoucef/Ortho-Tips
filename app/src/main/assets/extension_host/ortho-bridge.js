@@ -1,5 +1,8 @@
 /*
- * Ortho Tips — extension host bridge (API version 5).
+ * Ortho Tips — extension host bridge (API version 6).
+ *
+ * Version 6 adds `OrthoTips.gemini` (permission `gemini`): Gemini through the
+ * app's own key (Réglages → Gemini). The key never reaches the page.
  *
  * Version 5 implements the reserved `background` permission:
  * `OrthoTips.media` plays an audio stream in the app's Media3 service, so it
@@ -86,6 +89,9 @@
     var message = String(value);
     var e = new Error(message);
     if (message.indexOf('PermissionError') === 0) e.name = 'PermissionError';
+    // "GeminiError(quota): …" → Error { name: 'GeminiError', kind: 'quota', message: '…' }
+    var g = /^GeminiError\((\w+)\): ([\s\S]*)$/.exec(message);
+    if (g) { e = new Error(g[2]); e.name = 'GeminiError'; e.kind = g[1]; }
     c.reject(e);
   }
   function gated(permission, method, args) {
@@ -278,7 +284,7 @@
   }
 
   var api = {
-    bridgeVersion: 5,
+    bridgeVersion: 6,
     extensionId: String(info.extensionId || ''),
     extensionVersion: String(info.extensionVersion || ''),
     appVersion: String(info.appVersion || ''),
@@ -369,6 +375,20 @@
       onOpen: function (cb) {
         if (typeof cb === 'function' && has('notifications')) notificationListeners.push(cb);
       }
+    },
+    // Requires `gemini`: Gemini through the app's key (Réglages → Gemini). The key
+    // never reaches the page; the app picks the model (newest, with fallbacks).
+    gemini: {
+      // → { available: true, configured, model }  (configured: a key is set in the app)
+      status: function () { return gated('gemini', 'gemini.status', {}); },
+      // request.body: a generateContent body (contents, systemInstruction, generationConfig…),
+      // request.model: optional preferred model. → { model, response } (Google's JSON answer)
+      generate: function (request) {
+        request = request || {};
+        return gated('gemini', 'gemini.generate', { body: request.body || {}, model: request.model == null ? '' : String(request.model) });
+      },
+      // Opens the app's Réglages → Gemini (the page is reloaded when the user comes back).
+      openSettings: function () { return gated('gemini', 'gemini.openSettings', {}); }
     },
     // Requires `background`: audio played by the app's media service — keeps
     // playing with the screen off, with controls in the notification panel.

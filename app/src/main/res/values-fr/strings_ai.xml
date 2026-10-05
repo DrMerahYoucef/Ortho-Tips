@@ -74,4 +74,5 @@
     <string name="assistant_saved">Ajouté aux notes</string>
     <string name="assistant_refine">Demander une modification (ex. allergie à la pénicilline, enfant 20 kg…)</string>
     <string name="assistant_refine_send">Envoyer</string>
+    <string name="gemini_extensions_note">Les extensions avec la permission « Gemini » peuvent utiliser cette clé via l’app, sans jamais la voir. Le modèle ci-dessus sert aussi pour elles.</string>
 </resources>

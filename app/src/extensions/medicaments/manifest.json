@@ -1,0 +1,18 @@
+{
+  "entry": "index.html",
+  "contentSchema": 1,
+  "kind": "html",
+  "author": "Ortho Tips",
+  "permissions": [
+    "internet",
+    "gemini",
+    "import_export"
+  ],
+  "name": "Médicaments",
+  "icon": "💊",
+  "description": "Fiche structurée de n'importe quel médicament avec Gemini : indications, contre-indications, posologie, interactions, noms commerciaux et remboursement en Algérie.",
+  "minAppVersionCode": 0,
+  "attributes": {},
+  "id": "medicaments",
+  "version": "1.1"
+}

@@ -1,0 +1,19 @@
+{
+  "entry": "index.html",
+  "contentSchema": 1,
+  "kind": "html",
+  "author": "Ortho Tips",
+  "permissions": [
+    "internet",
+    "patients",
+    "storage",
+    "import_export"
+  ],
+  "name": "Import PowerPoint",
+  "icon": "📥",
+  "description": "Importe les patients, leurs images et vidéos depuis vos présentations .pptx : lecture sur le téléphone, surlignage des champs, vérification avant l'ajout. Gemini en option.",
+  "minAppVersionCode": 0,
+  "attributes": {},
+  "id": "pptx-patients",
+  "version": "1.7"
+}

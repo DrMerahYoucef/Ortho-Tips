@@ -1,0 +1,18 @@
+{
+  "entry": "index.html",
+  "contentSchema": 1,
+  "kind": "html",
+  "author": "Ortho Tips",
+  "permissions": [
+    "internet",
+    "import_export",
+    "sms"
+  ],
+  "name": "Mes finances",
+  "icon": "💰",
+  "description": "Comptes, cachette, dettes et objectifs d'épargne (voiture, maison, PS5\u2026) en DA, \u20ac et $, avec taux officiels ou parallèles.",
+  "minAppVersionCode": 0,
+  "attributes": {},
+  "id": "mes-finances",
+  "version": "1.9"
+}

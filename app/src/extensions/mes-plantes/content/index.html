@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="ortho-ext-id" content="mes-plantes">
+<meta name="ortho-ext-name" content="Mes plantes">
+<meta name="ortho-ext-description" content="Photographiez vos plantes : identification, fiches d'entretien, rappels d'arrosage et diagnostic avec Gemini.">
+<meta name="ortho-ext-version" content="1.1">
+<meta name="ortho-ext-icon" content="🪴">
+<meta name="ortho-ext-author" content="Ortho Tips">
+<meta name="ortho-ext-permissions" content="internet, storage, import_export, notifications">
+<title>Mes plantes</title>
+<style>
+:root{
+  --bg:#f5f7f4;--surface:#fff;--surface2:#eef2ec;--text:#1b1f1c;--muted:#5b675e;--line:#dfe5dc;
+  --accent:#27702b;--on-accent:#ffffff;--accent-soft:#e3f1e4;--good:#1e7a45;--good-soft:#e2f4ea;--bad:#c62828;--bad-soft:#fdecec;
+  --warn:#8a5300;--warn-soft:#fff1d6;--water:#0b67a8;--water-soft:#e2f0fb;--shadow:0 1px 2px rgba(0,0,0,.06),0 2px 8px rgba(0,0,0,.04);
+  --radius:16px;--nav:64px;
+}
+html[data-theme="dark"]{
+  --bg:#111412;--surface:#1b201c;--surface2:#252c26;--text:#e5ebe5;--muted:#a4b0a6;--line:#303a32;
+  --accent:#81c784;--on-accent:#0f1a10;--accent-soft:#223a25;--good:#6fd69b;--good-soft:#193528;--bad:#ff8a80;--bad-soft:#3d2020;
+  --warn:#ffc15e;--warn-soft:#3a2e17;--water:#7cc4f5;--water-soft:#16303f;--shadow:none;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,Roboto,sans-serif}
+body{padding-bottom:calc(var(--nav) + env(safe-area-inset-bottom))}
+button,input,select,textarea{font:inherit;color:inherit}
+main{padding:12px 16px 88px;max-width:720px;margin:0 auto}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:10px}
+.between{justify-content:space-between}
+.grow{flex:1;min-width:0}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.tiny{font-size:12px}
+.ellipsis{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+h1{font-size:22px;margin:12px 0 2px;overflow-wrap:anywhere}
+h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:18px 2px 8px;font-weight:600}
+h3{margin:0 0 10px;font-size:18px}
+h4{margin:12px 0 4px;font-size:14px}
+p{margin:6px 0}
+ul,ol{margin:6px 0;padding-left:20px}
+li{margin:3px 0}
+.pill{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill.good{background:var(--good-soft);color:var(--good)}.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}.pill.water{background:var(--water-soft);color:var(--water)}
+.pill.acc{background:var(--accent-soft);color:var(--accent)}
+.btn{border:0;border-radius:12px;min-height:44px;padding:0 16px;background:var(--accent);color:var(--on-accent);font-weight:600;cursor:pointer}
+.btn.ghost{background:var(--surface2);color:var(--text)}
+.btn.danger{background:var(--bad-soft);color:var(--bad)}
+.btn.water{background:var(--water-soft);color:var(--water)}
+.btn.block{width:100%}
+.btn[disabled]{opacity:.55}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btns .btn{flex:1}
+.icon-btn{min-width:44px;min-height:44px;border-radius:12px;border:0;background:transparent;display:inline-flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;color:var(--text)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;min-height:40px;cursor:pointer;font-size:13px}
+.chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;cursor:pointer;text-align:left;padding:0;box-shadow:var(--shadow)}
+.pcard .body{padding:8px 10px 10px}
+.pcard .name{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcard .sci{font-size:12px;color:var(--muted);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px}
+.ph{position:relative;aspect-ratio:1/1;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:44px;overflow:hidden}
+.ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ph img:not([src]){display:none}
+.ph.wide{aspect-ratio:4/3;border-radius:var(--radius);font-size:64px}
+.thumb{width:48px;height:48px;border-radius:12px;flex:none;aspect-ratio:auto;font-size:24px}
+.list .item{display:flex;align-items:center;gap:12px;padding:10px 2px;border-top:1px solid var(--line);min-height:56px}
+.list .item:first-child{border-top:0}
+.list .item.click{cursor:pointer}
+.empty{text-align:center;padding:28px 12px;color:var(--muted)}
+.empty .e{font-size:44px}
+.banner{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;font-weight:600;background:var(--water-soft);color:var(--water);border-color:transparent}
+.banner.warn{background:var(--warn-soft);color:var(--warn)}
+.banner .e{font-size:26px}
+.kv{padding:8px 0;border-top:1px dashed var(--line)}
+.kv:first-child{border-top:0}
+.kv b{display:block;font-size:13px;color:var(--muted);font-weight:600}
+.big{font-size:20px;font-weight:700}
+.aibox{border:1px dashed var(--line);border-radius:12px;padding:12px;margin-top:10px;background:var(--surface2)}
+.aibox.err{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-3px;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fab{position:fixed;right:16px;bottom:calc(var(--nav) + 16px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:18px;border:0;background:var(--accent);color:var(--on-accent);font-size:28px;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;z-index:5}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;height:calc(var(--nav) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);z-index:10}
+nav.tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--muted);cursor:pointer;position:relative}
+nav.tabs button span{font-size:20px;line-height:1;padding:3px 14px;border-radius:99px}
+nav.tabs button.on{color:var(--accent);font-weight:600}
+nav.tabs button.on span{background:var(--accent-soft)}
+nav.tabs .dot{position:absolute;top:6px;left:calc(50% + 10px);min-width:18px;height:18px;border-radius:9px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
+/* sheets: the resting state is the visible state; --vh / --kb come from visualViewport */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;animation:fade-in .2s ease both}
+.scrim.closing{animation:fade-out .2s ease both}
+.sheet{position:fixed;left:0;right:0;bottom:var(--kb,0px);max-height:calc(var(--vh,100vh) - 24px);overflow:auto;overscroll-behavior:contain;background:var(--surface);border-radius:22px 22px 0 0;z-index:21;padding:8px 16px calc(20px + env(safe-area-inset-bottom));animation:sheet-in .25s ease both;max-width:720px;margin:0 auto}
+.sheet.closing{animation:sheet-out .22s ease both}
+@keyframes sheet-in{from{transform:translateY(100%)}to{transform:none}}
+@keyframes sheet-out{from{transform:none}to{transform:translateY(100%)}}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+@keyframes fade-out{from{opacity:1}to{opacity:0}}
+@media (prefers-reduced-motion: reduce){.sheet,.scrim,.spin{animation:none}}
+.sheet .grab{width:40px;height:4px;border-radius:9px;background:var(--line);margin:4px auto 10px}
+label.f{display:block;margin:12px 0 4px;font-size:13px;color:var(--muted);font-weight:600}
+.input,select.input,textarea.input{width:100%;min-height:46px;border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:10px 12px;outline:none}
+textarea.input{min-height:80px;resize:vertical}
+.input:focus{border-color:var(--accent)}
+.hint{font-size:12px;color:var(--muted);margin-top:4px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.log{border-left:4px solid var(--line);padding:8px 10px;margin:8px 0;background:var(--surface2);border-radius:0 10px 10px 0}
+.log.error{border-left-color:var(--bad)}.log.warn{border-left-color:var(--warn)}.log.info{border-left-color:var(--water)}
+.log pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:4px 0 0;font:12px/1.4 ui-monospace,"Roboto Mono",monospace;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(var(--nav) + 24px);transform:translateX(-50%);background:#323232;color:#fff;padding:10px 16px;border-radius:12px;z-index:40;font-size:14px;max-width:90vw}
+details summary{cursor:pointer;min-height:40px;display:flex;align-items:center;font-weight:600}
+a{color:var(--accent)}
+.switch{display:flex;align-items:center;gap:12px;min-height:48px;cursor:pointer;font-weight:600}
+.switch input{width:22px;height:22px;accent-color:var(--accent);flex:none}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<main id="view" aria-live="polite"></main>
+<button class="fab hidden" id="fab" data-act="addPlant" aria-label="+">+</button>
+<nav class="tabs" id="tabs"></nav>
+<input type="file" id="pickCam" accept="image/*" capture="environment" class="hidden">
+<input type="file" id="pickGal" accept="image/*" class="hidden">
+<input type="file" id="pickJson" accept="application/json,.json" class="hidden">
+<script>
+'use strict';
+/* =====================================================================
+   Mes plantes — Ortho Tips extension
+   Storage keys: <id>:state (JSON, schema), <id>:apikey, <id>:log,
+   photos in OrthoTips.files (photos/<pid>.txt, data URL) or <id>:photo:<pid>.
+   ===================================================================== */
+const HOST = window.OrthoTips || null;
+const ID = 'mes-plantes';
+const KEY = ID + ':state', KEY_API = ID + ':apikey', KEY_LOG = ID + ':log', KEY_PHOTO = ID + ':photo:';
+const SCHEMA = 2;
+const API = 'https://generativelanguage.googleapis.com/v1beta';
+const LOG_MAX = 300;
+const MODEL_TTL = 12 * 3600 * 1000;
+
+/* ---------- strings ---------- */
+const STR = {
+  fr:{
+    tabPlants:'Plantes',tabWater:'Arrosage',tabDiag:'Diagnostic',tabSettings:'Réglages',
+    emptyPlants:'Aucune plante pour l’instant',emptyPlantsHint:'Prenez une photo : Gemini la reconnaît et remplit sa fiche.',
+    addPlant:'Ajouter une plante',newPlant:'Nouvelle plante',editPlant:'Modifier la plante',
+    takePhoto:'📷 Prendre une photo',gallery:'🖼️ Galerie',noPhoto:'Pas encore de photo',
+    location:'Emplacement',loc_indoor:'Intérieur',loc_outdoor:'Extérieur',loc_balcony:'Balcon / terrasse',
+    identify:'✨ Identifier avec Gemini',identifying:'Identification en cours…',reidentify:'🔄 Mettre à jour la fiche (Gemini)',
+    name:'Nom',scientific:'Nom scientifique',family:'Famille',interval:'Arroser tous les (jours)',lastWater:'Dernier arrosage',notes:'Notes',
+    save:'Enregistrer',cancel:'Annuler',close:'Fermer',delete:'Supprimer',edit:'Modifier',apply:'Appliquer',
+    needName:'Donnez un nom à la plante.',needInterval:'Intervalle d’arrosage : entre 1 et 365 jours.',needPhoto:'Prenez d’abord une photo.',
+    saved:'Plante enregistrée',deleted:'Supprimé',confirmDelete:'Supprimer « {n} » et ses diagnostics ?',
+    every:'Tous les {n} j',everyLong:'Arrosage tous les {n} jours',never:'jamais',
+    due_over:'En retard de {n} j',due_today:'À arroser aujourd’hui',due_tomorrow:'Demain',due_in:'Dans {n} j',
+    watered:'💧 Arrosé aujourd’hui',wateredToast:'💧 {n} arrosée',later:'⏰ Demain',snoozed:'Reporté à demain',
+    lastOn:'Dernier arrosage : {d}',nextOn:'Prochain : {d}',history:'Historique des arrosages ({n})',noHistory:'Aucun arrosage noté.',
+    suggest:'Gemini suggère d’arroser tous les {n} jours.',applied:'Intervalle mis à jour',
+    info:'Fiche de la plante',noInfo:'Pas encore de fiche. Identifiez la plante avec Gemini pour obtenir ses informations.',
+    summary:'Présentation',light:'Lumière',water:'Arrosage',humidity:'Humidité',temperature:'Température',soil:'Substrat',fertilizer:'Engrais',repotting:'Rempotage',toxicity:'Toxicité',tips:'Conseils',
+    confidence:'Confiance : {n} %',
+    dueBanner:'{n} plante(s) à arroser',dueToast:'💧 {n} plante(s) à arroser aujourd’hui',
+    overdue:'En retard',today:'Aujourd’hui',upcoming:'Prochains jours',allGood:'Rien à arroser pour le moment 🌿',
+    reminders:'Rappels',remindersText:'Vous pouvez aussi mettre les rappels dans l’agenda du téléphone : ouvrez ensuite le fichier .ics avec votre application Agenda.',
+    reminderHour:'Heure du rappel',exportIcs:'📅 Ajouter les rappels à l’agenda (.ics)',icsSaved:'Rappels enregistrés : ouvrez le fichier avec votre Agenda',icsNone:'Aucune plante à rappeler.',
+    icsTitle:'💧 Arroser : {n}',icsReExport:'Après avoir changé un intervalle, exportez à nouveau les rappels.',
+    notifTitle:'💧 Arroser : {n}',notifBody:'Arrosage tous les {n} jours. Touchez pour ouvrir la plante.',
+    notifOn:'🔔 Rappels par notification',notifHint:'Le jour de l’arrosage à l’heure choisie, puis chaque jour tant que l’arrosage n’est pas noté ici. Fonctionne même application fermée.',
+    notifAllow:'🔔 Autoriser les notifications',notifAsk:'Android n’autorise pas encore Ortho Tips à afficher des notifications.',
+    notifDenied:'Notifications bloquées pour Ortho Tips. Autorisez-les dans Paramètres Android → Applications → Ortho Tips → Notifications.',
+    notifActive:'✓ {n} rappel(s) programmé(s)',notifNext:'Prochain : {d}',notifOff:'Rappels désactivés.',notifWait:'Vérification…',
+    notifUnsupported:'Cette version d’Ortho Tips ne peut pas encore envoyer de notifications. Mettez l’application à jour, ou utilisez l’agenda ci-dessous.',
+    notifError:'Les rappels n’ont pas pu être programmés. Détails dans Réglages → Journal.',calendarAlt:'Agenda du téléphone (facultatif)',
+    diagnose:'🩺 Diagnostiquer',newDiag:'🩺 Nouveau diagnostic',diagTitle:'Diagnostic',diagPlant:'Plante',diagNoPlant:'— Plante non enregistrée —',
+    symptoms:'Ce que vous observez (facultatif)',symptomsPh:'Feuilles jaunes, taches brunes, tiges molles…',analyze:'🩺 Analyser',analyzing:'Analyse en cours…',
+    usePlantPhoto:'Utiliser la photo enregistrée',diagHistory:'Diagnostics',noDiag:'Aucun diagnostic pour l’instant.',diagIntro:'Photographiez la partie malade (feuilles, tige, racines, dessous des feuilles) pour que Gemini repère le problème et propose des solutions.',
+    status_healthy:'En bonne santé',status_minor:'Problème léger',status_serious:'Problème sérieux',
+    problems:'Problèmes probables',solutions:'Solutions',prevention:'Prévention',wateringAdvice:'Conseil d’arrosage',
+    lk_high:'probable',lk_medium:'possible',lk_low:'peu probable',urgent:'urgent',
+    signs:'Signes',cause:'Cause',model:'Modèle : {m}',deletedPlant:'plante supprimée',confirmDeleteDiag:'Supprimer ce diagnostic ?',
+    gemini:'Gemini',apiKey:'Clé API Gemini',apiKeyHint:'Clé gratuite sur aistudio.google.com/apikey. Elle reste sur ce téléphone et n’est envoyée qu’à Google. Elle n’est jamais incluse dans les sauvegardes.',
+    getKey:'Obtenir une clé',saveKey:'Enregistrer la clé',testKey:'Tester',removeKey:'Retirer la clé',keySaved:'Clé enregistrée',keyRemoved:'Clé retirée',
+    keyInvalidFormat:'Cette clé ne semble pas valide (trop courte ou avec des espaces).',show:'Afficher',hide:'Masquer',
+    noKeyCard:'Ajoutez votre clé API Gemini pour identifier vos plantes et diagnostiquer leurs problèmes.',openSettings:'Ouvrir les réglages',
+    modelPref:'Modèle',pref_auto:'Le plus récent (automatique)',pref_flash:'Flash le plus récent',pref_pro:'Pro le plus récent',pref_lite:'Flash-Lite le plus récent',
+    modelNow:'Modèle actuel : {m}',modelNone:'Aucun modèle choisi pour l’instant.',modelChecked:'Liste vérifiée {d}',refreshModels:'🔄 Actualiser les modèles',
+    modelsOk:'✓ Clé valide — modèle : {m}',modelHint:'La liste des modèles est lue chez Google à chaque ouverture (au plus toutes les 12 h) : le plus récent est utilisé, et si un modèle échoue le suivant est essayé.',
+    place:'Ville ou climat (facultatif)',placeHint:'Aide Gemini à adapter l’arrosage, ex. « Alger, balcon plein sud ».',
+    language:'Langue',auto:'Automatique',
+    log:'Journal des problèmes',logOpen:'📋 Voir le journal ({n})',logEmpty:'Aucun problème enregistré.',logClear:'🗑️ Effacer',logExport:'💾 Exporter',logCleared:'Journal effacé',
+    confirmClearLog:'Effacer le journal ?',
+    backup:'Sauvegarde',exportJson:'💾 Exporter une sauvegarde',importJson:'📂 Restaurer une sauvegarde',backupSaved:'Sauvegarde enregistrée',
+    restored:'Sauvegarde restaurée',badBackup:'Ce fichier n’est pas une sauvegarde de Mes plantes.',confirmRestore:'Remplacer toutes les plantes par celles de la sauvegarde ?',
+    whereApp:'Enregistré dans Ortho Tips, sur ce téléphone.',whereBrowser:'Enregistré dans ce navigateur.',
+    loadFailed:'Les données enregistrées sont illisibles : rien ne sera enregistré pour ne pas les écraser. Consultez le journal.',
+    photoBusy:'Préparation de la photo…',photoTooBig:'Photo trop volumineuse (max 20 Mo).',photoFailed:'Impossible de lire cette photo.',photoSaveFailed:'La photo n’a pas pu être enregistrée.',
+    noPickPerm:'Photos indisponibles : la permission « import_export » n’est pas accordée à l’extension.',
+    notPlant:'Gemini ne reconnaît pas de plante sur cette photo. Essayez une photo plus nette et plus proche.',
+    err_noKey:'Aucune clé API Gemini. Ajoutez-la dans Réglages.',err_noInternetPerm:'Accès internet non accordé à l’extension.',
+    err_offline:'Pas de connexion internet.',err_network:'Connexion à Gemini impossible.',err_timeout:'Gemini met trop de temps à répondre. Réessayez.',
+    err_badKey:'Clé API refusée par Google. Vérifiez-la dans Réglages.',err_denied:'Accès refusé par Google (clé ou API non activée).',
+    err_quota:'Quota Gemini dépassé. Réessayez plus tard.',err_server:'Service Gemini momentanément indisponible.',err_parse:'Réponse de Gemini illisible.',
+    err_blocked:'Gemini a refusé de répondre à cette demande.',err_http:'Erreur Gemini ({s}).',err_noModel:'Aucun modèle Gemini compatible trouvé pour cette clé.',
+    err_generic:'Une erreur est survenue.',seeLog:'Détails dans Réglages → Journal.',
+    ctx_models:'Modèles',ctx_identify:'Identification',ctx_diagnose:'Diagnostic',ctx_photo:'Photo',ctx_storage:'Stockage',ctx_js:'JavaScript',ctx_backup:'Sauvegarde',ctx_ics:'Rappels',ctx_notif:'Notifications',
+    back:'Retour',thisPlant:'cette plante'
+  },
+  en:{
+    tabPlants:'Plants',tabWater:'Watering',tabDiag:'Diagnosis',tabSettings:'Settings',
+    emptyPlants:'No plants yet',emptyPlantsHint:'Take a photo: Gemini recognises it and fills in its profile.',
+    addPlant:'Add a plant',newPlant:'New plant',editPlant:'Edit plant',
+    takePhoto:'📷 Take a photo',gallery:'🖼️ Gallery',noPhoto:'No photo yet',
+    location:'Location',loc_indoor:'Indoors',loc_outdoor:'Outdoors',loc_balcony:'Balcony / terrace',
+    identify:'✨ Identify with Gemini',identifying:'Identifying…',reidentify:'🔄 Update profile (Gemini)',
+    name:'Name',scientific:'Scientific name',family:'Family',interval:'Water every (days)',lastWater:'Last watered',notes:'Notes',
+    save:'Save',cancel:'Cancel',close:'Close',delete:'Delete',edit:'Edit',apply:'Apply',
+    needName:'Give the plant a name.',needInterval:'Watering interval: 1 to 365 days.',needPhoto:'Take a photo first.',
+    saved:'Plant saved',deleted:'Deleted',confirmDelete:'Delete “{n}” and its diagnoses?',
+    every:'Every {n} d',everyLong:'Water every {n} days',never:'never',
+    due_over:'{n} d overdue',due_today:'Water today',due_tomorrow:'Tomorrow',due_in:'In {n} d',
+    watered:'💧 Watered today',wateredToast:'💧 {n} watered',later:'⏰ Tomorrow',snoozed:'Moved to tomorrow',
+    lastOn:'Last watered: {d}',nextOn:'Next: {d}',history:'Watering history ({n})',noHistory:'No watering recorded.',
+    suggest:'Gemini suggests watering every {n} days.',applied:'Interval updated',
+    info:'Plant profile',noInfo:'No profile yet. Identify the plant with Gemini to get its information.',
+    summary:'Overview',light:'Light',water:'Watering',humidity:'Humidity',temperature:'Temperature',soil:'Soil',fertilizer:'Fertiliser',repotting:'Repotting',toxicity:'Toxicity',tips:'Tips',
+    confidence:'Confidence: {n}%',
+    dueBanner:'{n} plant(s) to water',dueToast:'💧 {n} plant(s) to water today',
+    overdue:'Overdue',today:'Today',upcoming:'Coming days',allGood:'Nothing to water right now 🌿',
+    reminders:'Reminders',remindersText:'You can also put the reminders in your phone’s calendar: then open the .ics file with your Calendar app.',
+    reminderHour:'Reminder time',exportIcs:'📅 Add reminders to calendar (.ics)',icsSaved:'Reminders saved: open the file with your Calendar',icsNone:'No plant to remind.',
+    icsTitle:'💧 Water: {n}',icsReExport:'After changing an interval, export the reminders again.',
+    notifTitle:'💧 Water: {n}',notifBody:'Watered every {n} days. Tap to open the plant.',
+    notifOn:'🔔 Notification reminders',notifHint:'On watering day at the chosen time, then every day until the watering is recorded here. Works even when the app is closed.',
+    notifAllow:'🔔 Allow notifications',notifAsk:'Android does not allow Ortho Tips to show notifications yet.',
+    notifDenied:'Notifications are blocked for Ortho Tips. Allow them in Android Settings → Apps → Ortho Tips → Notifications.',
+    notifActive:'✓ {n} reminder(s) scheduled',notifNext:'Next: {d}',notifOff:'Reminders turned off.',notifWait:'Checking…',
+    notifUnsupported:'This version of Ortho Tips cannot send notifications yet. Update the app, or use the calendar below.',
+    notifError:'Reminders could not be scheduled. Details in Settings → Log.',calendarAlt:'Phone calendar (optional)',
+    diagnose:'🩺 Diagnose',newDiag:'🩺 New diagnosis',diagTitle:'Diagnosis',diagPlant:'Plant',diagNoPlant:'— Plant not saved —',
+    symptoms:'What you notice (optional)',symptomsPh:'Yellow leaves, brown spots, soft stems…',analyze:'🩺 Analyse',analyzing:'Analysing…',
+    usePlantPhoto:'Use the saved photo',diagHistory:'Diagnoses',noDiag:'No diagnosis yet.',diagIntro:'Photograph the sick part (leaves, stem, roots, underside of leaves) so Gemini can spot the problem and suggest solutions.',
+    status_healthy:'Healthy',status_minor:'Minor problem',status_serious:'Serious problem',
+    problems:'Likely problems',solutions:'Solutions',prevention:'Prevention',wateringAdvice:'Watering advice',
+    lk_high:'likely',lk_medium:'possible',lk_low:'unlikely',urgent:'urgent',
+    signs:'Signs',cause:'Cause',model:'Model: {m}',deletedPlant:'deleted plant',confirmDeleteDiag:'Delete this diagnosis?',
+    gemini:'Gemini',apiKey:'Gemini API key',apiKeyHint:'Free key at aistudio.google.com/apikey. It stays on this phone and is only sent to Google. It is never included in backups.',
+    getKey:'Get a key',saveKey:'Save key',testKey:'Test',removeKey:'Remove key',keySaved:'Key saved',keyRemoved:'Key removed',
+    keyInvalidFormat:'This key does not look valid (too short or contains spaces).',show:'Show',hide:'Hide',
+    noKeyCard:'Add your Gemini API key to identify your plants and diagnose their problems.',openSettings:'Open settings',
+    modelPref:'Model',pref_auto:'Newest (automatic)',pref_flash:'Newest Flash',pref_pro:'Newest Pro',pref_lite:'Newest Flash-Lite',
+    modelNow:'Current model: {m}',modelNone:'No model chosen yet.',modelChecked:'List checked {d}',refreshModels:'🔄 Refresh models',
+    modelsOk:'✓ Key valid — model: {m}',modelHint:'The model list is read from Google each time you open the extension (at most every 12 h): the newest is used, and if a model fails the next one is tried.',
+    place:'City or climate (optional)',placeHint:'Helps Gemini adapt watering, e.g. “Algiers, south-facing balcony”.',
+    language:'Language',auto:'Automatic',
+    log:'Problem log',logOpen:'📋 View log ({n})',logEmpty:'No problem recorded.',logClear:'🗑️ Clear',logExport:'💾 Export',logCleared:'Log cleared',
+    confirmClearLog:'Clear the log?',
+    backup:'Backup',exportJson:'💾 Export a backup',importJson:'📂 Restore a backup',backupSaved:'Backup saved',
+    restored:'Backup restored',badBackup:'This file is not a Mes plantes backup.',confirmRestore:'Replace all plants with the ones in the backup?',
+    whereApp:'Saved in Ortho Tips, on this phone.',whereBrowser:'Saved in this browser.',
+    loadFailed:'Saved data cannot be read: nothing will be saved so it is not overwritten. See the log.',
+    photoBusy:'Preparing the photo…',photoTooBig:'Photo too large (max 20 MB).',photoFailed:'Could not read this photo.',photoSaveFailed:'The photo could not be saved.',
+    noPickPerm:'Photos unavailable: the “import_export” permission is not granted to the extension.',
+    notPlant:'Gemini does not see a plant in this photo. Try a sharper, closer photo.',
+    err_noKey:'No Gemini API key. Add it in Settings.',err_noInternetPerm:'Internet access not granted to the extension.',
+    err_offline:'No internet connection.',err_network:'Cannot reach Gemini.',err_timeout:'Gemini is taking too long. Try again.',
+    err_badKey:'Google refused the API key. Check it in Settings.',err_denied:'Access denied by Google (key or API not enabled).',
+    err_quota:'Gemini quota exceeded. Try again later.',err_server:'Gemini is temporarily unavailable.',err_parse:'Unreadable answer from Gemini.',
+    err_blocked:'Gemini declined to answer this request.',err_http:'Gemini error ({s}).',err_noModel:'No compatible Gemini model found for this key.',
+    err_generic:'Something went wrong.',seeLog:'Details in Settings → Log.',
+    ctx_models:'Models',ctx_identify:'Identification',ctx_diagnose:'Diagnosis',ctx_photo:'Photo',ctx_storage:'Storage',ctx_js:'JavaScript',ctx_backup:'Backup',ctx_ics:'Reminders',ctx_notif:'Notifications',
+    back:'Back',thisPlant:'this plant'
+  }
+};
+
+/* ---------- storage (function declarations: usable while the page loads) ---------- */
+function storeGet(k){ try{ return HOST ? HOST.storage.get(k) : localStorage.getItem(k); }catch(e){ return null; } }
+function storeSet(k, v){ if(HOST) HOST.storage.set(k, v); else localStorage.setItem(k, v); }
+function storeDel(k){ try{ if(HOST) HOST.storage.remove(k); else localStorage.removeItem(k); }catch(e){} }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function isDate(s){ return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s); }
+function clampInt(n, lo, hi, dflt){ n = Math.round(Number(n)); return Number.isFinite(n) && n >= lo && n <= hi ? n : dflt; }
+function str(x, max){ return x == null ? '' : String(x).slice(0, max || 2000); }
+function strList(a, max){ return Array.isArray(a) ? a.map(x => str(x, 600)).filter(Boolean).slice(0, max || 12) : []; }
+
+/* ---------- problem log (separate key, never contains the API key) ---------- */
+function redact(s){ return String(s == null ? '' : s).replace(/AIza[0-9A-Za-z_\-]{10,}/g, 'AIza…').replace(/([?&]key=)[^&\s"]+/gi, '$1…'); }
+function readLog(){ try{ const a = JSON.parse(storeGet(KEY_LOG) || '[]'); return Array.isArray(a) ? a : []; }catch(e){ return []; } }
+function log(lvl, ctx, msg, detail){
+  try{
+    const list = readLog();
+    list.push({t:Date.now(), lvl, ctx, msg:redact(msg).slice(0, 500), detail: detail == null ? '' : redact(typeof detail === 'string' ? detail : JSON.stringify(detail)).slice(0, 2000)});
+    while(list.length > LOG_MAX) list.shift();
+    storeSet(KEY_LOG, JSON.stringify(list));
+    if(typeof renderTabs === 'function' && document.getElementById('tabs')) renderTabs();
+  }catch(e){ /* the log must never break the page */ }
+}
+
+/* ---------- state ---------- */
+function defaults(){
+  return {v:SCHEMA, settings:{lang:'auto', model:'auto', hour:9, place:'', notify:true}, plants:[], diagnoses:[],
+          gemini:{models:[], fetchedAt:0, lastModel:''}, seenLog:0};
+}
+function cleanInfo(i){
+  if(!i || typeof i !== 'object') return null;
+  const c = i.care && typeof i.care === 'object' ? i.care : {};
+  return {summary:str(i.summary), family:str(i.family, 120), confidence: Number.isFinite(Number(i.confidence)) ? Math.max(0, Math.min(1, Number(i.confidence))) : null,
+          care:{light:str(c.light), water:str(c.water), humidity:str(c.humidity), temperature:str(c.temperature), soil:str(c.soil), fertilizer:str(c.fertilizer), repotting:str(c.repotting)},
+          toxicity:str(i.toxicity), tips:strList(i.tips), model:str(i.model, 80), date:str(i.date, 40)};
+}
+function cleanPlant(p){
+  if(!p || typeof p !== 'object') return null;
+  return {id:str(p.id, 40) || uid(), name:str(p.name, 120) || '?', scientific:str(p.scientific, 160), family:str(p.family, 120),
+          location:['indoor','outdoor','balcony'].includes(p.location) ? p.location : 'indoor',
+          interval:clampInt(p.interval, 1, 365, 7), notes:str(p.notes, 4000), photo:p.photo ? str(p.photo, 60) : null,
+          info:cleanInfo(p.info), waterings:Array.isArray(p.waterings) ? p.waterings.filter(isDate).sort().slice(-400) : [],
+          snooze:isDate(p.snooze) ? p.snooze : null, suggested:p.suggested ? clampInt(p.suggested, 1, 365, null) : null,
+          createdAt:Number(p.createdAt) || Date.now()};
+}
+function cleanDiag(d){
+  if(!d || typeof d !== 'object') return null;
+  return {id:str(d.id, 40) || uid(), plantId:d.plantId ? str(d.plantId, 40) : null, date:str(d.date, 40) || new Date().toISOString(),
+          photo:d.photo ? str(d.photo, 60) : null, symptoms:str(d.symptoms), model:str(d.model, 80),
+          status:['healthy','minor','serious'].includes(d.status) ? d.status : 'minor', summary:str(d.summary), plantGuess:str(d.plantGuess, 200),
+          problems:Array.isArray(d.problems) ? d.problems.slice(0, 8).map(x => ({name:str(x && x.name, 200), likelihood:['high','medium','low'].includes(x && x.likelihood) ? x.likelihood : 'medium', cause:str(x && x.cause), signs:str(x && x.signs)})).filter(x => x.name) : [],
+          solutions:Array.isArray(d.solutions) ? d.solutions.slice(0, 12).map(x => typeof x === 'string' ? {step:str(x, 300), detail:'', urgent:false} : {step:str(x && x.step, 300), detail:str(x && x.detail), urgent:!!(x && x.urgent)}).filter(x => x.step) : [],
+          prevention:strList(d.prevention), wateringAdvice:str(d.wateringAdvice), suggestInterval:d.suggestInterval ? clampInt(d.suggestInterval, 1, 365, null) : null};
+}
+/* Every future change of shape goes here; old data is converted, never dropped.
+   Schema 1 → 2 (v1.1): settings.notify added, on by default. */
+function migrate(d){
+  const base = defaults();
+  if(!d || typeof d !== 'object') return base;
+  const out = base;
+  out.settings = Object.assign({}, base.settings, d.settings && typeof d.settings === 'object' ? d.settings : {});
+  out.settings.hour = clampInt(out.settings.hour, 0, 23, 9);
+  if(!['auto','fr','en'].includes(out.settings.lang)) out.settings.lang = 'auto';
+  if(!['auto','flash','pro','lite'].includes(out.settings.model)) out.settings.model = 'auto';
+  out.settings.place = str(out.settings.place, 200);
+  if(typeof out.settings.notify !== 'boolean') out.settings.notify = true;
+  out.plants = (Array.isArray(d.plants) ? d.plants : []).map(cleanPlant).filter(Boolean);
+  out.diagnoses = (Array.isArray(d.diagnoses) ? d.diagnoses : []).map(cleanDiag).filter(Boolean);
+  const g = d.gemini && typeof d.gemini === 'object' ? d.gemini : {};
+  out.gemini = {models:Array.isArray(g.models) ? g.models.map(x => str(x, 80)).filter(Boolean) : [], fetchedAt:Number(g.fetchedAt) || 0, lastModel:str(g.lastModel, 80)};
+  out.seenLog = Number(d.seenLog) || 0;
+  out.v = SCHEMA;
+  return out;
+}
+let loadFailed = false;
+let state;
+{
+  const raw = storeGet(KEY);
+  try{ state = migrate(JSON.parse(raw || 'null')); }
+  catch(e){ state = defaults(); loadFailed = !!raw; log('error', 'storage', 'Saved data unreadable — saving disabled', String(e && e.message)); }
+}
+let saveTimer = null;
+function save(){ clearTimeout(saveTimer); saveTimer = setTimeout(flush, 200); try{ Notif.sync(); }catch(e){ /* not initialised yet while the page loads */ } }
+function flush(){
+  clearTimeout(saveTimer); saveTimer = null;
+  if(loadFailed) return;
+  try{ storeSet(KEY, JSON.stringify(state)); }
+  catch(e){ log('error', 'storage', 'Save failed', String(e && e.message)); toast('⚠️ ' + (e && e.message)); }
+}
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') flush(); });
+window.addEventListener('pagehide', flush);
+window.addEventListener('error', e => log('error', 'js', e.message || 'Error', (e.filename || '') + ':' + (e.lineno || '')));
+window.addEventListener('unhandledrejection', e => log('error', 'js', 'Unhandled promise', String(e.reason && (e.reason.stack || e.reason.message) || e.reason)));
+
+/* ---------- ui state + helpers ---------- */
+const ui = {tab:'plants', view:null, sheets:[], showKey:false, keyMsg:null, keyBusy:false};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function lang(){ const l = state.settings.lang !== 'auto' ? state.settings.lang : (HOST ? HOST.language : (navigator.language || 'fr')); return String(l).toLowerCase().startsWith('en') ? 'en' : 'fr'; }
+function t(k, vars){ let s = STR[lang()][k]; if(s == null) s = STR.fr[k] ?? k; if(vars) for(const [a, b] of Object.entries(vars)) s = s.split('{' + a + '}').join(b); return s; }
+function locale(){ return lang() === 'en' ? 'en-GB' : 'fr-FR'; }
+let toastTimer;
+function toast(msg){
+  if(HOST){ try{ HOST.toast(msg); }catch(e){} return; }
+  let el = $('.toast'); if(!el){ el = document.createElement('div'); el.className = 'toast'; document.body.appendChild(el); }
+  el.textContent = msg; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.remove(), 2600);
+}
+
+/* ---------- dates (local calendar days) ---------- */
+function isoDay(d){ d = d || new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function today(){ return isoDay(new Date()); }
+function dayNum(s){ const [y, m, d] = s.split('-').map(Number); return Math.round(Date.UTC(y, m - 1, d) / 86400000); }
+function addDays(s, n){ const [y, m, d] = s.split('-').map(Number); return isoDay(new Date(y, m - 1, d + n)); }
+function fmtDay(s){ if(!s) return t('never'); const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString(locale(), {day:'numeric', month:'short', year:'numeric'}); }
+function fmtTime(ms){ return new Date(ms).toLocaleString(locale(), {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}); }
+function ago(ms){ const m = Math.round((Date.now() - ms) / 60000); const rtf = new Intl.RelativeTimeFormat(locale(), {numeric:'auto'});
+  if(m < 60) return rtf.format(-m, 'minute'); if(m < 1440) return rtf.format(-Math.round(m / 60), 'hour'); return rtf.format(-Math.round(m / 1440), 'day'); }
+
+/* ---------- watering ---------- */
+function lastWatered(p){ return p.waterings.length ? p.waterings[p.waterings.length - 1] : null; }
+function nextDue(p){
+  const last = lastWatered(p);
+  let d = last ? addDays(last, p.interval) : today();
+  if(p.snooze && p.snooze > d) d = p.snooze;
+  return d;
+}
+function daysLeft(p){ return dayNum(nextDue(p)) - dayNum(today()); }
+function dueList(){ return state.plants.filter(p => daysLeft(p) <= 0); }
+function badge(p){
+  const n = daysLeft(p);
+  if(n < 0) return `<span class="pill bad">💧 ${esc(t('due_over', {n:-n}))}</span>`;
+  if(n === 0) return `<span class="pill water">💧 ${esc(t('due_today'))}</span>`;
+  if(n === 1) return `<span class="pill warn">${esc(t('due_tomorrow'))}</span>`;
+  return `<span class="pill good">${esc(t('due_in', {n}))}</span>`;
+}
+function waterPlant(p){
+  const d = today();
+  if(!p.waterings.includes(d)) p.waterings.push(d);
+  p.waterings.sort(); p.snooze = null;
+  save(); toast(t('wateredToast', {n:p.name}));
+}
+function plantById(id){ return state.plants.find(p => p.id === id); }
+
+/* ---------- photos: OrthoTips.files (storage permission) or the key/value store ---------- */
+const Photos = {
+  mem:new Map(),
+  files(){ return !!(HOST && HOST.permissions.has('storage')); },
+  async put(dataUrl, id){
+    id = id || 'p' + uid();
+    if(this.files()) await HOST.files.write('photos/' + id + '.txt', dataUrl);
+    else storeSet(KEY_PHOTO + id, dataUrl);
+    this.mem.set(id, dataUrl);
+    return id;
+  },
+  async get(id){
+    if(!id) return null;
+    if(this.mem.has(id)) return this.mem.get(id);
+    let v = null;
+    try{ v = this.files() ? await HOST.files.read('photos/' + id + '.txt') : storeGet(KEY_PHOTO + id); }
+    catch(e){ log('warn', 'photo', 'Photo not readable: ' + id, String(e && e.message)); }
+    if(!v && this.files()) v = storeGet(KEY_PHOTO + id);   // in case it was saved before the permission existed
+    if(v) this.mem.set(id, v);
+    return v || null;
+  },
+  async del(id){
+    if(!id) return;
+    this.mem.delete(id);
+    try{ if(this.files()) await HOST.files.delete('photos/' + id + '.txt'); }catch(e){ log('warn', 'photo', 'Photo not deleted: ' + id, String(e && e.message)); }
+    storeDel(KEY_PHOTO + id);
+  }
+};
+function photoHtml(pid, cls, emoji){
+  return `<div class="ph ${cls || ''}">${emoji || '🪴'}${pid ? `<img data-photo="${esc(pid)}" alt="">` : ''}</div>`;
+}
+function hydratePhotos(root){
+  (root || document).querySelectorAll('img[data-photo]:not([src])').forEach(img => {
+    Photos.get(img.dataset.photo).then(src => { if(src) img.src = src; });
+  });
+}
+function readAsDataUrl(file){ return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(r.error || new Error('read')); r.readAsDataURL(file); }); }
+function loadImage(src, ms){
+  return new Promise(res => { const img = new Image(); let done = false; const fin = v => { if(!done){ done = true; res(v); } };
+    img.onload = () => fin(img); img.onerror = () => fin(null); setTimeout(() => fin(null), ms); img.src = src; });
+}
+/* Shrinks to max 1024 px JPEG (fits Gemini and the store); returns the original if the WebView cannot decode it. */
+async function shrink(dataUrl){
+  const img = await loadImage(dataUrl, 3000);
+  if(!img || !img.naturalWidth) return dataUrl;
+  const s = Math.min(1, 1024 / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+  const ctx = c.getContext && c.getContext('2d'); if(!ctx) return dataUrl;
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.8);
+}
+let pickCallback = null;
+function canPick(){ return !HOST || HOST.permissions.has('import_export'); }
+function choosePhoto(src, cb){
+  if(!canPick()){ log('warn', 'photo', 'import_export not granted'); alert(t('noPickPerm')); return; }
+  pickCallback = cb;
+  $(src === 'cam' ? '#pickCam' : '#pickGal').click();
+}
+for(const sel of ['#pickCam', '#pickGal']){
+  document.querySelector(sel).addEventListener('change', async e => {
+    const file = e.target.files && e.target.files[0]; e.target.value = '';
+    const cb = pickCallback; pickCallback = null;
+    if(!file || !cb) return;
+    if(file.size > 20 * 1024 * 1024){ log('warn', 'photo', 'Photo too large', file.size + ' bytes'); toast(t('photoTooBig')); return; }
+    try{
+      toast(t('photoBusy'));
+      const raw = await readAsDataUrl(file);
+      if(!/^data:image\//.test(raw)){ throw new Error('Not an image: ' + (file.type || 'unknown type')); }
+      cb(await shrink(raw));
+    }catch(err){ log('error', 'photo', 'Photo not readable', String(err && err.message)); toast(t('photoFailed')); }
+  });
+}
+
+/* =====================================================================
+   Gemini — always the newest available model, with fallback and logging
+   ===================================================================== */
+function apiKey(){ return (storeGet(KEY_API) || '').trim(); }
+function AppError(code, detail, status){ const e = new Error(code); e.code = code; e.detail = detail; e.status = status; return e; }
+function userMessage(e){
+  const c = e && e.code;
+  if(c === 'http') return t('err_http', {s:e.status});
+  if(c && STR.fr['err_' + c]) return t('err_' + c);
+  if(c === 'notPlant') return t('notPlant');
+  return t('err_generic');
+}
+function checkNet(){
+  if(!apiKey()) throw AppError('noKey');
+  if(HOST && !HOST.permissions.has('internet')) throw AppError('noInternetPerm');
+  if(typeof window.fetch !== 'function') throw AppError('network', 'fetch unavailable');
+  if(navigator.onLine === false) throw AppError('offline');
+}
+async function http(url, opts, ms){
+  const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), ms) : 0;
+  let res;
+  try{ res = await window.fetch(url, Object.assign({}, opts, ctrl ? {signal:ctrl.signal} : {})); }
+  catch(e){ throw AppError(e && e.name === 'AbortError' ? 'timeout' : 'network', String(e && e.message || e)); }
+  finally{ clearTimeout(timer); }
+  let text = '', body = null;
+  try{ text = await res.text(); body = JSON.parse(text); }catch(e){}
+  if(!res.ok){
+    const g = (body && body.error) || {};
+    const msg = String(g.message || text || '').slice(0, 600);
+    let code = 'http';
+    if(res.status === 400 && /api key/i.test(msg)) code = 'badKey';
+    else if(res.status === 401 || res.status === 403) code = 'denied';
+    else if(res.status === 429) code = 'quota';
+    else if(res.status >= 500) code = 'server';
+    throw AppError(code, `HTTP ${res.status} ${g.status || ''} ${msg}`.trim(), res.status);
+  }
+  return body;
+}
+function headers(){ return {'Content-Type':'application/json', 'x-goog-api-key':apiKey()}; }
+
+/* Ranks model names: newest version first, stable before preview, preferred family first. */
+function parseModel(name){
+  const m = /^gemini-(\d+(?:\.\d+)?)-(flash-lite|flash|pro)(-[a-z0-9.-]+)?$/i.exec(name);
+  if(!m) return null;
+  const suffix = (m[3] || '').toLowerCase();
+  if(/(tts|live|image|audio|embed|robot|computer|translate|omni|veo|thinking|dialog|native|search|lite)/.test(suffix)) return null;
+  return {name, ver:m[1].split('.').map(Number), family:m[2].toLowerCase(), stage:/exp/.test(suffix) ? 2 : /preview/.test(suffix) ? 1 : 0, plain:!suffix};
+}
+function cmpVer(a, b){ for(let i = 0; i < Math.max(a.length, b.length); i++){ const d = (b[i] || 0) - (a[i] || 0); if(d) return d; } return 0; }
+function rankModels(names){
+  const fam = {flash:0, pro:1, 'flash-lite':2};
+  return names.map(parseModel).filter(Boolean).sort((a, b) =>
+    cmpVer(a.ver, b.ver) || a.stage - b.stage || fam[a.family] - fam[b.family] || (b.plain - a.plain) || a.name.localeCompare(b.name)).map(x => x.name);
+}
+function candidates(){
+  const pref = {flash:'flash', pro:'pro', lite:'flash-lite'}[state.settings.model];
+  let list = state.gemini.models.slice();
+  if(pref){ const mine = list.filter(n => (parseModel(n) || {}).family === pref); list = mine.concat(list.filter(n => !mine.includes(n))); }
+  list = list.slice(0, 4);
+  for(const alias of ['gemini-flash-latest', 'gemini-pro-latest']) if(!list.includes(alias)) list.push(alias);
+  return list;
+}
+async function refreshModels(force){
+  const g = state.gemini;
+  if(!force && g.models.length && Date.now() - g.fetchedAt < MODEL_TTL) return g.models;
+  checkNet();
+  const names = []; let token = '';
+  try{
+    for(let page = 0; page < 5; page++){
+      const body = await http(API + '/models?pageSize=1000' + (token ? '&pageToken=' + encodeURIComponent(token) : ''), {headers:headers()}, 20000);
+      for(const m of (body && body.models) || []){
+        const methods = m.supportedGenerationMethods || [];
+        if(methods.length && !methods.includes('generateContent')) continue;
+        names.push(String(m.name || '').replace(/^models\//, ''));
+      }
+      token = body && body.nextPageToken; if(!token) break;
+    }
+  }catch(e){
+    log('error', 'models', 'Model list failed: ' + userMessage(e), e.detail); e.logged = true;
+    if(g.models.length && !['badKey', 'denied'].includes(e.code)) return g.models;   // keep using the cached list
+    throw e;
+  }
+  const ranked = rankModels(names);
+  if(!ranked.length){ log('error', 'models', 'No compatible model in the list', names.slice(0, 40).join(', ')); throw AppError('noModel'); }
+  const before = g.models[0];
+  g.models = ranked; g.fetchedAt = Date.now(); save();
+  if(before !== ranked[0]) log('info', 'models', 'Newest model: ' + ranked[0], ranked.slice(0, 6).join(', '));
+  return ranked;
+}
+function extractJson(text){
+  let s = String(text || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+  const a = s.indexOf('{'), b = s.lastIndexOf('}');
+  if(a < 0 || b <= a) throw AppError('parse', 'No JSON object: ' + s.slice(0, 400));
+  try{ return JSON.parse(s.slice(a, b + 1)); }
+  catch(e){ throw AppError('parse', e.message + ' — ' + s.slice(0, 400)); }
+}
+async function callModel(model, parts, thinking){
+  const ver = (parseModel(model) || {ver:[0]}).ver;
+  const cfg = {responseMimeType:'application/json'};
+  if(thinking && ver[0] >= 3) cfg.thinkingConfig = {thinkingLevel:'low'};
+  let body;
+  try{
+    body = await http(`${API}/models/${encodeURIComponent(model)}:generateContent`,
+      {method:'POST', headers:headers(), body:JSON.stringify({contents:[{role:'user', parts}], generationConfig:cfg})}, 90000);
+  }catch(e){
+    if(cfg.thinkingConfig && e.status === 400 && /thinking/i.test(e.detail || '')){
+      log('warn', 'models', model + ': thinking setting refused, retrying without it', e.detail);
+      return callModel(model, parts, false);
+    }
+    throw e;
+  }
+  const cand = body && body.candidates && body.candidates[0];
+  if(!cand){ throw AppError('blocked', 'No candidate. ' + JSON.stringify((body && body.promptFeedback) || {}).slice(0, 300)); }
+  const text = ((cand.content && cand.content.parts) || []).filter(p => !p.thought && typeof p.text === 'string').map(p => p.text).join('');
+  if(!text) throw AppError(cand.finishReason === 'SAFETY' ? 'blocked' : 'parse', 'Empty answer, finishReason=' + cand.finishReason);
+  try{ return extractJson(text); }
+  catch(e){ e.detail = 'finishReason=' + cand.finishReason + ' — ' + e.detail; throw e; }
+}
+/* Tries the newest model, then the next ones when a model is missing, overloaded, out of quota or unreadable. */
+async function generate(ctx, parts){
+  checkNet();
+  await refreshModels(false);
+  const list = candidates();
+  let last = null;
+  for(const model of list){
+    try{
+      const out = await callModel(model, parts, true);
+      if(state.gemini.lastModel !== model){ state.gemini.lastModel = model; save(); }
+      return {model, out};
+    }catch(e){
+      last = e;
+      const retry = ['quota', 'server', 'timeout', 'parse', 'blocked'].includes(e.code) || (e.code === 'http' && [400, 404].includes(e.status));
+      log(retry ? 'warn' : 'error', ctx, model + ' — ' + userMessage(e), e.detail); e.logged = true;
+      if(e.code === 'http' && e.status === 404){ state.gemini.fetchedAt = 0; save(); }
+      if(!retry) break;
+    }
+  }
+  throw last || AppError('noModel');
+}
+function imagePart(dataUrl){
+  const m = /^data:([^;,]+);base64,(.*)$/.exec(dataUrl || '');
+  if(!m) throw AppError('parse', 'Photo is not a base64 data URL');
+  return {inlineData:{mimeType:m[1], data:m[2]}};
+}
+function contextLine(location){
+  const month = new Date().toLocaleDateString('en-GB', {month:'long'});
+  const place = state.settings.place ? `The owner lives in: ${state.settings.place}.` : 'The owner lives in Algeria (Mediterranean climate) unless the photo suggests otherwise.';
+  return `${place} Current month: ${month}. Plant location: ${location || 'indoor'}.`;
+}
+function answerLang(){ return lang() === 'en' ? 'English' : 'French'; }
+async function aiIdentify(photo, location){
+  const prompt = `You are an expert botanist and horticulturist. Identify the plant in the photo and write a practical care sheet.
+${contextLine(location)}
+Write every text value in ${answerLang()}. Be concrete and short (one or two sentences per field).
+Return ONLY a JSON object, no markdown, with exactly these keys:
+{"isPlant": true, "commonName": "", "scientificName": "", "family": "", "confidence": 0.0,
+ "summary": "", "care": {"light": "", "water": "", "humidity": "", "temperature": "", "soil": "", "fertilizer": "", "repotting": ""},
+ "toxicity": "", "tips": ["", ""], "wateringIntervalDays": 7}
+wateringIntervalDays is a whole number of days between waterings for this plant, at this location, this month. If the photo shows no plant, set isPlant to false.`;
+  const {model, out} = await generate('identify', [{text:prompt}, imagePart(photo)]);
+  if(out.isPlant === false) throw AppError('notPlant');
+  const name = str(out.commonName, 120).trim() || str(out.scientificName, 120).trim();
+  if(!name) throw AppError('parse', 'No plant name in answer: ' + JSON.stringify(out).slice(0, 300));
+  return {model, name, scientific:str(out.scientificName, 160), family:str(out.family, 120),
+          interval:clampInt(out.wateringIntervalDays, 1, 365, null),
+          info:cleanInfo(Object.assign({}, out, {model, date:new Date().toISOString()}))};
+}
+async function aiDiagnose(photo, plant, symptoms){
+  const about = plant ? `The plant is "${plant.name}"${plant.scientific ? ' (' + plant.scientific + ')' : ''}, watered every ${plant.interval} days, last watered ${lastWatered(plant) || 'unknown'}, location ${plant.location}.` : 'The plant species is not known: identify it if you can.';
+  const prompt = `You are a plant doctor (plant pathology, pests, nutrition, watering). Examine the photo and diagnose the plant's health.
+${about}
+${contextLine(plant && plant.location)}
+Owner's observations: ${symptoms ? JSON.stringify(symptoms) : 'none'}.
+Write every text value in ${answerLang()}. Give practical treatments available to a home gardener, most important first; mark urgent steps.
+Return ONLY a JSON object, no markdown, with exactly these keys:
+{"isPlant": true, "plantGuess": "", "status": "healthy|minor|serious", "summary": "",
+ "problems": [{"name": "", "likelihood": "high|medium|low", "cause": "", "signs": ""}],
+ "solutions": [{"step": "", "detail": "", "urgent": false}],
+ "prevention": [""], "wateringAdvice": "", "suggestedWateringIntervalDays": null}
+If the plant looks healthy, return an empty problems list and status "healthy". suggestedWateringIntervalDays is a whole number only if the watering frequency should change, otherwise null. If the photo shows no plant, set isPlant to false.`;
+  const {model, out} = await generate('diagnose', [{text:prompt}, imagePart(photo)]);
+  if(out.isPlant === false) throw AppError('notPlant');
+  const d = cleanDiag(Object.assign({}, out, {id:uid(), plantId:plant ? plant.id : null, date:new Date().toISOString(), symptoms, model,
+                                              suggestInterval:out.suggestedWateringIntervalDays}));
+  if(!d.summary && !d.problems.length) throw AppError('parse', 'Empty diagnosis: ' + JSON.stringify(out).slice(0, 300));
+  return d;
+}
+function aiBusy(label){ return `<div class="aibox"><span class="spin"></span>${esc(label)}</div>`; }
+function aiError(e){ return `<div class="aibox err" data-err="${esc(e.code || 'generic')}">⚠️ ${esc(userMessage(e))}${e.code === 'noKey' || e.code === 'badKey' ? `<div class="btns"><button class="btn" type="button" data-act="goSettings">${esc(t('openSettings'))}</button></div>` : `<div class="tiny" style="margin-top:4px">${esc(t('seeLog'))}</div>`}</div>`; }
+function logAppError(ctx, e){
+  // Errors from generate()/refreshModels() are already logged (per model); log every other one here.
+  if(e && e.logged) return;
+  log(e && e.code === 'notPlant' ? 'warn' : 'error', ctx, userMessage(e), (e && (e.detail || e.stack)) || String(e));
+  if(e) e.logged = true;
+}
+
+/* =====================================================================
+   Rendering
+   ===================================================================== */
+function render(){
+  document.documentElement.lang = lang();
+  const v = $('#view');
+  if(ui.view && ui.view.type === 'plant' && !plantById(ui.view.id)) ui.view = null;
+  if(ui.view && ui.view.type === 'plant') v.innerHTML = viewPlant(plantById(ui.view.id));
+  else if(ui.view && ui.view.type === 'log') v.innerHTML = viewLog();
+  else v.innerHTML = ({plants:viewPlants, water:viewWater, diag:viewDiag, settings:viewSettings})[ui.tab]();
+  $('#fab').classList.toggle('hidden', !(ui.tab === 'plants' && !ui.view));
+  renderTabs();
+  hydratePhotos(v);
+}
+function renderTabs(){
+  const errs = readLog().filter(x => x.lvl === 'error' && x.t > state.seenLog).length;
+  const due = dueList().length;
+  const tabs = [['plants', '🌿', t('tabPlants'), 0], ['water', '💧', t('tabWater'), due], ['diag', '🩺', t('tabDiag'), 0], ['settings', '⚙️', t('tabSettings'), errs]];
+  $('#tabs').innerHTML = tabs.map(([k, e, l, n]) => `<button type="button" class="${ui.tab === k && !ui.view ? 'on' : ''}" data-act="tab" data-tab="${k}"><span>${e}</span>${esc(l)}${n ? `<i class="dot">${n > 99 ? '99+' : n}</i>` : ''}</button>`).join('');
+}
+function plantName(p){ return esc(p.name); }
+function viewPlants(){
+  let h = '';
+  if(loadFailed) h += `<div class="card banner warn"><span class="e">⚠️</span><span>${esc(t('loadFailed'))}</span></div>`;
+  if(!apiKey()) h += `<div class="card"><div class="small">${esc(t('noKeyCard'))}</div><div class="btns"><button class="btn ghost" type="button" data-act="goSettings">🔑 ${esc(t('openSettings'))}</button></div></div>`;
+  const due = dueList();
+  if(due.length) h += `<button type="button" class="card banner" data-act="tab" data-tab="water"><span class="e">💧</span><span class="grow">${esc(t('dueBanner', {n:due.length}))}</span><span>›</span></button>`;
+  if(!state.plants.length){
+    return h + `<div class="empty"><div class="e">🪴</div><p><b>${esc(t('emptyPlants'))}</b></p><p class="small">${esc(t('emptyPlantsHint'))}</p>
+      <div class="btns"><button class="btn" type="button" data-act="addPlant">＋ ${esc(t('addPlant'))}</button></div></div>`;
+  }
+  const list = state.plants.slice().sort((a, b) => a.name.localeCompare(b.name, locale()));
+  return h + `<div class="grid">${list.map(p => `<button type="button" class="pcard" data-act="openPlant" data-id="${esc(p.id)}">
+    ${photoHtml(p.photo)}<div class="body"><div class="name">${plantName(p)}</div><div class="sci">${esc(p.scientific) || '&nbsp;'}</div>${badge(p)}</div></button>`).join('')}</div>`;
+}
+function viewPlant(p){
+  const last = lastWatered(p), next = nextDue(p);
+  const info = p.info;
+  const care = info ? ['light', 'water', 'humidity', 'temperature', 'soil', 'fertilizer', 'repotting'].filter(k => info.care[k]) : [];
+  const diags = state.diagnoses.filter(d => d.plantId === p.id).sort((a, b) => b.date.localeCompare(a.date));
+  const hist = p.waterings.slice().reverse();
+  return `<div class="row"><button class="icon-btn" type="button" data-act="home" aria-label="${esc(t('back'))}">←</button><div class="grow"></div>
+      <button class="icon-btn" type="button" data-act="editPlant" data-id="${esc(p.id)}" aria-label="${esc(t('edit'))}">✎</button></div>
+    ${photoHtml(p.photo, 'wide')}
+    <h1>${plantName(p)}</h1>
+    <div class="muted small">${p.scientific ? `<i>${esc(p.scientific)}</i>` : ''}${p.scientific && p.family ? ' · ' : ''}${esc(p.family)}</div>
+    <div style="margin:6px 0 12px"><span class="pill acc">${esc(t('loc_' + p.location))}</span></div>
+    <div class="card">
+      <div class="row between"><div class="big">${badge(p)}</div><span class="small muted">${esc(t('every', {n:p.interval}))}</span></div>
+      <div class="small muted" style="margin-top:6px">${esc(t('lastOn', {d:fmtDay(last)}))} · ${esc(t('nextOn', {d:fmtDay(next)}))}</div>
+      ${p.suggested && p.suggested !== p.interval ? `<div class="aibox small">✨ ${esc(t('suggest', {n:p.suggested}))}<div class="btns"><button class="btn ghost" type="button" data-act="applySuggest" data-id="${esc(p.id)}">${esc(t('apply'))}</button></div></div>` : ''}
+      <div class="btns"><button class="btn water" type="button" data-act="water" data-id="${esc(p.id)}">${esc(t('watered'))}</button>
+        <button class="btn ghost" type="button" data-act="snooze" data-id="${esc(p.id)}">${esc(t('later'))}</button></div>
+      <details style="margin-top:8px"><summary class="small">${esc(t('history', {n:hist.length}))}</summary>
+        ${hist.length ? `<div class="list">${hist.slice(0, 30).map(d => `<div class="item"><span class="grow">💧 ${esc(fmtDay(d))}</span><button class="icon-btn" type="button" data-act="unwater" data-id="${esc(p.id)}" data-day="${d}" aria-label="${esc(t('delete'))}">✕</button></div>`).join('')}</div>` : `<p class="small muted">${esc(t('noHistory'))}</p>`}
+      </details>
+    </div>
+    <h2>${esc(t('info'))}</h2>
+    <div class="card">
+      ${info ? `${info.summary ? `<p>${esc(info.summary)}</p>` : ''}
+        ${care.map(k => `<div class="kv"><b>${esc(t(k))}</b>${esc(info.care[k])}</div>`).join('')}
+        ${info.toxicity ? `<div class="kv"><b>⚠️ ${esc(t('toxicity'))}</b>${esc(info.toxicity)}</div>` : ''}
+        ${info.tips.length ? `<div class="kv"><b>${esc(t('tips'))}</b><ul>${info.tips.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+        <div class="tiny muted" style="margin-top:6px">${info.model ? esc(t('model', {m:info.model})) : ''}${info.confidence != null ? ' · ' + esc(t('confidence', {n:Math.round(info.confidence * 100)})) : ''}</div>`
+        : `<p class="small muted">${esc(t('noInfo'))}</p>`}
+      ${p.notes ? `<div class="kv"><b>${esc(t('notes'))}</b>${esc(p.notes)}</div>` : ''}
+      <div data-slot="reid"></div>
+      <div class="btns"><button class="btn ghost" type="button" data-act="reidentify" data-id="${esc(p.id)}">${esc(t('reidentify'))}</button></div>
+    </div>
+    <h2>${esc(t('diagHistory'))}</h2>
+    <div class="card">${diags.length ? `<div class="list">${diags.map(diagRow).join('')}</div>` : `<p class="small muted">${esc(t('noDiag'))}</p>`}
+      <div class="btns"><button class="btn" type="button" data-act="newDiag" data-id="${esc(p.id)}">${esc(t('diagnose'))}</button></div></div>
+    <div class="btns"><button class="btn danger" type="button" data-act="deletePlant" data-id="${esc(p.id)}">🗑️ ${esc(t('delete'))}</button></div>`;
+}
+function statusPill(s){ return `<span class="pill ${s === 'healthy' ? 'good' : s === 'serious' ? 'bad' : 'warn'}">${esc(t('status_' + s))}</span>`; }
+function diagRow(d){
+  const p = d.plantId ? plantById(d.plantId) : null;
+  const who = p ? p.name : (d.plantGuess || t('diagNoPlant'));
+  return `<div class="item click" data-act="openDiag" data-id="${esc(d.id)}">${photoHtml(d.photo, 'thumb', '🩺')}
+    <div class="grow"><div class="ellipsis"><b>${esc(who)}</b></div><div class="tiny muted ellipsis">${esc(fmtTime(Date.parse(d.date)))} · ${esc(d.summary)}</div></div>${statusPill(d.status)}</div>`;
+}
+function viewWater(){
+  const rows = state.plants.map(p => ({p, n:daysLeft(p)})).sort((a, b) => a.n - b.n || a.p.name.localeCompare(b.p.name));
+  const group = (title, items) => items.length ? `<h2>${esc(title)}</h2><div class="card list">${items.map(({p}) => `<div class="item">
+      <div class="click" data-act="openPlant" data-id="${esc(p.id)}">${photoHtml(p.photo, 'thumb')}</div>
+      <div class="grow click" data-act="openPlant" data-id="${esc(p.id)}"><div class="ellipsis"><b>${plantName(p)}</b></div><div class="tiny">${badge(p)} <span class="muted">${esc(t('every', {n:p.interval}))}</span></div></div>
+      <button class="btn water" type="button" data-act="water" data-id="${esc(p.id)}" aria-label="${esc(t('watered'))}">💧</button></div>`).join('')}</div>` : '';
+  let h = '';
+  if(!state.plants.length) h += `<div class="empty"><div class="e">💧</div><p>${esc(t('emptyPlants'))}</p><div class="btns"><button class="btn" type="button" data-act="addPlant">＋ ${esc(t('addPlant'))}</button></div></div>`;
+  else {
+    const over = rows.filter(r => r.n < 0), now = rows.filter(r => r.n === 0), soon = rows.filter(r => r.n > 0);
+    if(!over.length && !now.length) h += `<div class="card small">${esc(t('allGood'))}</div>`;
+    h += group(t('overdue'), over) + group(t('today'), now) + group(t('upcoming'), soon);
+  }
+  const hours = Array.from({length:24}, (_, i) => i);
+  const sup = Notif.supported();
+  h += `<h2>${esc(t('reminders'))}</h2><div class="card">
+    ${sup ? `<label class="switch"><input type="checkbox" data-input="notify" ${state.settings.notify ? 'checked' : ''}><span>${esc(t('notifOn'))}</span></label>
+      <p class="hint">${esc(t('notifHint'))}</p><div id="notifState">${notifStateHtml()}</div>`
+      : `<p class="small">${esc(t('notifUnsupported'))}</p>`}
+    <label class="f" for="hour">${esc(t('reminderHour'))}</label>
+    <select class="input" id="hour" data-input="hour">${hours.map(i => `<option value="${i}" ${i === state.settings.hour ? 'selected' : ''}>${String(i).padStart(2, '0')}:00</option>`).join('')}</select>
+    ${sup ? `<details style="margin-top:8px"><summary class="small">${esc(t('calendarAlt'))}</summary>${icsBlock()}</details>` : icsBlock()}</div>`;
+  return h;
+}
+function icsBlock(){
+  return `<p class="small">${esc(t('remindersText'))}</p><div class="btns"><button class="btn ghost" type="button" data-act="exportIcs">${esc(t('exportIcs'))}</button></div>
+    <p class="hint">${esc(t('icsReExport'))}</p>`;
+}
+function notifStateHtml(){
+  if(!state.settings.notify) return `<p class="small muted">${esc(t('notifOff'))}</p>`;
+  if(Notif.failed) return `<div class="aibox err small">⚠️ ${esc(t('notifError'))}</div>`;
+  const st = Notif.status;
+  if(!st) return `<p class="small muted">${esc(t('notifWait'))}</p>`;
+  let h = '';
+  if(!st.granted) h += `<div class="aibox small">${esc(Notif.asked ? t('notifDenied') : t('notifAsk'))}<div class="btns"><button class="btn" type="button" data-act="notifAllow">${esc(t('notifAllow'))}</button></div></div>`;
+  if(Notif.count) h += `<p class="small" data-notif-count="${Notif.count}">${esc(t('notifActive', {n:Notif.count}))}${Notif.next ? ` <span class="muted">· ${esc(t('notifNext', {d:fmtTime(Notif.next)}))}</span>` : ''}</p>`;
+  return h;
+}
+function viewDiag(){
+  const list = state.diagnoses.slice().sort((a, b) => b.date.localeCompare(a.date));
+  return `<div class="card"><p class="small">${esc(t('diagIntro'))}</p><div class="btns"><button class="btn" type="button" data-act="newDiag">${esc(t('newDiag'))}</button></div></div>
+    ${!apiKey() ? `<div class="card"><div class="small">${esc(t('noKeyCard'))}</div><div class="btns"><button class="btn ghost" type="button" data-act="goSettings">🔑 ${esc(t('openSettings'))}</button></div></div>` : ''}
+    <h2>${esc(t('diagHistory'))}</h2>
+    <div class="card">${list.length ? `<div class="list">${list.map(diagRow).join('')}</div>` : `<p class="small muted">${esc(t('noDiag'))}</p>`}</div>`;
+}
+function viewSettings(){
+  const s = state.settings, g = state.gemini, key = apiKey();
+  const current = g.lastModel || candidates()[0];
+  const nlog = readLog().length;
+  return `<h2>${esc(t('gemini'))}</h2><div class="card">
+    <label class="f" for="apikey">${esc(t('apiKey'))}</label>
+    <div class="row"><input class="input grow" id="apikey" name="apikey" type="${ui.showKey ? 'text' : 'password'}" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(key)}" placeholder="AIza…">
+      <button class="icon-btn" type="button" data-act="toggleKey" aria-label="${esc(ui.showKey ? t('hide') : t('show'))}">${ui.showKey ? '🙈' : '👁'}</button></div>
+    <p class="hint">${esc(t('apiKeyHint'))} <a href="https://aistudio.google.com/apikey">${esc(t('getKey'))}</a></p>
+    <div class="btns"><button class="btn" type="button" data-act="saveKey" ${ui.keyBusy ? 'disabled' : ''}>${esc(t('saveKey'))}</button>
+      ${key ? `<button class="btn ghost" type="button" data-act="testKey" ${ui.keyBusy ? 'disabled' : ''}>${esc(t('testKey'))}</button><button class="btn danger" type="button" data-act="removeKey">${esc(t('removeKey'))}</button>` : ''}</div>
+    <div id="keyMsg">${ui.keyBusy ? aiBusy('…') : ui.keyMsg || ''}</div>
+    <label class="f" for="model">${esc(t('modelPref'))}</label>
+    <select class="input" id="model" data-input="model">${['auto', 'flash', 'pro', 'lite'].map(k => `<option value="${k}" ${s.model === k ? 'selected' : ''}>${esc(t('pref_' + k))}</option>`).join('')}</select>
+    <p class="small" style="margin-top:8px">${g.models.length ? esc(t('modelNow', {m:current})) : esc(t('modelNone'))}${g.fetchedAt ? ` <span class="muted tiny">· ${esc(t('modelChecked', {d:ago(g.fetchedAt)}))}</span>` : ''}</p>
+    <p class="hint">${esc(t('modelHint'))}</p>
+    ${key ? `<div class="btns"><button class="btn ghost" type="button" data-act="refreshModels" ${ui.keyBusy ? 'disabled' : ''}>${esc(t('refreshModels'))}</button></div>` : ''}
+    <label class="f" for="place">${esc(t('place'))}</label>
+    <input class="input" id="place" data-input="place" value="${esc(s.place)}" autocomplete="off">
+    <p class="hint">${esc(t('placeHint'))}</p>
+  </div>
+  <h2>${esc(t('language'))}</h2><div class="card">
+    <select class="input" data-input="lang" aria-label="${esc(t('language'))}"><option value="auto" ${s.lang === 'auto' ? 'selected' : ''}>${esc(t('auto'))}</option><option value="fr" ${s.lang === 'fr' ? 'selected' : ''}>Français</option><option value="en" ${s.lang === 'en' ? 'selected' : ''}>English</option></select>
+  </div>
+  <h2>${esc(t('log'))}</h2><div class="card"><button class="btn ghost block" type="button" data-act="openLog">${esc(t('logOpen', {n:nlog}))}</button></div>
+  <h2>${esc(t('backup'))}</h2><div class="card">
+    <button class="btn block" type="button" data-act="exportJson">${esc(t('exportJson'))}</button>
+    <button class="btn ghost block" type="button" data-act="importJson" style="margin-top:8px">${esc(t('importJson'))}</button>
+    <p class="hint">${esc(HOST ? t('whereApp') : t('whereBrowser'))}</p></div>`;
+}
+function viewLog(){
+  const list = readLog().slice().reverse();
+  return `<div class="row"><button class="icon-btn" type="button" data-act="home" aria-label="${esc(t('back'))}">←</button><h3 class="grow" style="margin:0">${esc(t('log'))}</h3></div>
+    <div class="btns"><button class="btn ghost" type="button" data-act="exportLog" ${list.length ? '' : 'disabled'}>${esc(t('logExport'))}</button><button class="btn danger" type="button" data-act="clearLog" ${list.length ? '' : 'disabled'}>${esc(t('logClear'))}</button></div>
+    ${list.length ? list.map(x => `<div class="log ${esc(x.lvl)}"><div class="row between"><b class="small">${x.lvl === 'error' ? '⛔' : x.lvl === 'warn' ? '⚠️' : 'ℹ️'} ${esc(t('ctx_' + x.ctx) === 'ctx_' + x.ctx ? x.ctx : t('ctx_' + x.ctx))}</b><span class="tiny muted">${esc(fmtTime(x.t))}</span></div>
+      <div class="small">${esc(x.msg)}</div>${x.detail ? `<pre>${esc(x.detail)}</pre>` : ''}</div>`).join('') : `<div class="empty"><div class="e">✅</div><p>${esc(t('logEmpty'))}</p></div>`}`;
+}
+function logText(){
+  return readLog().map(x => `[${new Date(x.t).toISOString()}] ${x.lvl.toUpperCase()} ${x.ctx}: ${x.msg}${x.detail ? '\n    ' + x.detail : ''}`).join('\n');
+}
+
+/* =====================================================================
+   Sheets (keyboard-safe: no autofocus, @keyframes, visualViewport)
+   ===================================================================== */
+function openSheet(html, onMount){
+  const scrim = document.createElement('div'); scrim.className = 'scrim';
+  const sheet = document.createElement('div'); sheet.className = 'sheet'; sheet.setAttribute('role', 'dialog');
+  sheet.innerHTML = '<div class="grab"></div>' + html;
+  document.body.append(scrim, sheet);
+  ui.sheets.push({scrim, sheet});
+  scrim.addEventListener('click', closeSheet);
+  sheet.addEventListener('focusin', e => {
+    const f = e.target; if(!f.matches || !f.matches('input,select,textarea')) return;
+    setTimeout(() => { fitViewport(); f.scrollIntoView({block:'center', behavior:'smooth'}); }, 320);
+  });
+  if(onMount) onMount(sheet);
+  hydratePhotos(sheet);
+  return sheet;
+}
+function closeSheet(){
+  const e = ui.sheets.pop(); if(!e) return false;
+  if(document.activeElement && e.sheet.contains(document.activeElement)) document.activeElement.blur();
+  e.scrim.classList.add('closing'); e.sheet.classList.add('closing');
+  setTimeout(() => { e.scrim.remove(); e.sheet.remove(); }, 230);
+  return true;
+}
+function closeAllSheets(){ while(ui.sheets.length) closeSheet(); }
+function fitViewport(){
+  const root = document.documentElement.style, vv = window.visualViewport;
+  const visible = vv ? vv.height : window.innerHeight;
+  const keyboard = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+  root.setProperty('--vh', visible + 'px'); root.setProperty('--kb', keyboard + 'px');
+}
+if(window.visualViewport){ visualViewport.addEventListener('resize', fitViewport); visualViewport.addEventListener('scroll', fitViewport); }
+window.addEventListener('resize', fitViewport);
+fitViewport();
+function field(sheet, name){ return sheet.querySelector(`[name="${name}"]`); }
+function photoBox(url){ return url ? `<div class="ph wide"><img src="${esc(url)}" alt=""></div>` : `<div class="ph wide">📷<div class="tiny muted" style="position:absolute;bottom:10px">${esc(t('noPhoto'))}</div></div>`; }
+function pickButtons(){ return `<div class="btns"><button class="btn ghost" type="button" data-pick="cam">${esc(t('takePhoto'))}</button><button class="btn ghost" type="button" data-pick="gal">${esc(t('gallery'))}</button></div>`; }
+function locChips(cur){ return `<div class="chips">${['indoor', 'balcony', 'outdoor'].map(k => `<button type="button" class="chip ${k === cur ? 'on' : ''}" data-loc="${k}">${esc(t('loc_' + k))}</button>`).join('')}</div>`; }
+
+/* ---------- add / edit a plant ---------- */
+function openPlantSheet(p){
+  const editing = !!p;
+  const draft = {photo:null, photoChanged:false, info:null, location:p ? p.location : 'indoor', family:p ? p.family : '', busy:false, aiName:''};
+  openSheet(`<h3>${esc(editing ? t('editPlant') : t('newPlant'))}</h3>
+    <div data-slot="photo">${editing && p.photo ? photoHtml(p.photo, 'wide') : photoBox(null)}</div>
+    ${pickButtons()}
+    <label class="f">${esc(t('location'))}</label><div data-slot="loc">${locChips(draft.location)}</div>
+    ${editing ? '' : `<div class="btns"><button class="btn block" type="button" data-do="identify">${esc(t('identify'))}</button></div>`}
+    <div data-slot="ai"></div>
+    <label class="f" for="f-name">${esc(t('name'))}</label><input class="input" id="f-name" name="name" maxlength="120" value="${esc(p ? p.name : '')}" autocomplete="off">
+    <label class="f" for="f-sci">${esc(t('scientific'))}</label><input class="input" id="f-sci" name="scientific" maxlength="160" value="${esc(p ? p.scientific : '')}" autocomplete="off">
+    <div class="two"><div><label class="f" for="f-int">${esc(t('interval'))}</label><input class="input" id="f-int" name="interval" type="number" inputmode="numeric" min="1" max="365" value="${p ? p.interval : 7}"></div>
+      ${editing ? '<div></div>' : `<div><label class="f" for="f-last">${esc(t('lastWater'))}</label><input class="input" id="f-last" name="last" type="date" max="${today()}" value="${today()}"></div>`}</div>
+    <label class="f" for="f-notes">${esc(t('notes'))}</label><textarea class="input" id="f-notes" name="notes" maxlength="4000">${esc(p ? p.notes : '')}</textarea>
+    <div class="btns"><button class="btn ghost" type="button" data-do="cancel">${esc(t('cancel'))}</button><button class="btn" type="button" data-do="save">${esc(t('save'))}</button></div>`,
+  sheet => {
+    const slot = n => sheet.querySelector(`[data-slot="${n}"]`);
+    sheet.addEventListener('click', async e => {
+      const pick = e.target.closest('[data-pick]');
+      if(pick){ choosePhoto(pick.dataset.pick, url => { draft.photo = url; draft.photoChanged = true; slot('photo').innerHTML = photoBox(url); }); return; }
+      const loc = e.target.closest('[data-loc]');
+      if(loc){ draft.location = loc.dataset.loc; slot('loc').innerHTML = locChips(draft.location); return; }
+      const b = e.target.closest('[data-do]'); if(!b) return;
+      const act = b.dataset.do;
+      if(act === 'cancel') closeSheet();
+      else if(act === 'identify'){
+        if(draft.busy) return;
+        if(!draft.photo){ toast(t('needPhoto')); return; }
+        draft.busy = true; b.disabled = true; slot('ai').innerHTML = aiBusy(t('identifying'));
+        try{
+          const r = await aiIdentify(draft.photo, draft.location);
+          if(!sheet.isConnected) return;
+          draft.info = r.info; draft.family = r.family;
+          const nameEl = field(sheet, 'name');
+          if(!nameEl.value.trim() || nameEl.value === draft.aiName) nameEl.value = r.name;
+          draft.aiName = r.name;
+          field(sheet, 'scientific').value = r.scientific;
+          if(r.interval) field(sheet, 'interval').value = r.interval;
+          slot('ai').innerHTML = `<div class="aibox" data-ai="ok"><b>${esc(r.name)}</b>${r.scientific ? ` · <i>${esc(r.scientific)}</i>` : ''}
+            <div class="small" style="margin-top:4px">${esc(r.info.summary)}</div>
+            ${r.interval ? `<div class="small" style="margin-top:4px">💧 ${esc(t('everyLong', {n:r.interval}))}</div>` : ''}
+            <div class="tiny muted" style="margin-top:4px">${esc(t('model', {m:r.model}))}</div></div>`;
+        }catch(err){ logAppError('identify', err); if(sheet.isConnected) slot('ai').innerHTML = aiError(err); }
+        finally{ draft.busy = false; b.disabled = false; }
+      }
+      else if(act === 'save'){
+        const name = field(sheet, 'name').value.trim();
+        const interval = clampInt(field(sheet, 'interval').value, 1, 365, null);
+        if(!name){ toast(t('needName')); return; }
+        if(!interval){ toast(t('needInterval')); return; }
+        b.disabled = true;
+        let photoId = p ? p.photo : null;
+        if(draft.photoChanged && draft.photo){
+          try{ const newId = await Photos.put(draft.photo); if(photoId) await Photos.del(photoId); photoId = newId; }
+          catch(err){ log('error', 'photo', 'Photo not saved', String(err && err.message)); toast(t('photoSaveFailed')); }
+        }
+        if(editing){
+          Object.assign(p, {name:name.slice(0, 120), scientific:field(sheet, 'scientific').value.trim().slice(0, 160), interval, location:draft.location,
+                            notes:field(sheet, 'notes').value.slice(0, 4000), photo:photoId});
+          if(p.suggested === interval) p.suggested = null;
+        } else {
+          const last = field(sheet, 'last').value;
+          const np = cleanPlant({id:uid(), name, scientific:field(sheet, 'scientific').value.trim(), family:draft.family, location:draft.location, interval,
+                                 notes:field(sheet, 'notes').value, photo:photoId, info:draft.info, waterings:isDate(last) && last <= today() ? [last] : [], createdAt:Date.now()});
+          state.plants.push(np);
+          ui.tab = 'plants'; ui.view = {type:'plant', id:np.id};
+        }
+        save(); closeAllSheets(); render(); toast(t('saved'));
+      }
+    });
+  });
+}
+
+/* ---------- diagnosis ---------- */
+function openDiagSheet(plantId){
+  const draft = {photo:null, busy:false};
+  const opts = state.plants.slice().sort((a, b) => a.name.localeCompare(b.name, locale()));
+  openSheet(`<h3>${esc(t('diagTitle'))}</h3>
+    <label class="f" for="d-plant">${esc(t('diagPlant'))}</label>
+    <select class="input" id="d-plant" name="plant"><option value="">${esc(t('diagNoPlant'))}</option>${opts.map(p => `<option value="${esc(p.id)}" ${p.id === plantId ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>
+    <div data-slot="photo" style="margin-top:12px">${photoBox(null)}</div>
+    ${pickButtons()}
+    <div data-slot="usephoto"></div>
+    <label class="f" for="d-sym">${esc(t('symptoms'))}</label><textarea class="input" id="d-sym" name="symptoms" maxlength="1500" placeholder="${esc(t('symptomsPh'))}"></textarea>
+    <div class="btns"><button class="btn block" type="button" data-do="analyze">${esc(t('analyze'))}</button></div>
+    <div data-slot="ai"></div>`,
+  sheet => {
+    const slot = n => sheet.querySelector(`[data-slot="${n}"]`);
+    const sel = field(sheet, 'plant');
+    const refreshUse = () => { const p = plantById(sel.value); slot('usephoto').innerHTML = p && p.photo ? `<button class="btn ghost block" type="button" data-do="usePlantPhoto" style="margin-top:8px">🪴 ${esc(t('usePlantPhoto'))}</button>` : ''; };
+    sel.addEventListener('change', refreshUse); refreshUse();
+    sheet.addEventListener('click', async e => {
+      const pick = e.target.closest('[data-pick]');
+      if(pick){ choosePhoto(pick.dataset.pick, url => { draft.photo = url; slot('photo').innerHTML = photoBox(url); }); return; }
+      const b = e.target.closest('[data-do]'); if(!b) return;
+      if(b.dataset.do === 'usePlantPhoto'){
+        const p = plantById(sel.value); const url = p && await Photos.get(p.photo);
+        if(url){ draft.photo = url; slot('photo').innerHTML = photoBox(url); }
+        return;
+      }
+      if(b.dataset.do !== 'analyze' || draft.busy) return;
+      if(!draft.photo){ toast(t('needPhoto')); return; }
+      draft.busy = true; b.disabled = true; slot('ai').innerHTML = aiBusy(t('analyzing'));
+      try{
+        const plant = plantById(sel.value) || null;
+        const d = await aiDiagnose(draft.photo, plant, field(sheet, 'symptoms').value.trim());
+        try{ d.photo = await Photos.put(draft.photo); }catch(err){ log('error', 'photo', 'Diagnosis photo not saved', String(err && err.message)); }
+        state.diagnoses.push(d);
+        if(plant && d.suggestInterval && d.suggestInterval !== plant.interval) plant.suggested = d.suggestInterval;
+        save();
+        if(!sheet.isConnected){ render(); return; }
+        closeAllSheets(); render(); openDiagResult(d);
+      }catch(err){ logAppError('diagnose', err); if(sheet.isConnected) slot('ai').innerHTML = aiError(err); }
+      finally{ draft.busy = false; b.disabled = false; }
+    });
+  });
+}
+function openDiagResult(d){
+  const p = d.plantId ? plantById(d.plantId) : null;
+  const lk = {high:'bad', medium:'warn', low:'good'};
+  openSheet(`<div class="row between"><h3 style="margin:0">${esc(p ? p.name : (d.plantGuess || t('diagTitle')))}</h3>${statusPill(d.status)}</div>
+    <div class="tiny muted" style="margin:4px 0 10px">${esc(fmtTime(Date.parse(d.date)))}${d.model ? ' · ' + esc(t('model', {m:d.model})) : ''}</div>
+    ${d.photo ? photoHtml(d.photo, 'wide', '🩺') : ''}
+    ${d.symptoms ? `<p class="small muted">« ${esc(d.symptoms)} »</p>` : ''}
+    <p>${esc(d.summary)}</p>
+    ${d.problems.length ? `<h4>${esc(t('problems'))}</h4>${d.problems.map(x => `<div class="kv"><div class="row between"><b style="color:var(--text);font-size:15px">${esc(x.name)}</b><span class="pill ${lk[x.likelihood]}">${esc(t('lk_' + x.likelihood))}</span></div>
+      ${x.cause ? `<div class="small"><span class="muted">${esc(t('cause'))} : </span>${esc(x.cause)}</div>` : ''}${x.signs ? `<div class="small"><span class="muted">${esc(t('signs'))} : </span>${esc(x.signs)}</div>` : ''}</div>`).join('')}` : ''}
+    ${d.solutions.length ? `<h4>${esc(t('solutions'))}</h4><ol>${d.solutions.map(x => `<li>${x.urgent ? `<span class="pill bad">${esc(t('urgent'))}</span> ` : ''}<b>${esc(x.step)}</b>${x.detail ? `<div class="small">${esc(x.detail)}</div>` : ''}</li>`).join('')}</ol>` : ''}
+    ${d.prevention.length ? `<h4>${esc(t('prevention'))}</h4><ul>${d.prevention.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+    ${d.wateringAdvice ? `<h4>💧 ${esc(t('wateringAdvice'))}</h4><p class="small">${esc(d.wateringAdvice)}</p>` : ''}
+    ${p && d.suggestInterval && d.suggestInterval !== p.interval ? `<div class="aibox small">✨ ${esc(t('suggest', {n:d.suggestInterval}))}<div class="btns"><button class="btn ghost" type="button" data-do="apply">${esc(t('apply'))}</button></div></div>` : ''}
+    <div class="btns"><button class="btn danger" type="button" data-do="delete">🗑️ ${esc(t('delete'))}</button><button class="btn ghost" type="button" data-do="close">${esc(t('close'))}</button></div>`,
+  sheet => {
+    sheet.addEventListener('click', async e => {
+      const b = e.target.closest('[data-do]'); if(!b) return;
+      if(b.dataset.do === 'close') closeSheet();
+      else if(b.dataset.do === 'apply'){ p.interval = d.suggestInterval; p.suggested = null; save(); closeSheet(); render(); toast(t('applied')); }
+      else if(b.dataset.do === 'delete'){
+        if(!confirm(t('confirmDeleteDiag'))) return;
+        state.diagnoses = state.diagnoses.filter(x => x.id !== d.id);
+        await Photos.del(d.photo); save(); closeSheet(); render(); toast(t('deleted'));
+      }
+    });
+  });
+}
+
+/* ---------- re-identify an existing plant from its saved photo ---------- */
+async function reidentify(p, btn){
+  const slot = $('[data-slot="reid"]');
+  const photo = await Photos.get(p.photo);
+  if(!photo){ toast(t('needPhoto')); openPlantSheet(p); return; }
+  btn.disabled = true; if(slot) slot.innerHTML = aiBusy(t('identifying'));
+  try{
+    const r = await aiIdentify(photo, p.location);
+    p.info = r.info; if(r.scientific) p.scientific = r.scientific; if(r.family) p.family = r.family;
+    if(r.interval && r.interval !== p.interval) p.suggested = r.interval;
+    save(); render();
+  }catch(err){ logAppError('identify', err); const s = $('[data-slot="reid"]'); if(s) s.innerHTML = aiError(err); btn.disabled = false; }
+}
+
+/* ---------- calendar reminders (.ics) ---------- */
+function icsEsc(s){ return String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); }
+function buildIcs(){
+  const pad = n => String(n).padStart(2, '0');
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Ortho Tips//Mes plantes//' + lang().toUpperCase(), 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
+  for(const p of state.plants){
+    let start = nextDue(p); if(start < today()) start = today();
+    const title = t('icsTitle', {n:p.name});
+    lines.push('BEGIN:VEVENT', `UID:${p.id}@${ID}`, 'DTSTAMP:' + stamp,
+      `DTSTART:${start.replace(/-/g, '')}T${pad(state.settings.hour)}0000`, 'DURATION:PT15M',
+      `RRULE:FREQ=DAILY;INTERVAL=${p.interval}`, 'SUMMARY:' + icsEsc(title),
+      'DESCRIPTION:' + icsEsc(t('everyLong', {n:p.interval}) + (p.scientific ? ' — ' + p.scientific : '')),
+      'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsEsc(title), 'TRIGGER:PT0M', 'END:VALARM', 'END:VEVENT');
+  }
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n') + '\r\n';
+}
+async function saveText(name, text, mime){
+  if(HOST) return HOST.saveFile(name, text, mime);
+  const url = URL.createObjectURL(new Blob([text], {type:mime}));
+  const a = Object.assign(document.createElement('a'), {href:url, download:name});
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000);
+  return true;
+}
+function checkExportPerm(ctx){
+  if(HOST && !HOST.permissions.has('import_export')){ log('error', ctx, 'import_export not granted'); toast('⚠️ ' + t('noPickPerm')); return false; }
+  return true;
+}
+
+/* ---------- backup ---------- */
+async function exportBackup(){
+  if(!checkExportPerm('backup')) return;
+  flush();
+  const ids = [...state.plants.map(p => p.photo), ...state.diagnoses.map(d => d.photo)].filter(Boolean);
+  const photos = {};
+  for(const id of ids){ const v = await Photos.get(id); if(v) photos[id] = v; }
+  const json = JSON.stringify({app:ID, v:SCHEMA, date:new Date().toISOString(), data:state, photos});
+  const ok = await saveText(`${ID}-${today()}.json`, json, 'application/json');
+  if(ok) toast(t('backupSaved'));
+}
+$('#pickJson').addEventListener('change', async e => {
+  const file = e.target.files && e.target.files[0]; e.target.value = '';
+  if(!file) return;
+  try{
+    const raw = JSON.parse(await file.text());
+    if(!raw || raw.app !== ID || !raw.data || typeof raw.data !== 'object' || !Array.isArray(raw.data.plants)) throw new Error('format');
+    if(!confirm(t('confirmRestore'))) return;
+    const next = migrate(raw.data);
+    const photos = raw.photos && typeof raw.photos === 'object' ? raw.photos : {};
+    for(const [id, url] of Object.entries(photos)){
+      if(typeof url === 'string' && /^data:image\//.test(url) && /^[a-z0-9]{1,60}$/i.test(id)){
+        try{ await Photos.put(url, id); }catch(err){ log('error', 'backup', 'Photo not restored: ' + id, String(err && err.message)); }
+      }
+    }
+    const keep = new Set([...next.plants.map(p => p.photo), ...next.diagnoses.map(d => d.photo)]);
+    for(const id of [...state.plants.map(p => p.photo), ...state.diagnoses.map(d => d.photo)]) if(id && !keep.has(id)) await Photos.del(id);
+    next.gemini = state.gemini;   // model cache belongs to this phone
+    state = next; loadFailed = false; flush();
+    ui.view = null; ui.tab = 'plants'; render(); toast(t('restored'));
+  }catch(err){ log('error', 'backup', 'Restore refused', String(err && err.message)); alert(t('badBackup')); }
+});
+
+/* =====================================================================
+   Notifications — scheduled by the app (OrthoTips.notifications, bridge v3+).
+   One reminder per plant: on its watering day at the chosen hour, repeated
+   daily until the watering is recorded (which reschedules it). Older app
+   versions have no such API: the calendar export stays available.
+   ===================================================================== */
+function reminderAt(p){
+  const hour = state.settings.hour, now = Date.now();
+  const [y, m, d] = nextDue(p).split('-').map(Number);
+  let at = new Date(y, m - 1, d, hour, 0, 0, 0).getTime();
+  if(at <= now){   // due or overdue: next occurrence of the reminder hour, never in the past
+    const n = new Date();
+    at = new Date(n.getFullYear(), n.getMonth(), n.getDate(), hour, 0, 0, 0).getTime();
+    if(at <= now) at = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, hour, 0, 0, 0).getTime();
+  }
+  return at;
+}
+const Notif = {
+  status:null, count:0, next:0, failed:false, asked:false, timer:0, running:null, again:false,
+  api(){ return HOST && HOST.notifications && typeof HOST.notifications.schedule === 'function' ? HOST.notifications : null; },
+  supported(){ return !!(this.api() && HOST.permissions.has('notifications')); },
+  sync(){ if(!this.supported()) return; clearTimeout(this.timer); this.timer = setTimeout(() => this.run(), 300); },
+  paint(){ const el = document.getElementById('notifState'); if(el) el.innerHTML = notifStateHtml(); },
+  async refreshStatus(){
+    try{ this.status = await this.api().status(); }
+    catch(e){ this.status = null; log('error', 'notif', 'Status unavailable', String(e && e.message)); }
+    this.paint();
+  },
+  async run(){
+    if(this.running){ this.again = true; return; }
+    if(!this.supported() || loadFailed) return;
+    const api = this.api();
+    this.running = (async () => {
+      let errors = 0;
+      const step = async (what, fn) => { try{ return await fn(); }catch(e){ errors++; log('error', 'notif', what, String(e && e.message)); return null; } };
+      const existing = (await step('List failed', () => api.list())) || [];
+      const ours = existing.filter(n => String(n.id).startsWith('water-'));
+      if(!state.settings.notify){
+        for(const n of ours) await step('Cancel failed: ' + n.id, () => api.cancel(n.id));
+        this.count = 0; this.next = 0;
+      } else {
+        const want = state.plants.map(p => ({p, at:reminderAt(p)})).sort((a, b) => a.at - b.at).slice(0, 60);
+        const keep = new Set(want.map(w => 'water-' + w.p.id));
+        for(const n of ours) if(!keep.has(n.id)) await step('Cancel failed: ' + n.id, () => api.cancel(n.id));
+        let ok = 0;
+        for(const {p, at} of want){
+          const spec = {id:'water-' + p.id, title:t('notifTitle', {n:p.name}).slice(0, 100), body:t('notifBody', {n:p.interval}).slice(0, 300), at, repeatDays:1, data:p.id};
+          const cur = ours.find(n => n.id === spec.id);
+          if(cur && cur.title === spec.title && cur.body === spec.body && Number(cur.at) === at && Number(cur.repeatDays) === 1 && cur.data === spec.data){ ok++; continue; }
+          if(await step('Schedule failed: ' + p.name, () => api.schedule(spec))) ok++;
+        }
+        this.count = ok; this.next = want.length ? want[0].at : 0;
+      }
+      this.failed = errors > 0;
+      this.paint();
+    })();
+    try{ await this.running; } finally{ this.running = null; }
+    if(this.again){ this.again = false; this.run(); }
+  },
+  openFrom(ev){
+    const id = ev && ev.data;
+    if(!id || !plantById(id)) return false;
+    closeAllSheets(); ui.tab = 'plants'; ui.view = {type:'plant', id};
+    return true;
+  }
+};
+
+/* =====================================================================
+   Actions
+   ===================================================================== */
+async function testKey(){
+  ui.keyBusy = true; ui.keyMsg = null; render();
+  try{ const list = await refreshModels(true); ui.keyMsg = `<div class="aibox" data-ok="1">${esc(t('modelsOk', {m:candidates()[0] || list[0]}))}</div>`; }
+  catch(e){ logAppError('models', e); ui.keyMsg = aiError(e); }
+  ui.keyBusy = false;
+  if(ui.tab === 'settings' && !ui.view) render();
+}
+document.addEventListener('click', async e => {
+  const el = e.target.closest('[data-act]'); if(!el || el.closest('.sheet') && !['goSettings'].includes(el.dataset.act)) return;
+  const act = el.dataset.act, id = el.dataset.id;
+  const p = id ? plantById(id) : null;
+  switch(act){
+    case 'tab': ui.tab = el.dataset.tab; ui.view = null; if(ui.tab === 'settings') ui.keyMsg = null; render(); window.scrollTo(0, 0); break;
+    case 'home': ui.view = null; render(); window.scrollTo(0, 0); break;
+    case 'goSettings': closeAllSheets(); ui.tab = 'settings'; ui.view = null; render(); break;
+    case 'addPlant': openPlantSheet(null); break;
+    case 'openPlant': if(p){ ui.view = {type:'plant', id}; render(); window.scrollTo(0, 0); } break;
+    case 'editPlant': if(p) openPlantSheet(p); break;
+    case 'water': if(p){ waterPlant(p); render(); } break;
+    case 'snooze': if(p){ p.snooze = addDays(today(), 1); save(); render(); toast(t('snoozed')); } break;
+    case 'unwater': if(p){ p.waterings = p.waterings.filter(d => d !== el.dataset.day); save(); render(); } break;
+    case 'applySuggest': if(p && p.suggested){ p.interval = p.suggested; p.suggested = null; save(); render(); toast(t('applied')); } break;
+    case 'reidentify': if(p) reidentify(p, el); break;
+    case 'deletePlant':
+      if(p && confirm(t('confirmDelete', {n:p.name}))){
+        const gone = state.diagnoses.filter(d => d.plantId === p.id);
+        state.plants = state.plants.filter(x => x !== p);
+        state.diagnoses = state.diagnoses.filter(d => d.plantId !== p.id);
+        save(); ui.view = null; render(); toast(t('deleted'));
+        await Photos.del(p.photo); for(const d of gone) await Photos.del(d.photo);
+      }
+      break;
+    case 'newDiag': openDiagSheet(id || (ui.view && ui.view.type === 'plant' ? ui.view.id : null)); break;
+    case 'openDiag': { const d = state.diagnoses.find(x => x.id === id); if(d) openDiagResult(d); break; }
+    case 'toggleKey': { const inp = $('#apikey'); ui.showKey = !ui.showKey; if(inp){ const v = inp.value; render(); $('#apikey').value = v; } break; }
+    case 'saveKey': {
+      const v = ($('#apikey').value || '').trim();
+      if(v.length < 20 || /\s/.test(v)){ ui.keyMsg = `<div class="aibox err">${esc(t('keyInvalidFormat'))}</div>`; log('warn', 'models', 'Key rejected before saving (format)'); render(); break; }
+      try{ storeSet(KEY_API, v); }catch(err){ log('error', 'storage', 'Key not saved', String(err && err.message)); break; }
+      state.gemini = {models:[], fetchedAt:0, lastModel:''}; save(); toast(t('keySaved'));
+      await testKey(); break;
+    }
+    case 'testKey': await testKey(); break;
+    case 'refreshModels': await testKey(); break;
+    case 'removeKey': storeDel(KEY_API); state.gemini = {models:[], fetchedAt:0, lastModel:''}; ui.keyMsg = null; save(); render(); toast(t('keyRemoved')); break;
+    case 'openLog': ui.view = {type:'log'}; state.seenLog = Date.now(); save(); render(); window.scrollTo(0, 0); break;
+    case 'clearLog': if(confirm(t('confirmClearLog'))){ storeDel(KEY_LOG); render(); toast(t('logCleared')); } break;
+    case 'exportLog': if(checkExportPerm('backup')){ const ok = await saveText(`${ID}-journal-${today()}.txt`, logText(), 'text/plain'); if(ok) toast(t('backupSaved')); } break;
+    case 'exportIcs':
+      if(!state.plants.length){ toast(t('icsNone')); break; }
+      if(!checkExportPerm('ics')) break;
+      try{ const ok = await saveText('rappels-arrosage.ics', buildIcs(), 'text/calendar'); if(ok) toast(t('icsSaved')); }
+      catch(err){ log('error', 'ics', 'Calendar export failed', String(err && err.message)); }
+      break;
+    case 'exportJson': await exportBackup(); break;
+    case 'notifAllow': {
+      try{ Notif.status = await Notif.api().requestAccess(); }
+      catch(err){ log('error', 'notif', 'Permission request failed', String(err && err.message)); }
+      Notif.asked = true;
+      if(Notif.status && !Notif.status.granted) log('warn', 'notif', 'Android notifications refused');
+      Notif.paint(); break;
+    }
+    case 'importJson': if(checkExportPerm('backup')) $('#pickJson').click(); break;
+  }
+});
+document.addEventListener('change', e => {
+  const el = e.target; const k = el.dataset && el.dataset.input; if(!k) return;
+  const s = state.settings;
+  if(k === 'hour') s.hour = clampInt(el.value, 0, 23, 9);
+  else if(k === 'model'){ s.model = el.value; state.gemini.lastModel = ''; }
+  else if(k === 'lang') s.lang = el.value;
+  else if(k === 'place') s.place = el.value.trim().slice(0, 200);
+  else if(k === 'notify') s.notify = !!el.checked;
+  save();
+  if(k !== 'place') render();
+});
+document.getElementById('view').addEventListener('focusin', e => {
+  const f = e.target; if(!f.matches || !f.matches('input,textarea')) return;
+  setTimeout(() => { fitViewport(); f.scrollIntoView({block:'center', behavior:'smooth'}); }, 320);
+});
+
+/* ---------- theme, Back, start ---------- */
+function applyTheme(th){ document.documentElement.dataset.theme = th === 'dark' ? 'dark' : 'light'; }
+if(HOST){
+  applyTheme(HOST.theme); HOST.onThemeChange(applyTheme);
+  HOST.onBack(() => {
+    if(ui.sheets.length){ closeSheet(); return true; }
+    if(ui.view){ ui.view = null; render(); return true; }
+    if(ui.tab !== 'plants'){ ui.tab = 'plants'; render(); return true; }
+    return false;
+  });
+} else {
+  const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  applyTheme(mq && mq.matches ? 'dark' : 'light');
+  if(mq && mq.addEventListener) mq.addEventListener('change', ev => applyTheme(ev.matches ? 'dark' : 'light'));
+}
+if(Notif.supported()){
+  Notif.openFrom(HOST.notifications.launch);   // opened by tapping a reminder
+  HOST.notifications.onOpen(ev => { if(Notif.openFrom(ev)){ render(); window.scrollTo(0, 0); } });
+}
+render();
+{ const n = dueList().length; if(n) toast(t('dueToast', {n})); }
+if(Notif.supported()){ Notif.refreshStatus(); Notif.sync(); }
+// Check for newer Gemini models in the background (at most every 12 h); failures only go to the log.
+setTimeout(() => {
+  if(!apiKey() || (HOST && !HOST.permissions.has('internet'))) return;
+  refreshModels(false).then(() => { if(ui.tab === 'settings' && !ui.view) render(); }).catch(() => {});
+}, 0);
+</script>
+</body>
+</html>

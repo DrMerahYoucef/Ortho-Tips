@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="ortho-ext-id" content="focus-flow">
+<meta name="ortho-ext-name" content="Focus Flow">
+<meta name="ortho-ext-description" content="Pomodoro écran éteint, statistiques, défis chronométrés (décompte de 5 s, alarme) et radio pour se concentrer.">
+<meta name="ortho-ext-version" content="1.1">
+<meta name="ortho-ext-icon" content="🍅">
+<meta name="ortho-ext-author" content="Ortho Tips">
+<meta name="ortho-ext-permissions" content="notifications, internet, import_export, background">
+<title>Focus Flow</title>
+<style>
+:root{
+  --bg:#f6f7f9;--surface:#fff;--surface2:#eff1f5;--text:#1b1d22;--muted:#5f6b76;--line:#e3e6eb;
+  --accent:#3f51b5;--on-accent:#fff;--accent-soft:#e8eaf8;
+  --focus:#d6363b;--short:#0b7d70;--long:#4b4bc4;--on-ph:#fff;
+  --good:#1e7d4f;--good-soft:#e3f5ec;--bad:#c62828;--bad-soft:#fdecec;--warn:#9a5b00;--warn-soft:#fff3dd;
+  --orbit:#e6e8ee;--shadow:0 1px 2px rgba(0,0,0,.05),0 4px 14px rgba(0,0,0,.05);
+  --radius:16px;--nav:64px;--ph:var(--focus)
+}
+html[data-theme="dark"]{
+  --bg:#121417;--surface:#1d2025;--surface2:#262a31;--text:#e6e9ee;--muted:#a3adb8;--line:#30353d;
+  --accent:#9fa8ff;--on-accent:#11131a;--accent-soft:#2a2f4d;
+  --focus:#ff7b72;--short:#4fd8c4;--long:#a8abff;--on-ph:#141519;
+  --good:#5fd39a;--good-soft:#193528;--bad:#ff8a80;--bad-soft:#3d2020;--warn:#ffc15e;--warn-soft:#3a2e17;
+  --orbit:#2b3038;--shadow:none
+}
+body.ph-short{--ph:var(--short)} body.ph-long{--ph:var(--long)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,Roboto,sans-serif}
+body{padding-bottom:calc(var(--nav) + env(safe-area-inset-bottom))}
+button,input,select{font:inherit;color:inherit}
+.num{font-variant-numeric:tabular-nums}
+main{padding:12px 16px 24px;max-width:720px;margin:0 auto}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:10px}.between{justify-content:space-between}.grow{flex:1;min-width:0}
+.muted{color:var(--muted)}.small{font-size:13px}.tiny{font-size:12px}.center{text-align:center}
+.ellipsis{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:18px 2px 8px;font-weight:600}
+h3{margin:0;font-size:16px}
+.icon-btn{min-width:44px;min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);display:inline-flex;align-items:center;justify-content:center;font-size:19px;cursor:pointer}
+.btn{border:0;border-radius:12px;min-height:44px;padding:0 16px;background:var(--accent);color:var(--on-accent);font-weight:600;cursor:pointer}
+.btn.ghost{background:var(--surface2);color:var(--text)}
+.btn.danger{background:var(--bad-soft);color:var(--bad)}
+.btn.good{background:var(--good-soft);color:var(--good)}
+.btn.block{width:100%}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.btns .btn{flex:1}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;min-height:36px;cursor:pointer;font-size:13px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.seg{display:flex;background:var(--surface2);border-radius:12px;padding:3px;margin-bottom:12px}
+.seg button{flex:1;border:0;background:none;border-radius:10px;min-height:40px;cursor:pointer;color:var(--muted);font-weight:600;font-size:13px;padding:0 4px}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.pill{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600}
+.pill.good{background:var(--good-soft);color:var(--good)}.pill.bad{background:var(--bad-soft);color:var(--bad)}.pill.warn{background:var(--warn-soft);color:var(--warn)}.pill.acc{background:var(--accent-soft);color:var(--accent)}
+.empty{text-align:center;padding:26px 12px;color:var(--muted)}.empty .e{font-size:40px}
+.note{border-radius:14px;padding:12px;font-size:13px;background:var(--surface2);margin-bottom:12px}
+.note.warn{background:var(--warn-soft);color:var(--text)}.note.good{background:var(--good-soft);color:var(--text)}
+/* ---- timer ---- */
+.topline{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.today{flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.today b{color:var(--text)}
+.phase-seg button.on{color:var(--ph)}
+.dial{position:relative;width:min(320px,86vw);aspect-ratio:1;margin:2px auto 6px}
+.dial svg{width:100%;height:100%;display:block;overflow:visible}
+.dial .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.clock{font-size:clamp(46px,15vw,62px);font-weight:300;letter-spacing:-1px;font-variant-numeric:tabular-nums;line-height:1}
+.phase-name{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ph);margin-bottom:6px}
+.under{font-size:12px;color:var(--muted);margin-top:8px}
+.track{fill:none;stroke:var(--orbit)}
+.prog{fill:none;stroke:var(--ph);stroke-linecap:round;filter:drop-shadow(0 0 6px color-mix(in srgb,var(--ph) 45%,transparent));transition:stroke-dashoffset .3s linear}
+.arc{fill:none;stroke-linecap:round;stroke-width:8}
+.arc.done{stroke:var(--focus)}.arc.cut{stroke:color-mix(in srgb,var(--focus) 40%,var(--orbit))}
+.arc.live{stroke:var(--focus);opacity:.55;stroke-dasharray:2 4}
+.tick{stroke:var(--muted);opacity:.45}
+.hour{fill:var(--muted);font-size:10px;text-anchor:middle;dominant-baseline:middle}
+.nowdot{fill:var(--text)}
+.halo{fill:var(--ph);opacity:.3;transform-box:fill-box;transform-origin:center;animation:pulse 2s ease-out infinite}
+@keyframes pulse{from{transform:scale(.6);opacity:.5}to{transform:scale(2.2);opacity:0}}
+.beads{display:flex;justify-content:center;gap:8px;margin:2px 0 14px}
+.bead{width:12px;height:12px;border-radius:50%;border:2px solid var(--focus);opacity:.9}
+.bead.full{background:var(--focus)}
+.bead.now{animation:beat 1.4s ease-in-out infinite}
+@keyframes beat{50%{transform:scale(1.35)}}
+.controls{display:flex;align-items:center;justify-content:center;gap:22px;margin-bottom:14px}
+.round{width:56px;height:56px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.go{width:84px;height:84px;border-radius:50%;border:0;background:var(--ph);color:var(--on-ph);font-size:30px;cursor:pointer;box-shadow:0 6px 20px color-mix(in srgb,var(--ph) 35%,transparent);display:flex;align-items:center;justify-content:center}
+.label-in{display:flex;gap:8px;align-items:center}
+.label-in .input{flex:1}
+.mini{display:flex;align-items:center;gap:10px;cursor:pointer}
+.avatar{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none;overflow:hidden;color:#fff;background:linear-gradient(135deg,var(--a1,#5b6ee1),var(--a2,#b44fd0))}
+.avatar img{width:100%;height:100%;object-fit:cover;background:#fff}
+.avatar.big{width:72px;height:72px;border-radius:18px;font-size:34px}
+/* ---- stats ---- */
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px;box-shadow:var(--shadow)}
+.kpi .v{font-size:22px;font-weight:700;letter-spacing:-.3px}
+.kpi .k{font-size:12px;color:var(--muted)}
+.bars{display:flex;align-items:flex-end;gap:3px;height:130px;position:relative;padding-top:6px}
+.bars .c{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
+.bars .b{width:100%;max-width:26px;border-radius:5px 5px 2px 2px;background:var(--focus);min-height:2px}
+.bars .b.zero{background:var(--orbit)}
+.bars .d{font-size:10px;color:var(--muted);margin-top:4px;height:12px}
+.goalline{position:absolute;left:0;right:0;border-top:1.5px dashed var(--muted);opacity:.6;pointer-events:none}
+.heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:3px}
+.heat i{aspect-ratio:1;border-radius:3px;background:var(--orbit);display:block}
+.heat i.l1{background:color-mix(in srgb,var(--focus) 30%,var(--orbit))}.heat i.l2{background:color-mix(in srgb,var(--focus) 55%,var(--orbit))}
+.heat i.l3{background:color-mix(in srgb,var(--focus) 78%,var(--orbit))}.heat i.l4{background:var(--focus)}
+.heat i.out{visibility:hidden}
+.legend{display:flex;align-items:center;gap:3px;justify-content:flex-end;margin-top:8px;font-size:11px;color:var(--muted)}
+.legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+.hours{display:flex;align-items:flex-end;gap:2px;height:70px}
+.hours i{flex:1;background:var(--long);border-radius:3px 3px 1px 1px;min-height:2px;opacity:.85}
+.hours i.zero{background:var(--orbit)}
+.hlab{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px}
+.hbar{height:8px;border-radius:99px;background:var(--surface2);overflow:hidden;margin-top:6px}
+.hbar>i{display:block;height:100%;border-radius:99px;background:var(--accent)}
+.list .item{display:flex;align-items:center;gap:12px;padding:10px 2px;border-top:1px solid var(--line);min-height:52px}
+.list .item:first-child{border-top:0}
+.list .item.tap{cursor:pointer}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--focus)}.dot.cut{background:var(--orbit);border:2px solid var(--focus)}
+.x{min-width:44px;min-height:44px;border:0;background:none;color:var(--muted);font-size:18px;cursor:pointer;border-radius:10px}
+/* ---- challenges ---- */
+.ch .count{font-size:34px;font-weight:300;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.pbar{height:8px;border-radius:99px;background:var(--surface2);overflow:hidden;margin:8px 0}
+.pbar>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--short),var(--long));transition:width .4s}
+.ch.ended{border-color:var(--warn)}
+/* ---- radio ---- */
+.now{display:flex;gap:14px;align-items:center}
+.status{font-size:12px;font-weight:600}
+.status.playing{color:var(--good)}.status.error{color:var(--bad)}.status.buffering{color:var(--warn)}
+.eq{display:inline-flex;gap:2px;align-items:flex-end;height:12px;margin-right:4px;vertical-align:-1px}
+.eq i{width:3px;background:currentColor;animation:eq 1s ease-in-out infinite;border-radius:2px}
+.eq i:nth-child(2){animation-delay:.2s}.eq i:nth-child(3){animation-delay:.4s}
+@keyframes eq{0%,100%{height:3px}50%{height:12px}}
+.vol{width:100%;accent-color:var(--accent);min-height:32px}
+.star{min-width:44px;min-height:44px;border:0;background:none;font-size:20px;cursor:pointer;color:var(--muted)}
+.star.on{color:#f5b400}
+.input{width:100%;min-height:46px;border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:10px 12px;outline:none}
+.input:focus{border-color:var(--accent)}
+label.f{display:block;margin:10px 0 4px;font-size:13px;color:var(--muted);font-weight:600}
+.hint{font-size:12px;color:var(--muted);margin-top:4px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+/* ---- nav ---- */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;height:calc(var(--nav) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);z-index:10}
+nav.tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--muted);cursor:pointer}
+nav.tabs button span{font-size:20px;line-height:1;padding:3px 14px;border-radius:99px;position:relative}
+nav.tabs button.on{color:var(--accent);font-weight:600}
+nav.tabs button.on span{background:var(--accent-soft)}
+nav.tabs .badge{position:absolute;top:-2px;right:6px;width:9px;height:9px;border-radius:50%;background:var(--focus)}
+/* ---- sheets: resting state = visible; keyframes only decorate ---- */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;animation:fade-in .2s ease both}
+.scrim.closing{animation:fade-out .2s ease both}
+.sheet{position:fixed;left:0;right:0;bottom:var(--kb,0px);max-height:calc(var(--vh,100vh) - 24px);overflow:auto;overscroll-behavior:contain;background:var(--surface);border-radius:22px 22px 0 0;z-index:21;padding:8px 16px calc(20px + env(safe-area-inset-bottom));animation:sheet-in .25s ease both;max-width:720px;margin:0 auto}
+.sheet.closing{animation:sheet-out .22s ease both}
+.sheet .grab{width:40px;height:4px;border-radius:9px;background:var(--line);margin:4px auto 10px}
+.sheet h3{font-size:18px;margin-bottom:8px}
+@keyframes sheet-in{from{transform:translateY(100%)}to{transform:none}}
+@keyframes sheet-out{from{transform:none}to{transform:translateY(100%)}}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+@keyframes fade-out{from{opacity:1}to{opacity:0}}
+.stepper{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--line)}
+.stepper:first-of-type{border-top:0}
+.stepper .ctl{display:flex;align-items:center;gap:6px}
+.stepper .ctl .input{width:64px;text-align:center;min-height:44px;padding:6px}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;border-top:1px solid var(--line)}
+.switch input{width:22px;height:22px;accent-color:var(--accent);flex:none}
+/* ---- overlays ---- */
+.oled{position:fixed;inset:0;background:#000;color:#c9cdd4;z-index:30;display:flex;align-items:center;justify-content:center;animation:fade-in .4s ease both}
+.oled .box{text-align:center;transition:transform 2s ease}
+.oled .clock{color:#e8eaee;font-size:clamp(64px,22vw,96px);font-weight:200}
+.oled .phase-name{opacity:.8}
+.oled .sub{font-size:13px;opacity:.55;margin-top:10px}
+.oled .acts{display:flex;gap:14px;justify-content:center;margin-top:28px}
+.oled .acts button{min-width:52px;min-height:52px;border-radius:50%;border:1px solid #2a2d33;background:#0b0c0e;color:#c9cdd4;font-size:20px;cursor:pointer}
+.oled .exit{position:absolute;top:12px;right:12px;min-width:44px;min-height:44px;border-radius:12px;border:1px solid #2a2d33;background:#0b0c0e;color:#9aa1ab;font-size:18px;cursor:pointer}
+.alarm{position:fixed;inset:0;z-index:35;background:color-mix(in srgb,var(--bg) 92%,transparent);display:flex;align-items:center;justify-content:center;padding:20px;animation:fade-in .2s ease both}
+.alarm .panel{background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:24px 18px;text-align:center;width:100%;max-width:420px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.alarm .bell{font-size:56px;display:inline-block;animation:ring 1s ease-in-out infinite}
+@keyframes ring{0%,100%{transform:rotate(0)}10%,30%{transform:rotate(-18deg)}20%,40%{transform:rotate(18deg)}50%{transform:rotate(0)}}
+.alarm h3{font-size:20px;margin:10px 0 4px;overflow-wrap:anywhere}
+.countdown{position:fixed;inset:0;z-index:36;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center;animation:fade-in .2s ease both}
+.countdown .ready{font-size:15px;color:var(--muted)}
+.countdown h3{font-size:20px;margin:0;max-width:92%;overflow-wrap:anywhere}
+.cd-ring{position:relative;width:min(70vw,260px);aspect-ratio:1;margin:8px 0 16px}
+.cd-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.cd-ring .bg{fill:none;stroke:var(--orbit);stroke-width:10}
+.cd-ring .fg{fill:none;stroke:var(--accent);stroke-width:10;stroke-linecap:round;stroke-dasharray:283;animation:cd-drain 1s linear both}
+.cd-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(88px,30vw,128px);font-weight:250;font-variant-numeric:tabular-nums;line-height:1;animation:cd-pop .45s cubic-bezier(.2,.9,.3,1.3) both}
+@keyframes cd-drain{from{stroke-dashoffset:0}to{stroke-dashoffset:283}}
+@keyframes cd-pop{from{transform:scale(1.35);opacity:.2}to{transform:none;opacity:1}}
+.toast{position:fixed;left:50%;bottom:calc(var(--nav) + 24px);transform:translateX(-50%);background:#323232;color:#fff;padding:10px 16px;border-radius:12px;z-index:40;font-size:14px;max-width:90vw;animation:fade-in .2s ease both}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:50;overflow:hidden}
+.confetti i{position:absolute;top:-20px;font-size:22px;font-style:normal;animation:fall 1.8s ease-in forwards}
+@keyframes fall{to{transform:translateY(var(--fall,700px)) rotate(540deg);opacity:.6}}
+@media (prefers-reduced-motion: reduce){.countdown,.cd-ring .fg,.cd-num,.sheet,.scrim,.oled,.alarm,.halo,.bead.now,.alarm .bell,.eq i{animation:none}.prog{transition:none}}
+[hidden]{display:none !important}
+</style>
+</head>
+<body class="ph-focus">
+<main id="view"></main>
+<nav class="tabs" id="tabs"></nav>
+<script>
+'use strict';
+/* =====================================================================
+   Focus Flow — Pomodoro, statistics, timed challenges and focus radio.
+   - The timer runs on timestamps (endsAt), never on counted ticks: with the
+     screen off it is still right when the page wakes up, and every phase that
+     ended meanwhile is recorded at its real time.
+   - Phase ends and challenge alarms are scheduled with OrthoTips.notifications,
+     so Android notifies even with the screen off or the extension closed.
+   - Radio: OrthoTips.media (bridge 5, permission `background`) plays in the
+     app's media service — screen off, notification panel, lock screen. The
+     service is the single source of truth: the page only mirrors its state.
+     Older apps: an <audio> element in the page (stops when Android suspends it).
+   ===================================================================== */
+const HOST = window.OrthoTips || null;
+const ID = 'focus-flow', KEY = ID + ':state', SCHEMA = 1;
+const has = p => !HOST || !HOST.permissions || HOST.permissions.has(p);   // a plain browser has no permission system
+const NOTIF = HOST && HOST.notifications && has('notifications') ? HOST.notifications : null;
+const MEDIA = HOST && HOST.media && HOST.permissions && HOST.permissions.has('background') ? HOST.media : null;
+const LANG = /^en/i.test(HOST ? HOST.language : (navigator.language || 'fr')) ? 'en' : 'fr';
+document.documentElement.lang = LANG;
+const now = () => Date.now();
+
+/* ---------- texts ---------- */
+const I18N = {
+  fr:{
+    tabTimer:'Minuteur',tabStats:'Stats',tabChal:'Défis',tabRadio:'Radio',
+    focus:'Focus',short:'Pause courte',long:'Pause longue',shortS:'Pause',longS:'Longue',
+    start:'Démarrer',pause:'Pause',resume:'Reprendre',reset:'Recommencer',skip:'Passer',
+    today:'Aujourd’hui',sessionOf:'Session {n} · cycle {c}/{e}',goalOf:'{n} / {g} 🍅',paused:'En pause',ready:'Prêt',
+    labelPh:'Sur quoi travaillez-vous ?',noLabel:'Sans étiquette',
+    oled:'Mode veille',settings:'Réglages',
+    notifTitle:'🔔 Alertes écran éteint',notifText:'Autorisez les notifications pour être prévenu à la fin de chaque phase et de chaque défi, même écran éteint ou extension fermée.',
+    notifAllow:'Autoriser',notifDenied:'Notifications refusées : activez-les dans les réglages Android d’Ortho Tips.',
+    notifNone:'Cette version d’Ortho Tips ne gère pas les notifications : le minuteur reste exact, mais il ne peut pas sonner écran éteint.',
+    focusDone:'🍅 Focus terminé',breakDone:'☕ Pause terminée',
+    nBreakAuto:'Pause de {n} min commencée',nBreak:'Place à une pause de {n} min',
+    nFocusAuto:'Focus de {n} min commencé',nFocus:'Prêt pour {n} min de focus ?',nCycle:'Cycle complet ! Relancez quand vous êtes prêt.',
+    settingsTitle:'Réglages',focusMin:'Focus (min)',shortMin:'Pause courte (min)',longMin:'Pause longue (min)',every:'Pause longue toutes les',everyU:'sessions',
+    goal:'Objectif quotidien',goalU:'sessions',autoBreak:'Démarrer les pauses automatiquement',autoFocus:'Enchaîner le focus après une pause courte',
+    autoHint:'Après la pause longue, le minuteur attend toujours que vous relanciez : rien ne tourne indéfiniment.',
+    sound:'Son à la fin d’une phase',vibrate:'Vibration',notify:'Notifications de fin de phase',
+    backup:'Sauvegarde',exportJson:'Exporter (.json)',importJson:'Restaurer une sauvegarde',saved:'Sauvegarde enregistrée',restored:'Sauvegarde restaurée',
+    badFile:'Ce fichier n’est pas une sauvegarde Focus Flow.',noExport:'Export impossible : permission « import_export » absente.',
+    where:'Données enregistrées dans Ortho Tips, sur ce téléphone.',whereBrowser:'Données enregistrées dans ce navigateur.',
+    readFail:'⚠️ Données illisibles : rien ne sera enregistré pour ne pas les écraser. Restaurez une sauvegarde.',
+    oledHint:'Touchez × ou Retour pour quitter',
+    /* stats */
+    r7:'7 jours',r30:'30 jours',rAll:'Tout',kFocus:'Temps de focus',kSessions:'Sessions terminées',kStreak:'Série',kRate:'Sessions menées au bout',
+    days:'{n} j',best:'record {n} j',perDay:'Par jour',avg:'moyenne {d}/jour',regularity:'Régularité (16 semaines)',less:'Moins',more:'Plus',
+    bestHours:'Vos meilleures heures',bestHour:'Pic de concentration : {h}',byLabel:'Par étiquette',history:'Historique',
+    cut:'interrompue',delSession:'Supprimer cette session ?',deleted:'Session supprimée',
+    statsEmpty:'Aucune session pour l’instant',statsEmptyHint:'Terminez votre première session de focus : vos statistiques apparaîtront ici.',
+    /* challenges */
+    newChal:'Nouveau défi',chalTitle:'Objectif',chalPh:'Ex. : finir le chapitre fractures du coude',mode:'Mode',byDuration:'Durée',byTime:'Heure de fin',
+    hours:'Heures',minutes:'Minutes',endAt:'Terminer à',launch:'Lancer le défi',chalBad:'Donnez un objectif et une durée (1 min à 99 h).',
+    active:'En cours',ended:'Temps écoulé',endsAt:'fin à {t}',left:'restant',done:'Réussi ✓',notDone:'Pas réussi',giveUp:'Abandonner',plus5:'+5 min',
+    giveUpQ:'Abandonner ce défi ?',chalHistory:'Défis terminés',won:'Réussi',lost:'Échoué',rate:'{w} réussi(s) sur {n} ({p} %)',
+    chalEmpty:'Aucun défi',chalEmptyHint:'Fixez-vous un objectif et un temps : une alarme sonne quand il est écoulé.',
+    timeUp:'Temps écoulé !',didIt:'Avez-vous atteint votre objectif ?',stopSound:'Couper le son',chalStarted:'Défi lancé',
+    nChal:'⏰ Défi terminé',in:'en {d}',bravo:'Bravo !',
+    getReady:'Prêt ? Le défi démarre dans…',cdPill:'Départ…',cdCancel:'Annuler',cdCancelled:'Défi annulé',
+    /* radio */
+    nowPlaying:'Lecture',nothing:'Aucune station',pickOne:'Choisissez une station ci-dessous.',
+    stIdle:'Arrêtée',stBuffering:'Connexion…',stPlaying:'En direct',stPaused:'En pause',stError:'Erreur de lecture',
+    play:'Écouter',stop:'Arrêter',favs:'Favoris',suggest:'Suggestions',search:'Rechercher',algeria:'Algérie',recent:'Récemment écoutées',
+    searchPh:'Nom de station, genre…',searchGo:'Rechercher',loading:'Recherche…',noResult:'Aucune station trouvée.',netFail:'Annuaire injoignable : vérifiez la connexion.',
+    noInternet:'Permission « internet » absente : la radio est indisponible.',addStation:'Ajouter une station',stName:'Nom',stUrl:'Adresse du flux (http/https)',
+    stBad:'Indiquez un nom et une adresse commençant par http:// ou https://.',add:'Ajouter',favsEmpty:'Touchez ☆ sur une station pour la retrouver ici.',
+    bgOn:'🎧 Lecture en arrière-plan : la radio continue écran éteint, avec ses commandes dans le panneau de notifications et sur l’écran verrouillé.',
+    bgOff:'La radio joue dans l’extension : selon Android elle peut s’arrêter écran éteint, et elle n’apparaît pas dans le panneau de notifications. La lecture en arrière-plan arrive avec la prochaine version d’Ortho Tips (lecteur média).',
+    httpHidden:'{n} station(s) en http masquée(s) : non lisibles dans l’extension sans le lecteur d’arrière-plan.',
+    dirNote:'Annuaire : radio-browser.info (communautaire). Les flux viennent directement des radios.',
+    tryAlt:'Connexion… (autre adresse {i}/{n})',
+    eHttp:'Le serveur de la station refuse le flux : adresse déplacée, expirée ou bloquée.',eHttp403:'Accès refusé par le serveur de la station.',eHttp404:'Ce flux n’existe plus à cette adresse.',
+    eNet:'Serveur de la station injoignable.',eFormat:'Format du flux non pris en charge.',eOther:'La lecture a échoué.',
+    triedN:'{n} adresses essayées. Choisissez une autre station.',
+    volume:'Volume',remove:'Retirer',removeQ:'Retirer « {n} » ?',
+    gLofi:'Lo-fi',gJazz:'Jazz',gClassical:'Classique',gAmbient:'Ambient',gPiano:'Piano',gQuran:'Coran',gNature:'Nature'
+  },
+  en:{
+    tabTimer:'Timer',tabStats:'Stats',tabChal:'Challenges',tabRadio:'Radio',
+    focus:'Focus',short:'Short break',long:'Long break',shortS:'Break',longS:'Long',
+    start:'Start',pause:'Pause',resume:'Resume',reset:'Restart',skip:'Skip',
+    today:'Today',sessionOf:'Session {n} · cycle {c}/{e}',goalOf:'{n} / {g} 🍅',paused:'Paused',ready:'Ready',
+    labelPh:'What are you working on?',noLabel:'No label',
+    oled:'Standby mode',settings:'Settings',
+    notifTitle:'🔔 Screen-off alerts',notifText:'Allow notifications to be told when each phase and each challenge ends, even with the screen off or the extension closed.',
+    notifAllow:'Allow',notifDenied:'Notifications refused: turn them on in Android settings for Ortho Tips.',
+    notifNone:'This Ortho Tips version has no notifications: the timer stays exact, but it cannot ring with the screen off.',
+    focusDone:'🍅 Focus done',breakDone:'☕ Break over',
+    nBreakAuto:'{n}-min break started',nBreak:'Time for a {n}-min break',
+    nFocusAuto:'{n}-min focus started',nFocus:'Ready for {n} min of focus?',nCycle:'Cycle complete! Start again when you are ready.',
+    settingsTitle:'Settings',focusMin:'Focus (min)',shortMin:'Short break (min)',longMin:'Long break (min)',every:'Long break every',everyU:'sessions',
+    goal:'Daily goal',goalU:'sessions',autoBreak:'Start breaks automatically',autoFocus:'Start focus after a short break',
+    autoHint:'After the long break the timer always waits for you: nothing runs forever.',
+    sound:'Sound when a phase ends',vibrate:'Vibration',notify:'Phase-end notifications',
+    backup:'Backup',exportJson:'Export (.json)',importJson:'Restore a backup',saved:'Backup saved',restored:'Backup restored',
+    badFile:'This file is not a Focus Flow backup.',noExport:'Export unavailable: the “import_export” permission is missing.',
+    where:'Data saved in Ortho Tips, on this phone.',whereBrowser:'Data saved in this browser.',
+    readFail:'⚠️ Saved data unreadable: nothing will be saved so it is not overwritten. Restore a backup.',
+    oledHint:'Tap × or Back to leave',
+    r7:'7 days',r30:'30 days',rAll:'All',kFocus:'Focus time',kSessions:'Completed sessions',kStreak:'Streak',kRate:'Sessions seen through',
+    days:'{n} d',best:'best {n} d',perDay:'Per day',avg:'average {d}/day',regularity:'Consistency (16 weeks)',less:'Less',more:'More',
+    bestHours:'Your best hours',bestHour:'Peak focus: {h}',byLabel:'By label',history:'History',
+    cut:'interrupted',delSession:'Delete this session?',deleted:'Session deleted',
+    statsEmpty:'No session yet',statsEmptyHint:'Finish your first focus session: your statistics will show up here.',
+    newChal:'New challenge',chalTitle:'Goal',chalPh:'e.g. finish the elbow fractures chapter',mode:'Mode',byDuration:'Duration',byTime:'End time',
+    hours:'Hours',minutes:'Minutes',endAt:'End at',launch:'Start the challenge',chalBad:'Enter a goal and a duration (1 min to 99 h).',
+    active:'Running',ended:'Time is up',endsAt:'ends at {t}',left:'left',done:'Done ✓',notDone:'Not done',giveUp:'Give up',plus5:'+5 min',
+    giveUpQ:'Give up this challenge?',chalHistory:'Finished challenges',won:'Done',lost:'Failed',rate:'{w} done out of {n} ({p}%)',
+    chalEmpty:'No challenge',chalEmptyHint:'Set yourself a goal and a time: an alarm rings when it is up.',
+    timeUp:'Time is up!',didIt:'Did you reach your goal?',stopSound:'Mute',chalStarted:'Challenge started',
+    nChal:'⏰ Challenge over',in:'in {d}',bravo:'Well done!',
+    getReady:'Get ready: the challenge starts in…',cdPill:'Starting…',cdCancel:'Cancel',cdCancelled:'Challenge cancelled',
+    nowPlaying:'Playing',nothing:'No station',pickOne:'Pick a station below.',
+    stIdle:'Stopped',stBuffering:'Connecting…',stPlaying:'Live',stPaused:'Paused',stError:'Playback error',
+    play:'Listen',stop:'Stop',favs:'Favourites',suggest:'Suggestions',search:'Search',algeria:'Algeria',recent:'Recently played',
+    searchPh:'Station name, genre…',searchGo:'Search',loading:'Searching…',noResult:'No station found.',netFail:'Directory unreachable: check the connection.',
+    noInternet:'The “internet” permission is missing: radio unavailable.',addStation:'Add a station',stName:'Name',stUrl:'Stream address (http/https)',
+    stBad:'Enter a name and an address starting with http:// or https://.',add:'Add',favsEmpty:'Tap ☆ on a station to find it here.',
+    bgOn:'🎧 Background playback: the radio keeps playing with the screen off, with its controls in the notification panel and on the lock screen.',
+    bgOff:'The radio plays inside the extension: Android may stop it with the screen off, and it does not show in the notification panel. Background playback comes with the next Ortho Tips version (media player).',
+    httpHidden:'{n} http station(s) hidden: they cannot play inside the extension without the background player.',
+    dirNote:'Directory: radio-browser.info (community). Streams come straight from the stations.',
+    tryAlt:'Connecting… (other address {i}/{n})',
+    eHttp:'The station’s server refuses the stream: address moved, expired or blocked.',eHttp403:'Access refused by the station’s server.',eHttp404:'This stream no longer exists at this address.',
+    eNet:'Station server unreachable.',eFormat:'Stream format not supported.',eOther:'Playback failed.',
+    triedN:'{n} addresses tried. Pick another station.',
+    volume:'Volume',remove:'Remove',removeQ:'Remove “{n}”?',
+    gLofi:'Lo-fi',gJazz:'Jazz',gClassical:'Classical',gAmbient:'Ambient',gPiano:'Piano',gQuran:'Quran',gNature:'Nature'
+  }
+};
+const t = (k, vars) => { let s = (I18N[LANG][k] ?? I18N.fr[k] ?? k); if(vars) for(const v in vars) s = s.split('{' + v + '}').join(vars[v]); return s; };
+
+/* ---------- curated stations (https, instrumental, good for focus) ---------- */
+const SOMA = [
+  ['groovesalad','Groove Salad','Ambient · downtempo','🥗'],['dronezone','Drone Zone','Ambient · space','🌌'],
+  ['deepspaceone','Deep Space One','Deep ambient','🛰️'],['fluid','Fluid','Instrumental hip-hop · lo-fi','💧'],
+  ['sonicuniverse','Sonic Universe','Jazz','🎷'],['spacestation','Space Station Soma','Electronica','🚀'],
+  ['synphaera','Synphaera','Ambient · electronic','🔮'],['secretagent','Secret Agent','Lounge','🕶️'],
+  ['defcon','DEF CON Radio','Focus electronica','💻']
+].map(([k, name, sub, e]) => ({id:'soma:' + k, name, sub:'SomaFM · ' + sub, url:'https://ice1.somafm.com/' + k + '-128-mp3', logo:'', emoji:e}));
+const GENRES = [['lofi','gLofi','🎧'],['jazz','gJazz','🎷'],['classical','gClassical','🎻'],['ambient','gAmbient','🌌'],['piano','gPiano','🎹'],['quran','gQuran','📖'],['nature','gNature','🌿']];
+const RB_HOSTS = ['de1.api.radio-browser.info','fi1.api.radio-browser.info','de2.api.radio-browser.info'];
+
+/* ---------- state ---------- */
+function defaults(){
+  return {
+    v:SCHEMA,
+    settings:{focus:25, short:5, long:15, every:4, goal:8, autoBreak:true, autoFocus:false, sound:true, vibrate:true, notify:true},
+    timer:{phase:'focus', status:'idle', dur:25*60000, remaining:25*60000, endsAt:0, startedAt:0, count:0, label:''},
+    sessions:[],          // {id, start, end, min, label, done}
+    labels:[],            // recent labels, newest first
+    challenges:[],        // {id, title, dur, status: countdown|running|paused|ended|won|lost, goAt, endsAt, remaining, createdAt, finishedAt}
+    radio:{favorites:[], recent:[], last:null, volume:1}
+  };
+}
+/* Every future change of shape goes here: old data is converted, never dropped.
+   Function declarations only (this runs while the page loads). */
+function migrate(d){
+  const base = defaults();
+  if(!d || typeof d !== 'object') return base;
+  const out = Object.assign({}, base, d);
+  out.settings = Object.assign({}, base.settings, d.settings || {});
+  out.timer = Object.assign({}, base.timer, d.timer || {});
+  for(const k of ['sessions','labels','challenges']) out[k] = Array.isArray(d[k]) ? d[k] : [];
+  out.radio = Object.assign({}, base.radio, d.radio || {});
+  for(const k of ['favorites','recent']) if(!Array.isArray(out.radio[k])) out.radio[k] = [];
+  if(!['focus','short','long'].includes(out.timer.phase)) out.timer.phase = 'focus';
+  if(!['idle','running','paused'].includes(out.timer.status)) out.timer.status = 'idle';
+  out.v = SCHEMA;
+  return out;
+}
+function storeGet(){ try{ return HOST ? HOST.storage.get(KEY) : localStorage.getItem(KEY); }catch(e){ return null; } }
+let loadFailed = false;
+function storeSet(v){ if(loadFailed) return; try{ HOST ? HOST.storage.set(KEY, v) : localStorage.setItem(KEY, v); }catch(e){ toast('⚠️ ' + e.message); } }
+let state;
+{ const raw = storeGet();
+  try{ state = migrate(JSON.parse(raw || 'null')); }
+  catch(e){ state = defaults(); loadFailed = !!raw; try{ console.warn('Focus Flow: saved data unreadable, nothing will be overwritten'); }catch(x){} } }
+let saveTimer = null;
+function save(){ clearTimeout(saveTimer); saveTimer = setTimeout(flush, 200); }
+function flush(){ clearTimeout(saveTimer); saveTimer = null; storeSet(JSON.stringify(state)); }
+
+/* ---------- ui state & helpers ---------- */
+const ui = {tab:'timer', range:7, radioTab:'suggest', query:'', results:null, loading:false, searchErr:'', httpHidden:0, genre:'', sheets:[],
+            oled:false, alarmFor:null, dismissed:new Set(), notif:null, cdShown:0};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => now().toString(36) + Math.random().toString(36).slice(2, 8);
+const pad = n => String(n).padStart(2, '0');
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+function clock(ms){ const s = Math.max(0, Math.ceil(ms / 1000)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return h ? h + ':' + pad(m) + ':' + pad(x) : pad(m) + ':' + pad(x); }
+function dur(min){ min = Math.round(min); if(min < 60) return min + ' min'; const h = Math.floor(min / 60), m = min % 60; return LANG === 'en' ? h + 'h' + (m ? ' ' + pad(m) + 'm' : '') : h + ' h' + (m ? ' ' + pad(m) : ''); }
+function hm(ms){ const d = new Date(ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function dayKey(ms){ const d = new Date(ms); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function dayStart(ms){ const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); }
+function addDays(ms, n){ const d = new Date(ms); d.setDate(d.getDate() + n); return d.getTime(); }
+const LOC = LANG === 'en' ? 'en-GB' : 'fr-FR';
+function dateLabel(ms){ return new Date(ms).toLocaleDateString(LOC, {weekday:'short', day:'numeric', month:'short'}); }
+function toast(msg){
+  if(HOST){ try{ HOST.toast(msg); return; }catch(e){} }
+  const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg; document.body.append(el); setTimeout(() => el.remove(), 2200);
+}
+/* The fall distance is measured in pixels: inside the app's WebView `vh` can
+   resolve to almost 0, and the pieces would only spin at the top. */
+function confetti(){
+  const box = document.createElement('div'); box.className = 'confetti';
+  const pieces = Array.from({length:18}, () => ({left:Math.random() * 100, delay:Math.random() * 500, e:['🍅','✨','🎉','⭐'][Math.floor(Math.random() * 4)]}));
+  box.innerHTML = pieces.map(p => `<i style="left:${p.left.toFixed(1)}%;animation-delay:${p.delay.toFixed(0)}ms">${p.e}</i>`).join('');
+  document.body.append(box);
+  const h = Math.max(box.getBoundingClientRect().height, window.visualViewport ? visualViewport.height : 0, window.innerHeight || 0, 400);
+  box.style.setProperty('--fall', Math.round(h + 60) + 'px');
+  box.querySelectorAll('i').forEach((el, k) => {
+    if(typeof el.animate !== 'function') return;   // the CSS animation (same pixels) stays
+    el.style.animation = 'none';
+    el.animate([{transform:'translateY(0) rotate(0deg)', opacity:1}, {transform:`translateY(${Math.round(h + 60)}px) rotate(540deg)`, opacity:.6}],
+      {duration:1800, delay:pieces[k].delay, easing:'ease-in', fill:'forwards'});
+  });
+  setTimeout(() => box.remove(), 2600);
+}
+
+/* ---------- theme ---------- */
+function applyTheme(th){ document.documentElement.dataset.theme = th === 'dark' ? 'dark' : 'light'; }
+if(HOST){ applyTheme(HOST.theme); HOST.onThemeChange(applyTheme); }
+else{ const mq = matchMedia('(prefers-color-scheme: dark)'); applyTheme(mq.matches ? 'dark' : 'light'); mq.addEventListener && mq.addEventListener('change', e => applyTheme(e.matches ? 'dark' : 'light')); }
+
+/* ---------- sound & vibration (WebAudio, offline; unlocked by the first tap) ---------- */
+let actx = null;
+function audioCtx(){
+  if(!actx){ const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return null; try{ actx = new AC(); }catch(e){ return null; } }
+  if(actx.state === 'suspended' && actx.resume) actx.resume().catch(() => {});
+  return actx;
+}
+document.addEventListener('pointerdown', () => audioCtx(), {once:true, capture:true});
+function tone(freq, at, len, vol){
+  const c = audioCtx(); if(!c) return;
+  const o = c.createOscillator(), g = c.createGain(); const t0 = c.currentTime + at;
+  o.type = 'sine'; o.frequency.value = freq; g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(vol || .25, t0 + .02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+  o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + len + .05);
+}
+function chime(kind){
+  if(!state.settings.sound) return;
+  const notes = kind === 'focus' ? [784, 988, 1175] : [1175, 988, 784];
+  notes.forEach((f, i) => tone(f, i * .18, .9, .22));
+}
+function buzz(pattern){ if(state.settings.vibrate && navigator.vibrate){ try{ navigator.vibrate(pattern); }catch(e){} } }
+let alarmLoop = null;
+function startAlarmSound(){
+  stopAlarmSound(); let n = 0;
+  const ring = () => { tone(880, 0, .18, .3); tone(880, .25, .18, .3); tone(1320, .5, .35, .3); buzz([300, 120, 300]); if(++n > 40) stopAlarmSound(); };
+  ring(); alarmLoop = setInterval(ring, 1500);
+}
+function stopAlarmSound(){ if(alarmLoop){ clearInterval(alarmLoop); alarmLoop = null; } }
+
+/* =====================================================================
+   POMODORO ENGINE — pure functions of (timer, settings, time)
+   ===================================================================== */
+function phaseMs(p){ return Math.round(clamp(Number(state.settings[p]) || 1, 1, 240) * 60000); }
+function nextOf(phase, count){
+  if(phase === 'focus'){ const c = count + 1; return {phase: c >= state.settings.every ? 'long' : 'short', count:c}; }
+  if(phase === 'long') return {phase:'focus', count:0};
+  return {phase:'focus', count};
+}
+/* Does the phase that follows `prev` start by itself? Never after a long break. */
+function autoStarts(prev, next){
+  if(prev === 'long') return false;
+  return next === 'focus' ? !!state.settings.autoFocus : !!state.settings.autoBreak;
+}
+function elapsedMs(tm, at){ return tm.status === 'running' ? tm.dur - (tm.endsAt - at) : tm.status === 'paused' ? tm.dur - tm.remaining : 0; }
+function addSession(s){
+  if(s.min < 1) return;
+  state.sessions.push({id:uid(), start:s.start, end:s.end, min:Math.round(s.min), label:s.label || '', done:!!s.done});
+  if(state.sessions.length > 5000) state.sessions.splice(0, state.sessions.length - 5000);
+}
+/* Brings the timer up to `at`: every phase that ended (screen off, extension
+   closed) is recorded at its real end, auto-started phases are chained. */
+function advance(at, live){
+  const tm = state.timer; let last = null, guard = 0;
+  while(tm.status === 'running' && at >= tm.endsAt && guard++ < 50){
+    const end = tm.endsAt;
+    if(tm.phase === 'focus') addSession({start:tm.startedAt || end - tm.dur, end, min:tm.dur / 60000, label:tm.label, done:true});
+    const nx = nextOf(tm.phase, tm.count); const auto = autoStarts(tm.phase, nx.phase);
+    last = {phase:tm.phase, at:end};
+    tm.phase = nx.phase; tm.count = nx.count; tm.dur = phaseMs(nx.phase);
+    if(auto){ tm.status = 'running'; tm.startedAt = end; tm.endsAt = end + tm.dur; tm.remaining = tm.dur; }
+    else{ tm.status = 'idle'; tm.startedAt = 0; tm.endsAt = 0; tm.remaining = tm.dur; }
+  }
+  if(!last) return null;
+  save();
+  if(live && at - last.at < 5000){
+    chime(last.phase); buzz([200, 100, 200]);
+    if(last.phase === 'focus' && todayDone() === state.settings.goal) confetti();
+  }
+  return last;
+}
+/* Upcoming phase ends, as long as phases chain by themselves (max 10). */
+function plannedEnds(){
+  const tm = state.timer; const out = [];
+  if(tm.status !== 'running') return out;
+  let phase = tm.phase, count = tm.count, end = tm.endsAt;
+  for(let i = 0; i < 10; i++){
+    const nx = nextOf(phase, count); const auto = autoStarts(phase, nx.phase);
+    out.push({phase, end, next:nx.phase, auto});
+    if(!auto) break;
+    phase = nx.phase; count = nx.count; end = end + phaseMs(phase);
+  }
+  return out;
+}
+function startTimer(){
+  const tm = state.timer, n = now();
+  if(tm.status === 'running') return;
+  if(tm.status === 'idle'){ tm.dur = phaseMs(tm.phase); tm.remaining = tm.dur; tm.startedAt = n; }
+  tm.endsAt = n + tm.remaining; tm.status = 'running';
+  rememberLabel(tm.label);
+  changed();
+}
+function pauseTimer(){
+  const tm = state.timer; if(tm.status !== 'running') return;
+  tm.remaining = Math.max(0, tm.endsAt - now()); tm.status = 'paused'; changed();
+}
+/* A focus left before its end still counts its minutes, marked as interrupted. */
+function recordCut(at){
+  const tm = state.timer;
+  if(tm.phase === 'focus' && tm.status !== 'idle'){
+    const ms = elapsedMs(tm, at);
+    if(ms >= 60000) addSession({start:tm.startedAt || at - ms, end:at, min:ms / 60000, label:tm.label, done:false});
+  }
+}
+function resetTimer(){
+  const tm = state.timer, n = now(); recordCut(n);
+  tm.status = 'idle'; tm.dur = phaseMs(tm.phase); tm.remaining = tm.dur; tm.endsAt = 0; tm.startedAt = 0; changed();
+}
+function skipPhase(){
+  const tm = state.timer, n = now(); recordCut(n);
+  const next = tm.phase === 'focus' ? 'short' : 'focus';
+  if(tm.phase === 'long') tm.count = 0;
+  setPhase(next);
+}
+function setPhase(p){
+  const tm = state.timer;
+  tm.phase = p; tm.status = 'idle'; tm.dur = phaseMs(p); tm.remaining = tm.dur; tm.endsAt = 0; tm.startedAt = 0; changed();
+}
+function rememberLabel(l){
+  l = String(l || '').trim().slice(0, 60); if(!l) return;
+  state.labels = [l, ...state.labels.filter(x => x !== l)].slice(0, 8);
+}
+function todaySessions(){ const d0 = dayStart(now()); return state.sessions.filter(s => s.end > d0); }
+function todayDone(){ return todaySessions().filter(s => s.done).length; }
+function todayMin(){ const d0 = dayStart(now()); return todaySessions().reduce((a, s) => a + (s.end <= d0 ? 0 : s.min * Math.min(1, (s.end - Math.max(s.start, d0)) / Math.max(1, s.end - s.start))), 0); }
+
+/* =====================================================================
+   CHALLENGES ENGINE
+   ===================================================================== */
+function chal(id){ return state.challenges.find(c => c.id === id); }
+/* Challenges whose time is up: they wait for a verdict; the alarm rings only
+   if this happened just now in front of the user (otherwise Android notified). */
+function tickChallenges(at, live){
+  let any = false, rang = null, went = null;
+  for(const c of state.challenges){
+    if(c.status === 'countdown' && at >= c.goAt){ c.status = 'running'; any = true; if(live && at - c.goAt < 2000) went = c; }
+    if(c.status === 'running' && at >= c.endsAt){
+      c.status = 'ended'; c.finishedAt = c.endsAt; any = true;
+      if(live && at - c.endsAt < 5000) rang = c;
+    }
+  }
+  if(!any) return false;
+  save();
+  if(went){ ui.cdShown = 0; tone(1320, 0, .55, .35); buzz(250); toast(t('chalStarted')); }
+  if(rang){ ui.alarmFor = rang.id; startAlarmSound(); }
+  else if(!ui.alarmFor){ const e = state.challenges.find(c => c.status === 'ended' && !ui.dismissed.has(c.id)); if(e) ui.alarmFor = e.id; }
+  return true;
+}
+/* A challenge starts after a 5-second countdown: a beep each second, a higher
+   one at "go". The end is fixed from the start, so the reminder is scheduled
+   at once and the countdown also completes while the screen is off. */
+const CD_MS = 5000;
+function startChallenge(title, ms){
+  const n = now();
+  const c = {id:uid(), title:title.slice(0, 80), dur:ms, status:'countdown', goAt:n + CD_MS, endsAt:n + CD_MS + ms, remaining:ms, createdAt:n, finishedAt:0};
+  state.challenges.unshift(c); ui.cdShown = 0; changed(); countdownTick(now(), true);
+}
+function countingDown(){ return state.challenges.find(c => c.status === 'countdown') || null; }
+function countdownTick(at, live){
+  const c = countingDown(); if(!c) return;
+  const left = Math.ceil((c.goAt - at) / 1000);
+  if(left > 0 && left !== ui.cdShown){ ui.cdShown = left; if(live){ tone(880, 0, .16, .32); buzz(60); } renderOverlays(); }
+}
+function cancelCountdown(id){
+  const c = chal(id); if(!c || c.status !== 'countdown') return false;
+  state.challenges = state.challenges.filter(x => x !== c); ui.cdShown = 0; changed(); toast(t('cdCancelled')); return true;
+}
+function chalAct(id, act){
+  const c = chal(id); if(!c) return; const n = now();
+  if(act === 'pause' && c.status === 'running'){ c.remaining = Math.max(0, c.endsAt - n); c.status = 'paused'; }
+  else if(act === 'resume' && c.status === 'paused'){ c.endsAt = n + c.remaining; c.status = 'running'; }
+  else if(act === 'won'){ c.status = 'won'; c.finishedAt = Math.min(n, c.endsAt || n); confetti(); toast(t('bravo')); }
+  else if(act === 'lost'){ c.status = 'lost'; c.finishedAt = c.finishedAt || n; }
+  else if(act === 'giveup'){ if(!confirm(t('giveUpQ'))) return; c.status = 'lost'; c.finishedAt = n; }
+  else if(act === 'plus5'){ c.status = 'running'; c.endsAt = Math.max(n, c.endsAt) + 5 * 60000; c.dur += 5 * 60000; c.finishedAt = 0; }
+  if(['won','lost','plus5'].includes(act)){ if(ui.alarmFor === id){ ui.alarmFor = null; stopAlarmSound(); } ui.dismissed.delete(id); }
+  if(state.challenges.length > 300) state.challenges.length = 300;
+  changed();
+}
+
+/* =====================================================================
+   REMINDERS — what Android must show while the page sleeps
+   ===================================================================== */
+function wantedReminders(){
+  const out = [];
+  if(state.settings.notify){
+    plannedEnds().forEach((s, i) => {
+      const nextMin = Math.round(phaseMs(s.next) / 60000);
+      const title = s.phase === 'focus' ? t('focusDone') : t('breakDone');
+      const body = s.phase === 'long' ? t('nCycle') : s.phase === 'focus' ? t(s.auto ? 'nBreakAuto' : 'nBreak', {n:nextMin}) : t(s.auto ? 'nFocusAuto' : 'nFocus', {n:nextMin});
+      out.push({id:'pomo:' + i, title, body, at:s.end, repeatDays:0, data:JSON.stringify({k:'pomo'}), exact:true});
+    });
+  }
+  for(const c of state.challenges){
+    if(c.status !== 'running' && c.status !== 'countdown') continue;
+    out.push({id:'chal:' + c.id, title:t('nChal'), body:c.title.slice(0, 300), at:c.endsAt, repeatDays:0, data:JSON.stringify({k:'chal', id:c.id}), exact:true});
+  }
+  return out.slice(0, 60);
+}
+let syncing = null, syncAgain = false;
+/* Never touches reminders while the page is hidden: if the screen is off, the
+   app's notification must still fire even though this page may still be ticking. */
+function syncReminders(){
+  if(!NOTIF || document.hidden) return Promise.resolve();
+  if(syncing){ syncAgain = true; return syncing; }
+  syncing = (async () => {
+    try{
+      const st = await NOTIF.status(); ui.notif = !!st.granted;
+      if(!st.granted) return;
+      const want = wantedReminders();
+      const have = new Map((await NOTIF.list()).map(r => [r.id, r]));
+      for(const r of want){
+        const h = have.get(r.id);
+        if(!h || h.at !== r.at || h.title !== r.title || h.body !== r.body || (h.data ?? null) !== r.data) await NOTIF.schedule(r);
+        have.delete(r.id);
+      }
+      for(const id of have.keys()) await NOTIF.cancel(id);
+    }catch(e){ try{ console.warn('Focus Flow reminders: ' + e.message); }catch(x){} }
+    finally{ syncing = null; if(syncAgain){ syncAgain = false; syncReminders(); } }
+  })();
+  return syncing;
+}
+async function askNotif(){
+  if(!NOTIF) return;
+  try{ const s = await NOTIF.requestAccess(); ui.notif = !!s.granted; if(!s.granted) toast(t('notifDenied')); }catch(e){ toast(e.message); }
+  render(); syncReminders();
+}
+function onNotificationOpen(ev){
+  let d = {}; try{ d = JSON.parse(ev && ev.data || '{}') || {}; }catch(e){}
+  closeAllSheets(); ui.oled = false;
+  if(d.k === 'chal'){ ui.tab = 'chal'; tick(); const c = chal(d.id); if(c && c.status === 'ended') ui.alarmFor = c.id; }
+  else ui.tab = 'timer';
+  render();
+}
+
+/* =====================================================================
+   RADIO — one player, two engines. The engine is the source of truth.
+   ===================================================================== */
+const Player = {
+  native: !!MEDIA, st:{status:'idle', item:null, error:''}, audio:null,
+  station(){ const it = this.st.item; if(!it) return null; return findStation(it.id) || {id:it.id, name:it.title || it.url, url:it.url, logo:it.artworkUrl || '', sub:it.artist || ''}; },
+  /* `tries`: the addresses of the station being connected. Until one of them
+     plays, an error moves on to the next one; once playing, it is remembered. */
+  tries:null,
+  apply(s){
+    if(!s || typeof s !== 'object') return;
+    const st = {status:['idle','buffering','playing','paused','error'].includes(s.status) ? s.status : 'idle', item:s.item || null, error:s.error || ''};
+    const tr = this.tries;
+    if(tr && !tr.ok && st.item && st.item.id === tr.stn.id && (!st.item.url || st.item.url === tr.urls[tr.i])){
+      if(st.status === 'playing'){ tr.ok = true; if(tr.i > 0) adoptUrl(tr.stn.id, tr.urls[tr.i]); }
+      else if(st.status === 'error'){
+        tr.errors.push(st.error);
+        if(tr.i < tr.urls.length - 1){ tr.i++; this.load(tr.stn, tr.urls[tr.i]); return; }
+        tr.ok = true;   // all tried: show the error
+      }
+    }
+    this.st = st;
+    renderPlayer();
+  },
+  async play(stn){
+    const urls = playableUrls(stn); if(!urls.length) return;
+    rememberStation(stn);
+    this.tries = {stn, urls, i:0, ok:false, errors:[]};
+    this.load(stn, urls[0]);
+  },
+  async load(stn, url){
+    const item = {id:stn.id, url, title:stn.name, artist:stn.sub || '', artworkUrl:stn.logo || ''};
+    this.st = {status:'buffering', item, error:''}; renderPlayer();
+    if(this.native){
+      try{ this.apply(await MEDIA.play(Object.assign({}, item, {artist:stn.sub || 'Focus Flow'}))); }
+      catch(e){ this.apply({status:'error', item, error:e.message}); }
+      return;
+    }
+    const a = this.audioEl(); a.src = url; a.volume = clamp(state.radio.volume, 0, 1);
+    let p; try{ p = a.play(); }catch(e){ this.apply({status:'error', item, error:e.message}); return; }
+    if(p && p.catch) p.catch(e => { if(this.st.item && this.st.item.url === url) this.apply({status:'error', item, error:e.message}); });
+    this.session(stn);
+  },
+  async toggle(){
+    const s = this.st.status;
+    if(!this.st.item){ const l = state.radio.last; if(l) this.play(l); return; }
+    if(s === 'playing' || s === 'buffering'){
+      if(this.native){ try{ this.apply(await MEDIA.pause()); }catch(e){} } else{ this.audioEl().pause(); this.apply({status:'paused', item:this.st.item}); }
+    }else if(s === 'paused'){
+      if(this.native){ try{ this.apply(await MEDIA.resume()); }catch(e){} } else{ const p = this.audioEl().play(); this.apply({status:'buffering', item:this.st.item}); if(p && p.catch) p.catch(e => this.apply({status:'error', item:this.st.item, error:e.message})); }
+    }else{ const stn = this.station(); if(stn) this.play(stn); }
+  },
+  async stop(){
+    if(this.native){ try{ this.apply(await MEDIA.stop()); }catch(e){} }
+    else{ const a = this.audioEl(); a.pause(); a.removeAttribute('src'); try{ a.load(); }catch(e){} this.apply({status:'idle', item:null}); }
+  },
+  setVolume(v){
+    state.radio.volume = clamp(v, 0, 1); save();
+    if(this.native) MEDIA.setVolume(state.radio.volume).catch(() => {}); else if(this.audio) this.audio.volume = state.radio.volume;
+  },
+  audioEl(){
+    if(this.audio) return this.audio;
+    const a = this.audio = new Audio(); a.preload = 'none';
+    const keep = st => () => { if(this.st.item) this.apply({status:st, item:this.st.item}); };   // st.item.url = the address in use
+    a.addEventListener('playing', keep('playing')); a.addEventListener('waiting', keep('buffering'));
+    a.addEventListener('error', () => { if(this.st.item && a.getAttribute('src')) this.apply({status:'error', item:this.st.item, error:'stream'}); });
+    return a;
+  },
+  session(stn){   // a plain browser shows its own media controls from this
+    if(!navigator.mediaSession || !window.MediaMetadata) return;
+    try{ navigator.mediaSession.metadata = new MediaMetadata({title:stn.name, artist:stn.sub || 'Focus Flow'});
+      navigator.mediaSession.setActionHandler('play', () => this.toggle()); navigator.mediaSession.setActionHandler('pause', () => this.toggle());
+      navigator.mediaSession.setActionHandler('stop', () => this.stop()); }catch(e){}
+  }
+};
+function allKnown(){ return [...state.radio.favorites, ...state.radio.recent, ...SOMA, ...(ui.results || [])]; }
+function findStation(id){ return allKnown().find(s => s.id === id) || null; }
+function cleanStation(s){ const c = {id:String(s.id), name:String(s.name || '').slice(0, 100), url:String(s.url || ''), logo:/^https:\/\//i.test(s.logo || '') ? String(s.logo).slice(0, 500) : '', sub:String(s.sub || '').slice(0, 120), emoji:s.emoji || ''};
+  const alts = Array.isArray(s.alts) ? s.alts.filter(u => typeof u === 'string' && /^https?:\/\//i.test(u) && u.length <= 500).slice(0, 4) : [];
+  if(alts.length) c.alts = alts;
+  return c; }
+/* Every address worth trying for a station, best first: its own, the
+   directory's other one, then the http/https twin of each (many radio servers
+   moved to https and answer the old address with a redirect the player refuses).
+   The in-page player can only use https. */
+const swapProto = u => /^https:/i.test(u) ? 'http:' + u.slice(6) : /^http:/i.test(u) ? 'https:' + u.slice(5) : '';
+function playableUrls(stn){
+  if(!stn) return [];
+  const base = [stn.url, ...(stn.alts || [])].filter(u => /^https?:\/\//i.test(u || ''));
+  const all = [...base, ...base.map(swapProto)].filter(Boolean);
+  return [...new Set(all)].filter(u => Player.native || /^https:/i.test(u)).slice(0, 6);
+}
+/* An alternative address worked: keep it first for next time. */
+function adoptUrl(id, url){
+  const fix = x => { if(x && x.id === id && x.url !== url){ x.alts = [...new Set([x.url, ...(x.alts || [])])].filter(u => u !== url).slice(0, 4); x.url = url; } };
+  state.radio.favorites.forEach(fix); state.radio.recent.forEach(fix); fix(state.radio.last); (ui.results || []).forEach(fix);
+  save();
+}
+/* Human message for a player error; the raw code stays visible for diagnosis. */
+function errorText(err){
+  const e = String(err || ''); const code = (/\b([45]\d\d|3\d\d)\b/.exec(e) || [])[1];
+  if(/BAD_HTTP_STATUS|HTTP_STATUS|Response code/i.test(e)) return code === '403' ? t('eHttp403') : code === '404' || code === '410' ? t('eHttp404') : t('eHttp');
+  if(/NETWORK|TIMEOUT|CLEARTEXT|UnknownHost|connect/i.test(e)) return t('eNet');
+  if(/PARSING|DECOD|UNSUPPORTED|MALFORMED|FORMAT|NotSupported/i.test(e)) return t('eFormat');
+  return t('eOther');
+}
+function rememberStation(s){
+  const c = cleanStation(s); state.radio.last = c;
+  state.radio.recent = [c, ...state.radio.recent.filter(x => x.id !== c.id)].slice(0, 8); save();
+}
+function isFav(id){ return state.radio.favorites.some(s => s.id === id); }
+function toggleFav(id){
+  if(isFav(id)) state.radio.favorites = state.radio.favorites.filter(s => s.id !== id);
+  else{ const s = findStation(id); if(s) state.radio.favorites.unshift(cleanStation(s)); }
+  save(); render();
+}
+function rbToStation(r){
+  const tags = String(r.tags || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 2).join(', ');
+  const urls = [...new Set([r.url_resolved, r.url].filter(u => typeof u === 'string' && /^https?:\/\//i.test(u)))];
+  return {id:'rb:' + r.stationuuid, name:String(r.name || '').trim() || '?', url:urls[0] || '', alts:urls.slice(1),
+          logo:/^https:\/\//i.test(r.favicon || '') ? r.favicon : '', sub:[r.country, tags, r.bitrate ? r.bitrate + ' kbps' : ''].filter(Boolean).join(' · ')};
+}
+async function searchRadio(params){
+  if(!has('internet')){ ui.searchErr = t('noInternet'); ui.results = []; render(); return; }
+  if(typeof fetch !== 'function'){ ui.searchErr = t('netFail'); ui.results = []; render(); return; }
+  ui.loading = true; ui.searchErr = ''; ui.results = null; render();
+  const qs = new URLSearchParams(Object.assign({hidebroken:'true', limit:'60', order:'clickcount', reverse:'true'}, params)).toString();
+  let rows = null;
+  for(const h of RB_HOSTS){
+    try{
+      const ctl = window.AbortController ? new AbortController() : null; const timer = ctl && setTimeout(() => ctl.abort(), 8000);
+      const r = await fetch('https://' + h + '/json/stations/search?' + qs, ctl ? {signal:ctl.signal} : {});
+      if(timer) clearTimeout(timer);
+      if(!r.ok) continue; const j = await r.json(); if(Array.isArray(j)){ rows = j; break; }
+    }catch(e){}
+  }
+  ui.loading = false;
+  if(!rows){ ui.searchErr = t('netFail'); ui.results = []; render(); return; }
+  const seen = new Set(); let list = rows.map(rbToStation).filter(s => /^https?:\/\//i.test(s.url) && !seen.has(s.name.toLowerCase() + s.url) && seen.add(s.name.toLowerCase() + s.url));
+  ui.httpHidden = 0;
+  if(!Player.native){ const before = list.length; list = list.filter(s => /^https:/i.test(s.url) || (s.alts || []).some(u => /^https:/i.test(u))); ui.httpHidden = before - list.length; }
+  ui.results = list.slice(0, 40); render();
+}
+
+/* =====================================================================
+   RENDERING
+   ===================================================================== */
+function changed(){ save(); render(); syncReminders(); }
+function render(){
+  const tm = state.timer;
+  document.body.className = 'ph-' + tm.phase;
+  const keep = document.activeElement && document.activeElement.id && !document.activeElement.closest('.sheet') ? {id:document.activeElement.id, s:document.activeElement.selectionStart} : null;
+  const v = $('#view');
+  v.innerHTML = (loadFailed ? `<div class="note warn">${esc(t('readFail'))}</div>` : '') +
+    (ui.tab === 'timer' ? viewTimer() : ui.tab === 'stats' ? viewStats() : ui.tab === 'chal' ? viewChal() : viewRadio());
+  const pending = state.challenges.some(c => c.status === 'ended');
+  $('#tabs').innerHTML = [['timer','⏱️','tabTimer'],['stats','📊','tabStats'],['chal','🏁','tabChal'],['radio','📻','tabRadio']].map(([k, e, l]) =>
+    `<button data-tab="${k}" class="${ui.tab === k ? 'on' : ''}" aria-label="${esc(t(l))}"><span>${e}${k === 'chal' && pending ? '<i class="badge"></i>' : ''}</span>${esc(t(l))}</button>`).join('');
+  if(keep){ const el = document.getElementById(keep.id); if(el){ el.focus(); try{ if(keep.s != null) el.setSelectionRange(keep.s, keep.s); }catch(e){} } }
+  renderOverlays(); live();
+}
+
+/* ---------- timer view ---------- */
+const CX = 150, R_ORBIT = 138, R_PROG = 114, C_PROG = 2 * Math.PI * R_PROG;
+function pt(r, deg){ const a = deg * Math.PI / 180; return [CX + r * Math.sin(a), CX - r * Math.cos(a)]; }
+function arcD(r, a0, a1){
+  if(a1 - a0 < 1.2) a1 = a0 + 1.2;
+  const [x0, y0] = pt(r, a0), [x1, y1] = pt(r, Math.min(a1, a0 + 359.9));
+  return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+}
+const degOf = (ms, d0) => clamp((ms - d0) / 86400000, 0, 1) * 360;
+/* The dial: the phase in progress inside, and around it the 24-hour orbit of
+   today — every focus session drawn at the time it really happened. */
+function dialSvg(){
+  const n = now(), d0 = dayStart(n);
+  const arcs = todaySessions().map(s => `<path class="arc ${s.done ? 'done' : 'cut'}" d="${arcD(R_ORBIT, degOf(Math.max(s.start, d0), d0), degOf(s.end, d0))}"/>`).join('');
+  const ticks = Array.from({length:24}, (_, h) => { const [x0, y0] = pt(R_ORBIT - 7, h * 15), [x1, y1] = pt(R_ORBIT - (h % 6 ? 10 : 14), h * 15);
+    return `<line class="tick" x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke-width="${h % 6 ? 1 : 2}"/>`; }).join('');
+  const hours = [0, 6, 12, 18].map(h => { const [x, y] = pt(R_ORBIT + 13, h * 15); return `<text class="hour" x="${x.toFixed(1)}" y="${y.toFixed(1)}">${h}h</text>`; }).join('');
+  return `<svg viewBox="0 0 300 300" role="img" aria-label="${esc(t('today'))}">
+    <circle class="track" cx="150" cy="150" r="${R_ORBIT}" stroke-width="8"/>${ticks}${hours}${arcs}
+    <path id="liveArc" class="arc live" d=""/>
+    <circle class="track" cx="150" cy="150" r="${R_PROG}" stroke-width="12"/>
+    <circle id="ring" class="prog" cx="150" cy="150" r="${R_PROG}" stroke-width="12" stroke-dasharray="${C_PROG.toFixed(2)}" stroke-dashoffset="${C_PROG.toFixed(2)}" transform="rotate(-90 150 150)"/>
+    <circle id="nowHalo" class="halo" r="5" cx="150" cy="12"/><circle id="nowDot" class="nowdot" r="3.5" cx="150" cy="12"/>
+  </svg>`;
+}
+function viewTimer(){
+  const tm = state.timer, s = state.settings, done = todayDone();
+  const cyc = tm.phase === 'long' ? s.every : tm.count;
+  const beads = Array.from({length:s.every}, (_, i) => `<i class="bead ${i < cyc ? 'full' : ''} ${i === cyc && tm.phase === 'focus' && tm.status === 'running' ? 'now' : ''}"></i>`).join('');
+  const goIcon = tm.status === 'running' ? '⏸' : '▶';
+  const goLabel = tm.status === 'running' ? t('pause') : tm.status === 'paused' ? t('resume') : t('start');
+  const sub = tm.status === 'paused' ? t('paused') : tm.phase === 'focus' ? t('sessionOf', {n:done + 1, c:Math.min(tm.count + 1, s.every), e:s.every}) : t('goalOf', {n:done, g:s.goal});
+  return `
+  <div class="topline">
+    <div class="today"><span>🍅</span><span><b class="num">${done}</b> / ${s.goal} · <b class="num">${dur(todayMin())}</b> ${esc(t('today').toLowerCase())}</span></div>
+    <button class="icon-btn" data-act="oled" aria-label="${esc(t('oled'))}" title="${esc(t('oled'))}">🌙</button>
+    <button class="icon-btn" data-act="settings" aria-label="${esc(t('settings'))}" title="${esc(t('settings'))}">⚙️</button>
+  </div>
+  <div class="seg phase-seg">${['focus','short','long'].map(p => `<button data-act="phase" data-phase="${p}" class="${tm.phase === p ? 'on' : ''}" ${tm.status === 'running' && tm.phase !== p ? 'disabled' : ''}>${esc(t(p === 'focus' ? 'focus' : p === 'short' ? 'shortS' : 'longS'))}</button>`).join('')}</div>
+  <div class="dial">${dialSvg()}
+    <div class="mid"><div class="phase-name">${esc(t(tm.phase))}</div><div class="clock" id="clock">${clock(tm.status === 'running' ? tm.endsAt - now() : tm.remaining)}</div><div class="under">${esc(sub)}</div></div>
+  </div>
+  <div class="beads" aria-hidden="true">${beads}</div>
+  <div class="controls">
+    <button class="round" data-act="reset" aria-label="${esc(t('reset'))}" title="${esc(t('reset'))}">↺</button>
+    <button class="go" data-act="go" aria-label="${esc(goLabel)}" title="${esc(goLabel)}">${goIcon}</button>
+    <button class="round" data-act="skip" aria-label="${esc(t('skip'))}" title="${esc(t('skip'))}">⏭</button>
+  </div>
+  <div class="card">
+    <div class="label-in"><span>🏷️</span><input class="input" id="label" maxlength="60" placeholder="${esc(t('labelPh'))}" value="${esc(tm.label)}" enterkeyhint="done"></div>
+    ${state.labels.length ? `<div class="chips" style="margin-top:8px">${state.labels.map(l => `<button class="chip ${l === tm.label ? 'on' : ''}" data-act="useLabel" data-label="${esc(l)}">${esc(l)}</button>`).join('')}</div>` : ''}
+  </div>
+  ${miniPlayer()}
+  ${notifCard()}`;
+}
+function notifCard(){
+  if(!HOST) return '';
+  if(!NOTIF) return HOST.notifications ? '' : `<div class="note">${esc(t('notifNone'))}</div>`;
+  if(ui.notif !== false) return '';
+  return `<div class="card"><h3>${esc(t('notifTitle'))}</h3><p class="small muted" style="margin:6px 0 10px">${esc(t('notifText'))}</p>
+    <button class="btn block" data-act="askNotif">${esc(t('notifAllow'))}</button></div>`;
+}
+function stationAvatar(s, big){
+  if(!s) return `<div class="avatar${big ? ' big' : ''}">📻</div>`;
+  let h = 0; for(const ch of s.id) h = (h * 31 + ch.charCodeAt(0)) % 360;
+  const style = `--a1:hsl(${h} 62% 52%);--a2:hsl(${(h + 60) % 360} 62% 44%)`;
+  if(s.logo) return `<div class="avatar${big ? ' big' : ''}" style="${style}"><img src="${esc(s.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-fallback="${esc(s.emoji || '📻')}"></div>`;
+  return `<div class="avatar${big ? ' big' : ''}" style="${style}">${esc(s.emoji || (s.name || '?').trim().charAt(0).toUpperCase() || '📻')}</div>`;
+}
+function statusHtml(){
+  const st = Player.st.status;
+  const lbl = {idle:'stIdle', buffering:'stBuffering', playing:'stPlaying', paused:'stPaused', error:'stError'}[st];
+  const tr = Player.tries, alt = st === 'buffering' && tr && !tr.ok && tr.i > 0;
+  return `<span class="status ${st}">${st === 'playing' ? '<span class="eq"><i></i><i></i><i></i></span>' : ''}${esc(alt ? t('tryAlt', {i:tr.i + 1, n:tr.urls.length}) : t(lbl))}</span>`;
+}
+function miniPlayer(){
+  const s = Player.station() || (Player.st.item ? null : state.radio.last);
+  if(!s) return '';
+  const on = Player.st.status === 'playing' || Player.st.status === 'buffering';
+  return `<div class="card mini" data-player="mini" data-act="toRadio">${stationAvatar(s)}
+    <div class="grow"><div class="ellipsis" style="font-weight:600">${esc(s.name)}</div><div class="tiny" data-player="status">${statusHtml()}</div></div>
+    <button class="round" style="width:48px;height:48px" data-act="radioToggle" aria-label="${esc(on ? t('pause') : t('play'))}">${on ? '⏸' : '▶'}</button></div>`;
+}
+/* Called every 250 ms: only moves what moves, never rebuilds inputs. */
+function live(){
+  const tm = state.timer, n = now();
+  const left = tm.status === 'running' ? tm.endsAt - n : tm.remaining;
+  const ck = $('#clock'); if(ck) ck.textContent = clock(left);
+  const ring = $('#ring'); if(ring){ const f = clamp(1 - left / Math.max(1, tm.dur), 0, 1); ring.setAttribute('stroke-dashoffset', (C_PROG * (1 - f)).toFixed(2)); }
+  const d0 = dayStart(n), nd = degOf(n, d0);
+  const [x, y] = pt(R_ORBIT, nd);
+  for(const id of ['#nowDot', '#nowHalo']){ const e = $(id); if(e){ e.setAttribute('cx', x.toFixed(2)); e.setAttribute('cy', y.toFixed(2)); } }
+  const la = $('#liveArc');
+  if(la){ if(tm.phase === 'focus' && tm.status !== 'idle' && tm.startedAt){ la.setAttribute('d', arcD(R_ORBIT, degOf(Math.max(tm.startedAt, d0), d0), nd)); } else la.setAttribute('d', ''); }
+  if(ui.tab === 'chal') document.querySelectorAll('[data-count]').forEach(el => {
+    const c = chal(el.dataset.count); if(!c) return;
+    const rest = c.status === 'running' ? c.endsAt - n : c.remaining;
+    el.textContent = clock(rest);
+    const bar = el.parentElement.querySelector('.pbar>i'); if(bar) bar.style.width = (clamp(1 - rest / Math.max(1, c.dur), 0, 1) * 100).toFixed(1) + '%';
+  });
+  const oc = $('#oledClock'); if(oc) oc.textContent = clock(left);
+  if(HOST === null) document.title = (tm.status === 'running' ? clock(left) + ' · ' : '') + 'Focus Flow';
+}
+function renderPlayer(){
+  document.querySelectorAll('[data-player="status"]').forEach(el => { el.innerHTML = statusHtml(); });
+  if(ui.tab === 'radio' || ui.tab === 'timer'){ if(!ui.sheets.length && !(document.activeElement && document.activeElement.id === 'q')) render(); else{ const m = $('[data-player="mini"]'); if(m) m.outerHTML = miniPlayer(); } }
+  renderOverlays();
+}
+
+/* ---------- stats view ---------- */
+function rangeStart(){ return ui.range === 'all' ? 0 : addDays(dayStart(now()), -(ui.range - 1)); }
+function streaks(){
+  const days = new Set(state.sessions.filter(s => s.done).map(s => dayKey(s.start)));
+  let cur = 0, d = dayStart(now());
+  if(!days.has(dayKey(d))) d = addDays(d, -1);
+  while(days.has(dayKey(d))){ cur++; d = addDays(d, -1); }
+  const sorted = [...days].sort(); let best = 0, run = 0, prev = null;
+  for(const k of sorted){ const ms = new Date(k + 'T12:00:00').getTime(); run = prev != null && Math.round((ms - prev) / 86400000) === 1 ? run + 1 : 1; best = Math.max(best, run); prev = ms; }
+  return {cur, best};
+}
+function viewStats(){
+  if(!state.sessions.length) return `<div class="card empty"><div class="e">📊</div><h3>${esc(t('statsEmpty'))}</h3><p class="small">${esc(t('statsEmptyHint'))}</p></div>`;
+  const r0 = rangeStart(), list = state.sessions.filter(s => s.start >= r0);
+  const min = list.reduce((a, s) => a + s.min, 0), doneN = list.filter(s => s.done).length;
+  const first = state.sessions.reduce((a, s) => Math.min(a, s.start), now());
+  const spanDays = ui.range === 'all' ? Math.max(1, Math.round((dayStart(now()) - dayStart(first)) / 86400000) + 1) : ui.range;
+  const rate = list.length ? Math.round(doneN / list.length * 100) : 0;
+  const st = streaks();
+  let html = `<div class="seg">${[[7,'r7'],[30,'r30'],['all','rAll']].map(([k, l]) => `<button data-act="range" data-range="${k}" class="${ui.range === k ? 'on' : ''}">${esc(t(l))}</button>`).join('')}</div>
+  <div class="kpis">
+    <div class="kpi"><div class="v num">${dur(min)}</div><div class="k">${esc(t('kFocus'))}</div></div>
+    <div class="kpi"><div class="v num">${doneN}</div><div class="k">${esc(t('kSessions'))}</div></div>
+    <div class="kpi"><div class="v num">🔥 ${esc(t('days', {n:st.cur}))}</div><div class="k">${esc(t('kStreak'))} · ${esc(t('best', {n:st.best}))}</div></div>
+    <div class="kpi"><div class="v num">${rate} %</div><div class="k">${esc(t('kRate'))}</div></div>
+  </div>`;
+  // per day
+  const nDays = ui.range === 'all' ? Math.min(30, spanDays) : ui.range; const today = dayStart(now());
+  const perDay = Array.from({length:nDays}, (_, i) => { const d = addDays(today, i - nDays + 1); const k = dayKey(d); return {d, m:state.sessions.filter(s => dayKey(s.start) === k).reduce((a, s) => a + s.min, 0)}; });
+  const goalMin = state.settings.goal * state.settings.focus; const top = Math.max(goalMin, ...perDay.map(x => x.m), 1);
+  const wd = new Intl.DateTimeFormat(LOC, {weekday:'narrow'});
+  html += `<h2>${esc(t('perDay'))}</h2><div class="card"><div class="small muted" style="margin-bottom:6px">${esc(t('avg', {d:dur(min / spanDays)}))}</div>
+    <div class="bars"><div class="goalline" style="bottom:${(16 + goalMin / top * 108).toFixed(1)}px" title="${esc(t('goal'))}"></div>${perDay.map((x, i) =>
+      `<div class="c" title="${esc(dateLabel(x.d) + ' · ' + dur(x.m))}"><div class="b ${x.m ? '' : 'zero'}" style="height:${(x.m / top * 108).toFixed(1)}px"></div><div class="d">${nDays <= 7 || (nDays - 1 - i) % 5 === 0 ? esc(nDays <= 7 ? wd.format(new Date(x.d)) : new Date(x.d).getDate()) : ''}</div></div>`).join('')}</div></div>`;
+  // heatmap, weeks starting on Monday
+  const weeks = 16; const dow = (new Date(today).getDay() + 6) % 7; const startHeat = addDays(today, -dow - (weeks - 1) * 7);
+  const minsByDay = {}; for(const s of state.sessions) minsByDay[dayKey(s.start)] = (minsByDay[dayKey(s.start)] || 0) + s.min;
+  const maxDay = Math.max(1, ...Object.values(minsByDay));
+  const cells = Array.from({length:weeks * 7}, (_, i) => { const d = addDays(startHeat, i); if(d > today) return '<i class="out"></i>';
+    const m = minsByDay[dayKey(d)] || 0; const lvl = m ? Math.min(4, 1 + Math.floor(m / maxDay * 3.999)) : 0; return `<i class="${lvl ? 'l' + lvl : ''}" title="${esc(dateLabel(d) + ' · ' + dur(m))}"></i>`; }).join('');
+  html += `<h2>${esc(t('regularity'))}</h2><div class="card"><div class="heat">${cells}</div>
+    <div class="legend">${esc(t('less'))} <i style="background:var(--orbit)"></i><i class="l1" style="background:color-mix(in srgb,var(--focus) 30%,var(--orbit))"></i><i style="background:color-mix(in srgb,var(--focus) 55%,var(--orbit))"></i><i style="background:color-mix(in srgb,var(--focus) 78%,var(--orbit))"></i><i style="background:var(--focus)"></i> ${esc(t('more'))}</div></div>`;
+  // hours
+  const hrs = Array(24).fill(0); for(const s of list){ let a = s.start; while(a < s.end){ const h = new Date(a).getHours(); const nextH = new Date(a); nextH.setMinutes(60, 0, 0); const b = Math.min(s.end, nextH.getTime()); hrs[h] += (b - a) / 60000 * (s.min / Math.max(1, (s.end - s.start) / 60000)); a = b; } }
+  const hTop = Math.max(1, ...hrs); const bestH = hrs.indexOf(Math.max(...hrs));
+  if(list.length) html += `<h2>${esc(t('bestHours'))}</h2><div class="card"><div class="small" style="margin-bottom:8px">⚡ ${esc(t('bestHour', {h:bestH + 'h–' + (bestH + 1) + 'h'}))}</div>
+    <div class="hours">${hrs.map((m, h) => `<i class="${m ? '' : 'zero'}" style="height:${(m / hTop * 100).toFixed(1)}%" title="${h}h · ${esc(dur(m))}"></i>`).join('')}</div>
+    <div class="hlab"><span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span></div></div>`;
+  // labels
+  const by = {}; for(const s of list){ const k = s.label || ''; by[k] = (by[k] || 0) + s.min; }
+  const lab = Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if(lab.length) html += `<h2>${esc(t('byLabel'))}</h2><div class="card">${lab.map(([k, m]) => `<div style="margin-bottom:10px"><div class="row between small"><span class="ellipsis grow">${esc(k || t('noLabel'))}</span><b class="num">${dur(m)}</b></div><div class="hbar"><i style="width:${(m / lab[0][1] * 100).toFixed(1)}%"></i></div></div>`).join('')}</div>`;
+  // history
+  const hist = [...list].sort((a, b) => b.start - a.start).slice(0, 60);
+  if(hist.length) html += `<h2>${esc(t('history'))}</h2><div class="card list">${hist.map(s => `<div class="item"><i class="dot ${s.done ? '' : 'cut'}"></i>
+      <div class="grow"><div class="ellipsis">${esc(s.label || t('noLabel'))}</div><div class="tiny muted">${esc(dateLabel(s.start))} · ${hm(s.start)}–${hm(s.end)}${s.done ? '' : ' · ' + esc(t('cut'))}</div></div>
+      <b class="num small">${dur(s.min)}</b><button class="x" data-act="delSession" data-id="${esc(s.id)}" aria-label="✕">✕</button></div>`).join('')}</div>`;
+  return html;
+}
+
+/* ---------- challenges view ---------- */
+function chalCard(c){
+  const n = now(); const rest = c.status === 'running' ? c.endsAt - n : c.remaining;
+  if(c.status === 'countdown') return `<div class="card ch"><div class="row between"><h3 class="ellipsis grow">${esc(c.title)}</h3><span class="pill acc">${esc(t('cdPill'))}</span></div>
+    <div class="count">${clock(c.dur)}</div><div class="btns"><button class="btn ghost" data-act="cdCancel" data-id="${esc(c.id)}">${esc(t('cdCancel'))}</button></div></div>`;
+  if(c.status === 'ended') return `<div class="card ch ended"><div class="row between"><h3 class="ellipsis grow">${esc(c.title)}</h3><span class="pill warn">${esc(t('ended'))}</span></div>
+    <p class="small muted" style="margin:6px 0 0">${esc(t('didIt'))}</p>
+    <div class="btns"><button class="btn good" data-act="chal" data-do="won" data-id="${c.id}">${esc(t('done'))}</button><button class="btn danger" data-act="chal" data-do="lost" data-id="${c.id}">${esc(t('notDone'))}</button><button class="btn ghost" data-act="chal" data-do="plus5" data-id="${c.id}">${esc(t('plus5'))}</button></div></div>`;
+  return `<div class="card ch"><div class="row between"><h3 class="ellipsis grow">${esc(c.title)}</h3><span class="pill acc">${esc(c.status === 'paused' ? t('paused') : t('active'))}</span></div>
+    <div class="count" data-count="${c.id}">${clock(rest)}</div>
+    <div class="pbar"><i style="width:${(clamp(1 - rest / Math.max(1, c.dur), 0, 1) * 100).toFixed(1)}%"></i></div>
+    <div class="tiny muted">${c.status === 'running' ? esc(t('endsAt', {t:hm(c.endsAt)})) + ' · ' : ''}${esc(dur(c.dur / 60000))}</div>
+    <div class="btns"><button class="btn ghost" data-act="chal" data-do="${c.status === 'running' ? 'pause' : 'resume'}" data-id="${c.id}">${c.status === 'running' ? '⏸ ' + esc(t('pause')) : '▶ ' + esc(t('resume'))}</button>
+      <button class="btn good" data-act="chal" data-do="won" data-id="${c.id}">${esc(t('done'))}</button>
+      <button class="btn danger" data-act="chal" data-do="giveup" data-id="${c.id}">${esc(t('giveUp'))}</button></div></div>`;
+}
+function viewChal(){
+  const open = state.challenges.filter(c => ['countdown','running','paused','ended'].includes(c.status));
+  const fin = state.challenges.filter(c => c.status === 'won' || c.status === 'lost');
+  let html = `<button class="btn block" data-act="newChal" style="margin-bottom:12px;min-height:52px">＋ ${esc(t('newChal'))}</button>`;
+  if(!open.length && !fin.length) return html + `<div class="card empty"><div class="e">🏁</div><h3>${esc(t('chalEmpty'))}</h3><p class="small">${esc(t('chalEmptyHint'))}</p></div>` + notifCard();
+  html += open.map(chalCard).join('') + notifCard();
+  if(fin.length){
+    const w = fin.filter(c => c.status === 'won').length;
+    html += `<h2>${esc(t('chalHistory'))}</h2><div class="small muted" style="margin:-4px 2px 8px">${esc(t('rate', {w, n:fin.length, p:Math.round(w / fin.length * 100)}))}</div>
+    <div class="card list">${fin.slice(0, 30).map(c => `<div class="item"><span style="font-size:20px">${c.status === 'won' ? '🏆' : '⌛'}</span>
+      <div class="grow"><div class="ellipsis">${esc(c.title)}</div><div class="tiny muted">${esc(dateLabel(c.createdAt))} · ${esc(dur(c.dur / 60000))}</div></div>
+      <span class="pill ${c.status === 'won' ? 'good' : 'bad'}">${esc(t(c.status === 'won' ? 'won' : 'lost'))}</span></div>`).join('')}</div>`;
+  }
+  return html;
+}
+function chalSheet(){
+  const sh = openSheet(`<h3>${esc(t('newChal'))}</h3>
+    <label class="f" for="cTitle">${esc(t('chalTitle'))}</label><input class="input" id="cTitle" name="title" maxlength="80" placeholder="${esc(t('chalPh'))}">
+    <label class="f">${esc(t('mode'))}</label><div class="seg" style="margin-bottom:4px"><button data-mode="dur" class="on" type="button">${esc(t('byDuration'))}</button><button data-mode="at" type="button">${esc(t('byTime'))}</button></div>
+    <div data-pane="dur"><div class="chips" style="margin:6px 0">${[15,30,45,60,90,120,180].map(m => `<button class="chip" type="button" data-min="${m}">${esc(dur(m))}</button>`).join('')}</div>
+      <div class="two"><div><label class="f" for="cH">${esc(t('hours'))}</label><input class="input" id="cH" name="h" type="number" inputmode="numeric" min="0" max="99" value="0"></div>
+      <div><label class="f" for="cM">${esc(t('minutes'))}</label><input class="input" id="cM" name="m" type="number" inputmode="numeric" min="0" max="59" value="45"></div></div></div>
+    <div data-pane="at" hidden><label class="f" for="cAt">${esc(t('endAt'))}</label><input class="input" id="cAt" name="at" type="time" value="${hm(now() + 3600000)}"></div>
+    <div class="hint" data-err></div>
+    <button class="btn block" data-go style="margin-top:14px">🏁 ${esc(t('launch'))}</button>`);
+  let mode = 'dur';
+  sh.addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b) return;
+    if(b.dataset.mode){ mode = b.dataset.mode; sh.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('on', x === b)); sh.querySelectorAll('[data-pane]').forEach(p => { p.hidden = p.dataset.pane !== mode; }); }
+    else if(b.dataset.min){ const m = +b.dataset.min; sh.querySelector('[name=h]').value = Math.floor(m / 60); sh.querySelector('[name=m]').value = m % 60; sh.querySelectorAll('[data-min]').forEach(x => x.classList.toggle('on', x === b)); }
+    else if(b.hasAttribute('data-go')){
+      const title = sh.querySelector('[name=title]').value.trim(); let ms = 0;
+      if(mode === 'dur') ms = ((parseInt(sh.querySelector('[name=h]').value, 10) || 0) * 60 + (parseInt(sh.querySelector('[name=m]').value, 10) || 0)) * 60000;
+      else{ const v = sh.querySelector('[name=at]').value; const mt = /^(\d{1,2}):(\d{2})$/.exec(v || '');
+        if(mt){ const d = new Date(now()); d.setHours(+mt[1], +mt[2], 0, 0); let at = d.getTime(); if(at <= now()) at = addDays(at, 1); ms = at - now() - CD_MS; } }
+      if(!title || ms < 60000 || ms > 99 * 3600000 + 59 * 60000){ sh.querySelector('[data-err]').textContent = t('chalBad'); return; }
+      closeSheet(); startChallenge(title, ms);
+    }
+  });
+}
+
+/* ---------- radio view ---------- */
+function stationRow(s){
+  const cur = Player.st.item && Player.st.item.id === s.id;
+  return `<div class="item tap" data-act="playStation" data-id="${esc(s.id)}">${stationAvatar(s)}
+    <div class="grow"><div class="ellipsis" style="font-weight:${cur ? 700 : 500}">${cur && Player.st.status === 'playing' ? '<span class="eq" style="color:var(--good)"><i></i><i></i><i></i></span>' : ''}${esc(s.name)}</div><div class="tiny muted ellipsis">${esc(s.sub || '')}</div></div>
+    <button class="star ${isFav(s.id) ? 'on' : ''}" data-act="fav" data-id="${esc(s.id)}" aria-label="☆">${isFav(s.id) ? '★' : '☆'}</button></div>`;
+}
+function viewRadio(){
+  const s = Player.station() || state.radio.last; const st = Player.st.status; const on = st === 'playing' || st === 'buffering';
+  let html = `<div class="card"><div class="now">${stationAvatar(s, true)}
+      <div class="grow"><div class="tiny muted">${esc(t('nowPlaying'))}</div><div class="ellipsis" style="font-weight:700;font-size:17px">${esc(s ? s.name : t('nothing'))}</div>
+        <div class="tiny muted ellipsis">${esc(s ? s.sub || '' : t('pickOne'))}</div><div data-player="status">${statusHtml()}</div></div></div>
+      ${st === 'error' ? `<div class="small" style="color:var(--bad);margin-top:6px">${esc(errorText(Player.st.error))}${Player.tries && Player.tries.urls.length > 1 ? ' ' + esc(t('triedN', {n:Player.tries.urls.length})) : ''}</div>${Player.st.error ? `<div class="tiny muted">${esc(Player.st.error)}</div>` : ''}` : ''}
+      <div class="btns"><button class="btn" data-act="radioToggle" ${s ? '' : 'disabled'}>${on ? '⏸ ' + esc(t('pause')) : '▶ ' + esc(t('play'))}</button>
+        <button class="btn ghost" data-act="radioStop" ${Player.st.item ? '' : 'disabled'}>⏹ ${esc(t('stop'))}</button>
+        ${s ? `<button class="btn ghost" style="flex:0 0 52px" data-act="fav" data-id="${esc(s.id)}" aria-label="☆">${isFav(s.id) ? '★' : '☆'}</button>` : ''}</div>
+      <label class="f" for="vol">${esc(t('volume'))}</label><input class="vol" id="vol" type="range" min="0" max="1" step="0.05" value="${state.radio.volume}"></div>
+    <div class="note ${Player.native ? 'good' : ''}">${esc(Player.native ? t('bgOn') : t('bgOff'))}</div>`;
+  if(HOST && !has('internet')) return html + `<div class="note warn">${esc(t('noInternet'))}</div>`;
+  html += `<div class="seg">${[['fav','favs'],['suggest','suggest'],['search','search'],['dz','algeria']].map(([k, l]) => `<button data-act="radioTab" data-rt="${k}" class="${ui.radioTab === k ? 'on' : ''}">${esc(t(l))}</button>`).join('')}</div>`;
+  if(ui.radioTab === 'fav'){
+    html += state.radio.favorites.length ? `<div class="card list">${state.radio.favorites.map(stationRow).join('')}</div>` : `<div class="card empty"><div class="e">☆</div><p class="small">${esc(t('favsEmpty'))}</p></div>`;
+    if(state.radio.recent.length) html += `<h2>${esc(t('recent'))}</h2><div class="card list">${state.radio.recent.map(stationRow).join('')}</div>`;
+    html += `<button class="btn ghost block" data-act="addStation">＋ ${esc(t('addStation'))}</button>`;
+  }else if(ui.radioTab === 'suggest'){
+    html += `<div class="card list">${SOMA.map(stationRow).join('')}</div>`;
+  }else{
+    if(ui.radioTab === 'search') html += `<form class="row" data-form="search" style="margin-bottom:10px"><input class="input grow" id="q" type="search" enterkeyhint="search" placeholder="${esc(t('searchPh'))}" value="${esc(ui.query)}"><button class="btn" type="submit">${esc(t('searchGo'))}</button></form>
+      <div class="chips" style="margin-bottom:12px">${GENRES.map(([g, l, e]) => `<button class="chip ${ui.genre === g ? 'on' : ''}" data-act="genre" data-g="${g}">${e} ${esc(t(l))}</button>`).join('')}</div>`;
+    if(ui.loading) html += `<div class="card empty"><div class="e">📡</div><p class="small">${esc(t('loading'))}</p></div>`;
+    else if(ui.searchErr) html += `<div class="note warn">${esc(ui.searchErr)}</div>`;
+    else if(ui.results){
+      html += ui.results.length ? `<div class="card list">${ui.results.map(stationRow).join('')}</div>` : `<div class="card empty"><p class="small">${esc(t('noResult'))}</p></div>`;
+      if(ui.httpHidden) html += `<p class="tiny muted">${esc(t('httpHidden', {n:ui.httpHidden}))}</p>`;
+    }
+    html += `<p class="tiny muted">${esc(t('dirNote'))}</p>`;
+  }
+  return html;
+}
+function addStationSheet(){
+  const sh = openSheet(`<h3>${esc(t('addStation'))}</h3>
+    <label class="f" for="sName">${esc(t('stName'))}</label><input class="input" id="sName" name="name" maxlength="80">
+    <label class="f" for="sUrl">${esc(t('stUrl'))}</label><input class="input" id="sUrl" name="url" type="url" inputmode="url" placeholder="https://…">
+    <div class="hint" data-err></div><button class="btn block" data-go style="margin-top:14px">${esc(t('add'))}</button>`);
+  sh.querySelector('[data-go]').addEventListener('click', () => {
+    const name = sh.querySelector('[name=name]').value.trim(), url = sh.querySelector('[name=url]').value.trim();
+    if(!name || !/^https?:\/\/[^\s]+$/i.test(url)){ sh.querySelector('[data-err]').textContent = t('stBad'); return; }
+    const s = cleanStation({id:'custom:' + uid(), name, url, sub:url.replace(/^https?:\/\//i, '').split('/')[0]});
+    state.radio.favorites.unshift(s); ui.radioTab = 'fav'; save(); closeSheet(); render();
+  });
+}
+
+/* ---------- settings sheet ---------- */
+const STEPS = [['focus','focusMin',1,180,5],['short','shortMin',1,60,1],['long','longMin',1,90,5],['every','every',2,12,1],['goal','goal',1,24,1]];
+function settingsSheet(){
+  const s = state.settings;
+  const sh = openSheet(`<h3>${esc(t('settingsTitle'))}</h3>
+    ${STEPS.map(([k, l, , , st]) => `<div class="stepper"><label class="small" for="set-${k}">${esc(t(l))}${k === 'every' ? ' (' + esc(t('everyU')) + ')' : k === 'goal' ? ' (' + esc(t('goalU')) + ')' : ''}</label>
+      <div class="ctl"><button class="icon-btn" type="button" data-step="${k}" data-d="-${st}" aria-label="−">−</button><input class="input num" id="set-${k}" name="${k}" type="number" inputmode="numeric" value="${s[k]}"><button class="icon-btn" type="button" data-step="${k}" data-d="${st}" aria-label="+">+</button></div></div>`).join('')}
+    ${[['autoBreak','autoBreak'],['autoFocus','autoFocus'],['sound','sound'],['vibrate','vibrate']].concat(NOTIF ? [['notify','notify']] : []).map(([k, l]) =>
+      `<label class="switch"><span class="small">${esc(t(l))}</span><input type="checkbox" name="${k}" ${s[k] ? 'checked' : ''}></label>`).join('')}
+    <div class="hint">${esc(t('autoHint'))}</div>
+    <h2>${esc(t('backup'))}</h2>
+    <button class="btn block" data-do="export">💾 ${esc(t('exportJson'))}</button>
+    <button class="btn ghost block" data-do="import" style="margin-top:8px">📂 ${esc(t('importJson'))}</button>
+    <input type="file" accept="application/json,.json" hidden data-file>
+    <p class="tiny muted">${esc(HOST ? t('where') : t('whereBrowser'))}</p>`);
+  const setNum = (k, v) => { const def = STEPS.find(x => x[0] === k); const val = clamp(Math.round(Number(v) || def[2]), def[2], def[3]); s[k] = val; sh.querySelector(`[name="${k}"]`).value = val; applySettings(); };
+  sh.addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b) return;
+    if(b.dataset.step) setNum(b.dataset.step, s[b.dataset.step] + Number(b.dataset.d));
+    else if(b.dataset.do === 'export') exportBackup();
+    else if(b.dataset.do === 'import') sh.querySelector('[data-file]').click();
+  });
+  sh.addEventListener('change', e => {
+    const el = e.target;
+    if(el.type === 'checkbox'){ s[el.name] = el.checked; applySettings(); }
+    else if(el.type === 'number') setNum(el.name, el.value);
+    else if(el.matches('[data-file]')) importBackup(el);
+  });
+}
+/* New durations apply at once to an idle timer, to the next phases otherwise. */
+function applySettings(){
+  const tm = state.timer;
+  if(tm.status === 'idle'){ tm.dur = phaseMs(tm.phase); tm.remaining = tm.dur; }
+  save(); render(); syncReminders();
+}
+async function exportBackup(){
+  const name = 'focus-flow-' + dayKey(now()) + '.json';
+  const json = JSON.stringify({app:ID, v:SCHEMA, date:new Date().toISOString(), data:state}, null, 1);
+  if(HOST){ if(!has('import_export')){ toast(t('noExport')); return; } if(await HOST.saveFile(name, json, 'application/json')) toast(t('saved')); return; }
+  const url = URL.createObjectURL(new Blob([json], {type:'application/json'}));
+  const a = Object.assign(document.createElement('a'), {href:url, download:name}); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+async function importBackup(input){
+  const f = input.files && input.files[0]; input.value = ''; if(!f) return;
+  try{
+    const raw = JSON.parse(await f.text());
+    if(!raw || raw.app !== ID || !raw.data || typeof raw.data !== 'object' || !Array.isArray(raw.data.sessions)) throw new Error('format');
+    state = migrate(raw.data); loadFailed = false; flush(); closeAllSheets(); render(); syncReminders(); toast(t('restored'));
+  }catch(e){ alert(t('badFile')); }
+}
+
+/* ---------- overlays: standby (OLED) and challenge alarm ---------- */
+let oledShift = null;
+function renderOverlays(){
+  // standby
+  let o = $('#oled');
+  if(ui.oled){
+    const tm = state.timer, s = Player.station(), on = Player.st.status === 'playing' || Player.st.status === 'buffering';
+    if(!o){ o = document.createElement('div'); o.id = 'oled'; o.className = 'oled'; document.body.append(o);
+      oledShift = setInterval(() => { const b = $('#oled .box'); if(b) b.style.transform = `translate(${Math.round(Math.random() * 40 - 20)}px,${Math.round(Math.random() * 60 - 30)}px)`; }, 60000); }
+    o.innerHTML = `<button class="exit" data-act="oledExit" aria-label="✕">✕</button><div class="box">
+      <div class="phase-name">${esc(t(tm.phase))}</div><div class="clock" id="oledClock">${clock(tm.status === 'running' ? tm.endsAt - now() : tm.remaining)}</div>
+      <div class="sub">🍅 ${todayDone()} / ${state.settings.goal}${s ? ' · 📻 ' + esc(s.name) : ''}</div>
+      <div class="acts"><button data-act="go" aria-label="${esc(tm.status === 'running' ? t('pause') : t('start'))}">${tm.status === 'running' ? '⏸' : '▶'}</button>
+      ${s ? `<button data-act="radioToggle" aria-label="📻">${on ? '🔇' : '📻'}</button>` : ''}</div>
+      <div class="sub">${esc(t('oledHint'))}</div></div>`;
+  }else if(o){ o.remove(); clearInterval(oledShift); oledShift = null; }
+  // 5-second countdown before a challenge
+  let cd = $('#countdown'); const cc = countingDown();
+  if(cc){
+    const left = clamp(Math.ceil((cc.goAt - now()) / 1000), 1, 5);
+    if(!cd){ cd = document.createElement('div'); cd.id = 'countdown'; cd.className = 'countdown'; cd.setAttribute('role', 'alertdialog'); document.body.append(cd); }
+    if(cd.dataset.n !== left + ':' + cc.id){
+      cd.dataset.n = left + ':' + cc.id;
+      cd.innerHTML = `<div class="ready">${esc(t('getReady'))}</div><h3>${esc(cc.title)}</h3>
+        <div class="cd-ring" aria-live="assertive"><svg viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="45"/><circle class="fg" cx="50" cy="50" r="45"/></svg><div class="cd-num num">${left}</div></div>
+        <div class="tiny muted">${esc(dur(cc.dur / 60000))}</div>
+        <button class="btn ghost" data-act="cdCancel" data-id="${esc(cc.id)}" style="min-width:160px">${esc(t('cdCancel'))}</button>`;
+    }
+  }else if(cd) cd.remove();
+  // alarm
+  let a = $('#alarm'); const c = ui.alarmFor ? chal(ui.alarmFor) : null;
+  if(c && c.status === 'ended'){
+    if(!a){ a = document.createElement('div'); a.id = 'alarm'; a.className = 'alarm'; a.setAttribute('role', 'alertdialog'); document.body.append(a); }
+    a.innerHTML = `<div class="panel"><div class="bell">⏰</div><div class="tiny muted">${esc(t('timeUp'))}</div><h3>${esc(c.title)}</h3>
+      <p class="small muted">${esc(t('didIt'))}</p>
+      <div class="btns"><button class="btn good" data-act="chal" data-do="won" data-id="${c.id}">${esc(t('done'))}</button><button class="btn danger" data-act="chal" data-do="lost" data-id="${c.id}">${esc(t('notDone'))}</button></div>
+      <div class="btns"><button class="btn ghost" data-act="chal" data-do="plus5" data-id="${c.id}">${esc(t('plus5'))}</button>${alarmLoop ? `<button class="btn ghost" data-act="mute">🔕 ${esc(t('stopSound'))}</button>` : ''}</div></div>`;
+  }else{ if(a) a.remove(); if(ui.alarmFor && (!c || c.status !== 'ended')){ ui.alarmFor = null; stopAlarmSound(); } }
+}
+function dismissAlarm(){ if(ui.alarmFor){ ui.dismissed.add(ui.alarmFor); ui.alarmFor = null; stopAlarmSound(); render(); return true; } return false; }
+
+/* ---------- sheets (keyboard-safe, Back aware) ---------- */
+function openSheet(html){
+  const scrim = document.createElement('div'); scrim.className = 'scrim';
+  const sheet = document.createElement('div'); sheet.className = 'sheet'; sheet.setAttribute('role', 'dialog');
+  sheet.innerHTML = '<div class="grab"></div>' + html;
+  document.body.append(scrim, sheet); ui.sheets.push({scrim, sheet});
+  scrim.addEventListener('click', closeSheet);
+  // No automatic focus: let the user tap; then bring the field into view.
+  sheet.addEventListener('focusin', e => {
+    const f = e.target; if(!f.matches || !f.matches('input,select,textarea')) return;
+    setTimeout(() => { fitViewport(); f.scrollIntoView({block:'center', behavior:'smooth'}); }, 320);
+  });
+  return sheet;
+}
+function closeSheet(){
+  const e = ui.sheets.pop(); if(!e) return false;
+  if(document.activeElement && e.sheet.contains(document.activeElement)) document.activeElement.blur();
+  e.scrim.classList.add('closing'); e.sheet.classList.add('closing');
+  setTimeout(() => { e.scrim.remove(); e.sheet.remove(); }, 230);
+  return true;
+}
+function closeAllSheets(){ while(ui.sheets.length) closeSheet(); }
+function fitViewport(){
+  const root = document.documentElement.style, vv = window.visualViewport;
+  const visible = vv ? vv.height : window.innerHeight;
+  const kb = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+  root.setProperty('--vh', visible + 'px'); root.setProperty('--kb', kb + 'px');
+}
+if(window.visualViewport){ visualViewport.addEventListener('resize', fitViewport); visualViewport.addEventListener('scroll', fitViewport); }
+window.addEventListener('resize', fitViewport); fitViewport();
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const tab = e.target.closest('[data-tab]');
+  if(tab){ ui.tab = tab.dataset.tab; render(); window.scrollTo(0, 0); return; }
+  const b = e.target.closest('[data-act]'); if(!b || b.disabled) return;
+  const act = b.dataset.act;
+  switch(act){
+    case 'go': state.timer.status === 'running' ? pauseTimer() : startTimer(); break;
+    case 'reset': resetTimer(); break;
+    case 'skip': skipPhase(); break;
+    case 'phase': if(b.dataset.phase !== state.timer.phase && state.timer.status !== 'running'){ recordCut(now()); setPhase(b.dataset.phase); } break;
+    case 'useLabel': state.timer.label = b.dataset.label; changed(); break;
+    case 'settings': settingsSheet(); break;
+    case 'oled': ui.oled = true; renderOverlays(); break;
+    case 'oledExit': ui.oled = false; renderOverlays(); break;
+    case 'askNotif': askNotif(); break;
+    case 'range': ui.range = b.dataset.range === 'all' ? 'all' : Number(b.dataset.range); render(); break;
+    case 'delSession': if(confirm(t('delSession'))){ state.sessions = state.sessions.filter(s => s.id !== b.dataset.id); save(); render(); toast(t('deleted')); } break;
+    case 'newChal': chalSheet(); break;
+    case 'chal': chalAct(b.dataset.id, b.dataset.do); break;
+    case 'cdCancel': cancelCountdown(b.dataset.id); break;
+    case 'mute': stopAlarmSound(); renderOverlays(); break;
+    case 'toRadio': if(!e.target.closest('[data-act="radioToggle"]')){ ui.tab = 'radio'; render(); } break;
+    case 'radioToggle': Player.toggle(); break;
+    case 'radioStop': Player.stop(); break;
+    case 'radioTab': ui.radioTab = b.dataset.rt; ui.results = null; ui.searchErr = ''; ui.genre = '';
+      if(ui.radioTab === 'dz') searchRadio({countrycode:'DZ'}); else render(); break;
+    case 'genre': ui.genre = b.dataset.g; ui.query = ''; searchRadio({tag:b.dataset.g}); break;
+    case 'playStation': if(!e.target.closest('[data-act="fav"]')){ const s = findStation(b.dataset.id); if(s) Player.play(s); } break;
+    case 'fav': toggleFav(b.dataset.id); break;
+    case 'addStation': addStationSheet(); break;
+  }
+});
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  if(e.target.dataset.form === 'search'){ const q = $('#q').value.trim(); ui.query = q; ui.genre = ''; if(q) searchRadio({name:q}); }
+});
+document.addEventListener('input', e => {
+  if(e.target.id === 'label'){ state.timer.label = e.target.value.slice(0, 60); save(); }
+  if(e.target.id === 'vol') Player.setVolume(Number(e.target.value));
+});
+document.addEventListener('change', e => { if(e.target.id === 'label'){ rememberLabel(e.target.value); save(); } });
+document.addEventListener('error', e => {   // a station logo that does not load: show its letter
+  const img = e.target; if(img && img.tagName === 'IMG' && img.dataset.fallback != null){ const p = img.parentElement; img.remove(); if(p) p.textContent = img.dataset.fallback; }
+}, true);
+
+/* ---------- Back: alarm, sheet, standby, then the timer, then leave ---------- */
+function onBack(){
+  const cc = countingDown(); if(cc) return cancelCountdown(cc.id);
+  if(ui.alarmFor) return dismissAlarm();
+  if(ui.sheets.length){ closeSheet(); return true; }
+  if(ui.oled){ ui.oled = false; renderOverlays(); return true; }
+  if(ui.tab !== 'timer'){ ui.tab = 'timer'; render(); return true; }
+  return false;
+}
+if(HOST) HOST.onBack(onBack);
+
+/* ---------- the clock ---------- */
+function tick(){
+  const n = now();
+  const a = advance(n, !document.hidden), c = tickChallenges(n, !document.hidden);
+  countdownTick(n, !document.hidden);
+  if(a || c){ render(); syncReminders(); }
+  else live();
+}
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'hidden') flush();
+  else{ tick(); syncReminders(); }
+});
+window.addEventListener('pagehide', flush);
+
+/* ---------- start ---------- */
+(function start(){
+  const n = now();
+  advance(n, false); tickChallenges(n, false);
+  // Opened from a notification, or one tapped while open.
+  if(NOTIF && NOTIF.launch) onNotificationOpen(NOTIF.launch);
+  if(NOTIF) NOTIF.onOpen(onNotificationOpen);
+  // A challenge that ended while we were away asks for its verdict.
+  if(!ui.alarmFor){ const e = state.challenges.find(c => c.status === 'ended'); if(e) ui.alarmFor = e.id; }
+  if(MEDIA){ MEDIA.onChange(s => Player.apply(s)); MEDIA.state().then(s => Player.apply(s)).catch(() => {}); }
+  render();
+  syncReminders().then(() => { if(ui.notif === false) render(); });
+  setInterval(tick, 250);
+})();
+</script>
+</body>
+</html>
