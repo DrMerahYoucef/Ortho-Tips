@@ -95,6 +95,9 @@ dependencies {
   implementation(platform(libs.androidx.compose.bom))
   // implementation(libs.accompanist.permissions)
   implementation(libs.androidx.activity.compose)
+  // Background audio for extensions (OrthoTips.media, permission `background`).
+  implementation(libs.androidx.media3.exoplayer)
+  implementation(libs.androidx.media3.session)
   implementation(libs.androidx.camera.camera2)
   implementation(libs.androidx.camera.core)
   implementation(libs.androidx.camera.lifecycle)

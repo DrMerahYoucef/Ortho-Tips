@@ -1,5 +1,13 @@
 /*
- * Ortho Tips — extension host bridge (API version 4).
+ * Ortho Tips — extension host bridge (API version 5).
+ *
+ * Version 5 implements the reserved `background` permission:
+ * `OrthoTips.media` plays an audio stream in the app's Media3 service, so it
+ * keeps playing with the screen off and shows its controls in the notification
+ * panel and on the lock screen. The service is the single source of truth: its
+ * state is pushed back to the page (`media.onChange`) whatever changed it
+ * (the page, the notification, a Bluetooth headset). Notifications also accept
+ * `exact: true` (an exact alarm when Android allows it).
  *
  * Injected as the first script of every extension page, before any of the
  * page's own code. It turns the raw Android interface `OrthoTipsNative` into:
@@ -257,6 +265,7 @@
   // ---- theme, back, misc -----------------------------------------------------
   var themeListeners = [];
   var notificationListeners = [];
+  var mediaListeners = [];
   // Set when the app opened this extension because a notification was tapped.
   var launch = null;
   if (info.launch && info.launch.source === 'notification' && has('notifications')) {
@@ -269,7 +278,7 @@
   }
 
   var api = {
-    bridgeVersion: 4,
+    bridgeVersion: 5,
     extensionId: String(info.extensionId || ''),
     extensionVersion: String(info.extensionVersion || ''),
     appVersion: String(info.appVersion || ''),
@@ -350,7 +359,8 @@
           body: n.body == null ? '' : String(n.body),
           at: Number(n.at),
           repeatDays: Math.max(0, Math.floor(Number(n.repeatDays) || 0)),
-          data: n.data == null ? null : String(n.data)
+          data: n.data == null ? null : String(n.data),
+          exact: !!n.exact
         });
       },
       cancel: function (id) { return gated('notifications', 'notifications.cancel', { id: String(id) }); },
@@ -359,6 +369,25 @@
       onOpen: function (cb) {
         if (typeof cb === 'function' && has('notifications')) notificationListeners.push(cb);
       }
+    },
+    // Requires `background`: audio played by the app's media service — keeps
+    // playing with the screen off, with controls in the notification panel.
+    media: {
+      play: function (item) {
+        item = item || {};
+        return gated('background', 'media.play', {
+          id: String(item.id == null ? '' : item.id), url: String(item.url || ''),
+          title: String(item.title || ''), artist: item.artist == null ? '' : String(item.artist),
+          artworkUrl: item.artworkUrl == null ? '' : String(item.artworkUrl)
+        });
+      },
+      pause: function () { return gated('background', 'media.pause', {}); },
+      resume: function () { return gated('background', 'media.resume', {}); },
+      stop: function () { return gated('background', 'media.stop', {}); },
+      setVolume: function (v) { return gated('background', 'media.setVolume', { volume: Math.max(0, Math.min(1, Number(v) || 0)) }); },
+      // → { status: 'idle'|'buffering'|'playing'|'paused'|'error', item|null, error, volume }
+      state: function () { return gated('background', 'media.state', {}); },
+      onChange: function (cb) { if (typeof cb === 'function' && has('background')) mediaListeners.push(cb); }
     },
     // Requires `database`: read-only clinical reference data, never patients.
     database: {
@@ -387,6 +416,13 @@
       var ev = { id: String(id || ''), data: data == null ? null : String(data) };
       notificationListeners.forEach(function (cb) { try { cb(ev); } catch (e) { try { console.error(e); } catch (x) {} } });
       try { window.dispatchEvent(new CustomEvent('orthotips:notification', { detail: ev })); } catch (e) {}
+    },
+    // The media service's state changed (any controller: page, notification, headset).
+    __mediaChanged: function (state) {
+      var st = state;
+      if (typeof st === 'string') { try { st = JSON.parse(st); } catch (e) { return; } }
+      mediaListeners.forEach(function (cb) { try { cb(st); } catch (e) { try { console.error(e); } catch (x) {} } });
+      try { window.dispatchEvent(new CustomEvent('orthotips:media', { detail: st })); } catch (e) {}
     },
     __handleBack: function () {
       for (var i = backHandlers.length - 1; i >= 0; i--) {

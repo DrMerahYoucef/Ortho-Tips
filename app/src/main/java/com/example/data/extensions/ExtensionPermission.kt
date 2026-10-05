@@ -26,7 +26,8 @@ enum class ExtensionPermission(val key: String, val implemented: Boolean) {
     IMPORT_EXPORT("import_export", implemented = true),
     /** Reminders the app shows as notifications, even when it is closed. */
     NOTIFICATIONS("notifications", implemented = true),
-    BACKGROUND("background", implemented = false);
+    /** Audio played by the app's media service: screen off, controls in the notification panel. */
+    BACKGROUND("background", implemented = true);
 
     companion object {
         private val SEPARATORS = Regex("[\\s,;]+")

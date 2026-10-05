@@ -88,7 +88,7 @@
     <string name="ext_perm_assets">Lecture de ses propres fichiers intégrés</string>
     <string name="ext_perm_import_export">Import et export de fichiers</string>
     <string name="ext_perm_notifications">Notifications — rappels affichés même application fermée</string>
-    <string name="ext_perm_background">Exécution en arrière-plan (pas encore disponible)</string>
+    <string name="ext_perm_background">Lecture audio en arrière-plan — écran éteint, commandes dans le panneau de notifications</string>
 
     <string name="ext_error_unreadable">Impossible de lire ce fichier.</string>
     <string name="ext_error_not_a_package">Ce fichier n’est pas une extension .OTips.</string>

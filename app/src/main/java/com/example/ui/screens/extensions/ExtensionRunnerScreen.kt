@@ -454,6 +454,16 @@ fun ExtensionRunnerScreen(
                                     },
                                     onSettle = host::settle,
                                     onDenied = { host.log(ConsoleLine(isError = true, text = it)) },
+                                    media = if (state.extension.has(ExtensionPermission.BACKGROUND)) {
+                                        ExtensionMedia(context, state.extension.id) { json ->
+                                            val view = host.webView
+                                            view?.post {
+                                                view.evaluateJavascript("window.OrthoTips&&OrthoTips.__mediaChanged(" + JSONObject.quote(json) + ")", null)
+                                            }
+                                        }
+                                    } else {
+                                        null
+                                    },
                                     patients = if (state.extension.has(ExtensionPermission.PATIENTS)) {
                                         val records = (context.applicationContext as com.example.OrthoApplication).appModule.extensionPatients
                                         object : ExtensionPatientAccess {

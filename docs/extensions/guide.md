@@ -116,7 +116,7 @@ permissions.
 | `assets` | `OrthoTips.assets.read(path)` (section 5) — read-only access to extra files bundled alongside the extension. | Only meaningful for multi-file extension packages; a single `.html` file has nothing to read here. |
 | `import_export` | `OrthoTips.saveFile(...)` and the `<input type="file">` flow: file picker, or the camera for `capture` inputs (section 5). | Previously always available to every extension; now explicit like everything else. |
 | `notifications` | `OrthoTips.notifications.*`: reminders the app shows as Android notifications, even when Ortho Tips is closed (section 5). | Android asks the user the first time (Android 13+). Reminders survive reboots and are removed with the extension. |
-| `background` *(reserved)* | Running work while the extension isn't in the foreground. | Not implemented yet, same as above. |
+| `background` | `OrthoTips.media.*`: audio played by the app's media service — keeps playing with the screen off, controls in the notification panel and on the lock screen (section 5). | Import review: « Lecture audio en arrière-plan ». Streams must be `http(s)` URLs. |
 
 Adding a capability later should mean adding one row here and one value to the
 permission enum (section 14) — nothing else about this system should need to change.
@@ -171,9 +171,9 @@ The host must check permissions on every gated call, not just at import:
   capabilities. This is also what makes every extension written before this
   section fully backward compatible.
 - **Explicit, per-capability declaration** — no "allow everything" option.
-- **Future-proof**: unknown/reserved values (`background`) can
-  be declared now and simply do nothing until implemented, instead of needing a
-  manifest-format change later.
+- **Future-proof**: unknown values are ignored, so a manifest written for a
+  newer app still installs on an older one (the missing feature is simply
+  absent: feature-detect it).
 - When writing a new extension, only request what it actually calls — it keeps
   the Extension Details screen an accurate, quick record of what each program
   can reach.
@@ -194,7 +194,7 @@ const HOST = window.OrthoTips || null;   // always feature-detect
 
 | Property | Type | Notes |
 |---|---|---|
-| `bridgeVersion` | number | `4` for this guide (`2` added the permission system, `3` notifications, `4` patients). |
+| `bridgeVersion` | number | `5` for this guide (`2` added the permission system, `3` notifications, `4` patients, `5` background audio and exact reminders). |
 | `extensionId` | string | The `ortho-ext-id` of this file. |
 | `extensionVersion` | string | The installed version. |
 | `appVersion` | string | Ortho Tips version name. |
@@ -303,6 +303,43 @@ for (const img of images) await P.addMedia(id, { data: img.blob, mimeType: img.t
 Show the user what will be written **before** writing it (a review screen), and
 say which records were created or updated afterwards.
 
+### Background audio — requires `background`
+
+Audio played by the **app's media service** (Media3), not by the page: it keeps
+playing with the screen off and when the extension is closed, and shows its
+controls in the notification panel, on the lock screen and on Bluetooth
+headsets. The service is the single source of truth: whoever pauses (the page,
+the notification, a headset), the page is told through `onChange`.
+
+| Call | Result |
+|---|---|
+| `media.play({ id, url, title, artist, artworkUrl })` | state; `url` must be `http://` or `https://` (else `Invalid stream URL`) |
+| `media.pause()` / `media.resume()` / `media.stop()` | state |
+| `media.setVolume(0..1)` | state |
+| `media.state()` | state |
+| `media.onChange(cb)` | `cb(state)` on every change, whatever made it |
+
+State: `{ status: 'idle'|'buffering'|'playing'|'paused'|'error', item: { id, url, title, artist, artworkUrl } | null, error, volume }`.
+
+- An extension only sees and controls **its own** item: another extension's
+  stream reads as `idle`.
+- `artworkUrl` must be `https://` (otherwise no artwork).
+- Calls, Bluetooth and unplugged headphones are handled by the service (pause on
+  a call, pause when headphones are unplugged).
+- Deleting the extension, clearing its data or an update without `background`
+  stops its stream.
+- Feature-detect: `window.OrthoTips && OrthoTips.media` (bridge ≥ 5). On older
+  apps, fall back to an `<audio>` element (which stops with the screen off).
+
+```js
+const M = window.OrthoTips && OrthoTips.media;
+if (M) {
+  M.onChange(render);               // the notification or a headset can change it too
+  render(await M.state());          // reopening the extension: the radio may still be playing
+  playButton.onclick = () => M.play({ id: 'fip', url: 'https://…/stream.mp3', title: 'FIP', artist: 'Radio' });
+}
+```
+
 ### Notifications — requires `notifications`
 
 Reminders scheduled by the extension and **shown by the app**, even when Ortho
@@ -315,7 +352,7 @@ sees, replaces and cancels **its own** reminders.
 OrthoTips.notifications.status()        // → { available: true, granted }  (granted: the app may notify)
 OrthoTips.notifications.requestAccess() // → { available, granted }  Android 13+: the system dialog,
                                         //   or its settings screen once it will not ask again
-OrthoTips.notifications.schedule({ id, title, body, at, repeatDays, data })  // → { id, at }
+OrthoTips.notifications.schedule({ id, title, body, at, repeatDays, data, exact })  // → { id, at }
 OrthoTips.notifications.cancel(id)      // → true if it existed
 OrthoTips.notifications.cancelAll()     // → how many were cancelled
 OrthoTips.notifications.list()          // → [{ id, title, body, at, repeatDays, data }] sorted by at
@@ -328,6 +365,10 @@ OrthoTips.notifications.launch          // { id, data } if this opening came fro
   max 1000, given back on tap. Title and body are **plain text**, never HTML.
 - `at` is epoch **milliseconds**. In the past, it is shown within about a minute.
   Delivery is accurate to a few minutes (the phone's battery saver decides).
+- `exact: true` (bridge v5) asks for an **exact** alarm (timers, alarms). Android
+  12+ only allows it once the user enables « Alarmes et rappels » for Ortho Tips
+  (off by default on Android 14+); `status().exact` says whether it is allowed.
+  Without it the reminder is delivered as usual, a few minutes late at worst.
 - `repeatDays`: 0 = once; N = again every N days at the **same local time**
   (09:00 stays 09:00 across daylight-saving changes; after the phone was off,
   it fires once, then continues).
@@ -857,7 +898,8 @@ render();
 | `data/extensions/ExtensionRepository.kt` | Inspect, install (atomic, verified), update, delete, export, HTML → `.OTips`, legacy migration. Layout: `filesDir/extensions/<id>/{install.json,content/,files/}`. |
 | `data/extensions/*ExtensionHandler*`, `OperativeGuideExtension.kt`, `ClassificationsExtension.kt` | Kind-specific validation and activation. |
 | `OperativeGuideMigration` (in `OperativeGuideExtension.kt`) | For updates only: guide data already on the phone gets its extension installed silently. Nothing is ever installed automatically on a new installation; bundled extensions are installed by the user from the import screen. |
-| `ui/screens/extensions/ExtensionBridge.kt` + `assets/extension_host/ortho-bridge.js` | `window.OrthoTips` (bridge v3); permissions enforced on every call. |
+| `ui/screens/extensions/ExtensionBridge.kt` + `assets/extension_host/ortho-bridge.js` | `window.OrthoTips` (bridge v5); permissions enforced on every call. |
+| `data/extensions/media/ExtensionMediaService.kt` + `ui/screens/extensions/ExtensionMedia.kt` | `OrthoTips.media`: the Media3 service (screen off, notification, lock screen, headsets) and the per-extension controller that pushes its state to the page. |
 | `data/extensions/ExtensionPatients.kt` + `ExtensionPatientRules.kt` | `OrthoTips.patients`: field whitelist and validation, records and media written through `PatientRepository` (never deleted). |
 | `data/reminders/*` + `ui/screens/extensions/ExtensionNotificationRouter.kt` | `OrthoTips.notifications`: rules and storage (`ReminderRules`, `ExtensionReminderStore`), alarms and notifications (`ExtensionReminders`), boot/alarm receivers, taps routed to `onOpen` / `launch`. |
 | `ui/screens/extensions/ExtensionImportScreen.kt` | Bundled / updates / external / installed, and the import-time review (4.3). |

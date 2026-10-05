@@ -97,4 +97,18 @@ class ReminderRulesTest {
         assertEquals(63, store.removeAll("mes-plantes").size)
         assertEquals(listOf("autre"), store.all().map { it.extensionId })
     }
+
+    @Test
+    fun exactFlagIsKeptAndOptional() {
+        val file = Files.createTempDirectory("rem").resolve("r.json").toFile()
+        val store = ExtensionReminderStore(file)
+        store.put(StoredReminder("focus-flow", "timer", "Fin du défi", "", 1000L, 0, null, 0, 1000L, exact = true))
+        store.put(StoredReminder("focus-flow", "daily", "Pomodoro", "", 2000L, 1, null, 0, 2000L))
+        assertTrue(ExtensionReminderStore(file).get("focus-flow", "timer")!!.exact)          // kept across a restart
+        assertEquals(false, store.get("focus-flow", "daily")!!.exact)                          // default: inexact
+        assertTrue(store.get("focus-flow", "timer")!!.toPublicJson().getBoolean("exact"))
+        // A reminder saved by an older version (no "exact" key) reads as inexact.
+        file.writeText("""{"version":1,"reminders":[{"extensionId":"x","id":"a","title":"T","body":"","nextAt":5,"repeatDays":0,"data":null,"createdAt":0,"anchorAt":5}]}""")
+        assertEquals(false, ExtensionReminderStore(file).get("x", "a")!!.exact)
+    }
 }
