@@ -16,6 +16,11 @@
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Extension audio (OrthoTips.media): plays with the screen off. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Extension reminders asked as exact (allowed by the user under « Alarmes et rappels »). -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission
@@ -58,6 +63,7 @@
 
 
     <application
+        android:usesCleartextTraffic="true"
         android:localeConfig="@xml/locales_config"
         android:name=".OrthoApplication"
         android:allowBackup="true"
@@ -117,6 +123,17 @@
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>
         </receiver>
+
+        <!-- Extension audio (OrthoTips.media, permission `background`), controlled from the
+             extension, the notification panel, the lock screen and headsets. -->
+        <service
+            android:name=".data.extensions.media.ExtensionMediaService"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaSessionService" />
+            </intent-filter>
+        </service>
 
         <!-- Extension reminders (OrthoTips.notifications): one alarm per reminder… -->
         <receiver

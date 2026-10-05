@@ -90,6 +90,9 @@ class AppModule(private val context: Context) {
             // Deleted, data cleared, or updated without `notifications`: its reminders go.
             onExtensionEvent = { id, granted ->
                 if (granted == null || ExtensionPermission.NOTIFICATIONS !in granted) extensionReminders.cancelAll(id)
+                if (granted == null || ExtensionPermission.BACKGROUND !in granted) {
+                    com.example.ui.screens.extensions.ExtensionMedia.stopFor(context, id)
+                }
             },
             onExtensionsChanged = { list ->
                 bankSmsInbox.setConsumers(list.filter { it.has(ExtensionPermission.SMS) }.map { it.id })

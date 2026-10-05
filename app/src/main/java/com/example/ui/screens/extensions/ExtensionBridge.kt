@@ -54,13 +54,17 @@ internal class ExtensionBridge(
     /** Shows Android's notification permission dialog (or settings); the answer settles [requestId]. */
     private val onRequestNotificationAccess: (requestId: String) -> Unit = {},
     /** Patient records; null when the extension does not hold `patients`. */
-    private val patients: ExtensionPatientAccess? = null
+    private val patients: ExtensionPatientAccess? = null,
+    /** Audio in the app's media service; null when the extension does not hold `background`. */
+    private val media: ExtensionMediaAccess? = null
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val worker: ExecutorService = Executors.newSingleThreadExecutor()
 
     fun dispose() {
         worker.shutdownNow()
+        // The page goes away: its controller goes, the media service keeps playing.
+        media?.release()
     }
 
     @JavascriptInterface
@@ -133,6 +137,14 @@ internal class ExtensionBridge(
         if (name == "sms.requestAccess") {
             // A system dialog: must be launched from the UI, answered later.
             main.post { onRequestSmsAccess(id) }
+            return
+        }
+        if (name.startsWith("media.")) {
+            // Media3 controllers live on the main thread and answer asynchronously.
+            val access = media ?: run { settle(id, false, "Media is unavailable"); return }
+            val args = runCatching { if (argsJson.isNullOrBlank()) JSONObject() else JSONObject(argsJson) }
+                .getOrElse { settle(id, false, "Invalid arguments"); return }
+            main.post { access.call(name, args) { ok, value -> settle(id, ok, value) } }
             return
         }
         if (name == "notifications.requestAccess") {
@@ -225,7 +237,7 @@ internal class ExtensionBridge(
 
     companion object {
         /** Bridge API version exposed as `OrthoTips.bridgeVersion`. */
-        const val BRIDGE_VERSION = 4
+        const val BRIDGE_VERSION = 5
 
         /** Method → permission it needs. Anything absent is refused. */
         private val REQUIRED = mapOf(
@@ -235,6 +247,12 @@ internal class ExtensionBridge(
             "files.delete" to ExtensionPermission.STORAGE,
             "assets.read" to ExtensionPermission.ASSETS,
             "database.query" to ExtensionPermission.DATABASE,
+            "media.play" to ExtensionPermission.BACKGROUND,
+            "media.pause" to ExtensionPermission.BACKGROUND,
+            "media.resume" to ExtensionPermission.BACKGROUND,
+            "media.stop" to ExtensionPermission.BACKGROUND,
+            "media.setVolume" to ExtensionPermission.BACKGROUND,
+            "media.state" to ExtensionPermission.BACKGROUND,
             "patients.search" to ExtensionPermission.PATIENTS,
             "patients.get" to ExtensionPermission.PATIENTS,
             "patients.getByCode" to ExtensionPermission.PATIENTS,
@@ -277,6 +295,13 @@ internal interface ExtensionNotificationAccess {
     fun cancel(id: String): Boolean
     fun cancelAll(): Int
     fun list(): JSONArray
+}
+
+/** What the bridge needs for `OrthoTips.media` (permission `background`): answers on the main thread. */
+internal interface ExtensionMediaAccess {
+    /** [done] gets the state JSON, or an error message. */
+    fun call(method: String, args: JSONObject, done: (Boolean, String) -> Unit)
+    fun release()
 }
 
 /** What the bridge needs for `OrthoTips.patients`: read, create, update, add media — never delete. */

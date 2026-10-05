@@ -94,7 +94,7 @@
     <string name="ext_perm_import_export">Importing and exporting files</string>
     <string name="ext_perm_sms">Reading bank SMS: debits, credits and balances (never codes)</string>
     <string name="ext_perm_notifications">Notifications — reminders shown even when the app is closed</string>
-    <string name="ext_perm_background">Running in the background (not available yet)</string>
+    <string name="ext_perm_background">Background audio — keeps playing with the screen off, controls in the notification panel</string>
 
     <string name="ext_error_unreadable">This file could not be read.</string>
     <string name="ext_error_not_a_package">This file is not an .OTips extension.</string>

@@ -46,6 +46,11 @@ class ExtensionReminders(
 
     /** `{ available: true, granted }`: granted = the user lets the app notify and the channel is not blocked. */
     fun status(): JSONObject = JSONObject().put("available", true).put("granted", notificationsEnabled())
+        .put("exact", canScheduleExact())
+
+    /** Exact alarms: always below Android 12; from 12 on, only once the user allows « Alarmes et rappels ». */
+    fun canScheduleExact(): Boolean = Build.VERSION.SDK_INT < 31 ||
+        app.getSystemService(AlarmManager::class.java)?.canScheduleExactAlarms() == true
 
     fun notificationsEnabled(): Boolean {
         val manager = NotificationManagerCompat.from(app)
@@ -80,7 +85,8 @@ class ExtensionReminders(
             repeatDays = request.repeatDays,
             data = request.data,
             createdAt = previous?.createdAt ?: System.currentTimeMillis(),
-            anchorAt = request.at
+            anchorAt = request.at,
+            exact = args.optBoolean("exact", false)
         )
         store.put(row)   // throws "Too many notifications (max 64)" before anything is armed
         arm(row)
@@ -149,7 +155,16 @@ class ExtensionReminders(
 
     private fun arm(row: StoredReminder) {
         val manager = app.getSystemService(AlarmManager::class.java) ?: return
-        manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, row.nextAt, alarmIntent(row.extensionId, row.id))
+        val intent = alarmIntent(row.extensionId, row.id)
+        if (row.exact && canScheduleExact()) {
+            try {
+                manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, row.nextAt, intent)
+                return
+            } catch (e: SecurityException) {
+                Log.w(TAG, "Exact alarm refused, using an inexact one", e)
+            }
+        }
+        manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, row.nextAt, intent)
     }
 
     private fun disarm(extensionId: String, id: String) {

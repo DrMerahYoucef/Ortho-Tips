@@ -14,17 +14,19 @@ data class StoredReminder(
     val repeatDays: Int,
     val data: String?,
     val createdAt: Long,
-    val anchorAt: Long
+    val anchorAt: Long,
+    /** Asked as exact (bridge v5): an exact alarm when Android allows it. */
+    val exact: Boolean = false
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put("extensionId", extensionId).put("id", id).put("title", title).put("body", body)
         .put("nextAt", nextAt).put("repeatDays", repeatDays).put("data", data ?: JSONObject.NULL)
-        .put("createdAt", createdAt).put("anchorAt", anchorAt)
+        .put("createdAt", createdAt).put("anchorAt", anchorAt).put("exact", exact)
 
     /** What `OrthoTips.notifications.list()` returns for it. */
     fun toPublicJson(): JSONObject = JSONObject()
         .put("id", id).put("title", title).put("body", body).put("at", nextAt)
-        .put("repeatDays", repeatDays).put("data", data ?: JSONObject.NULL)
+        .put("repeatDays", repeatDays).put("data", data ?: JSONObject.NULL).put("exact", exact)
 
     companion object {
         fun fromJson(o: JSONObject) = StoredReminder(
@@ -36,7 +38,8 @@ data class StoredReminder(
             repeatDays = o.optInt("repeatDays", 0),
             data = if (o.isNull("data")) null else o.optString("data"),
             createdAt = o.optLong("createdAt", 0L),
-            anchorAt = o.optLong("anchorAt", o.getLong("nextAt"))
+            anchorAt = o.optLong("anchorAt", o.getLong("nextAt")),
+            exact = o.optBoolean("exact", false)
         )
     }
 }
