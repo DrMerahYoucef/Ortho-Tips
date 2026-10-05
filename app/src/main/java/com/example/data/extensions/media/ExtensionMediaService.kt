@@ -2,9 +2,15 @@ package com.example.data.extensions.media
 
 import android.app.PendingIntent
 import android.content.Intent
+import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import com.example.BuildConfig
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 
@@ -17,13 +23,23 @@ import androidx.media3.session.MediaSessionService
  * and keeps the service in the foreground while it plays, so playback goes on
  * with the screen off.
  */
+@OptIn(UnstableApi::class) // Media3's HTTP data source and builder options.
 class ExtensionMediaService : MediaSessionService() {
 
     private var session: MediaSession? = null
 
     override fun onCreate() {
         super.onCreate()
+        // Many radio servers redirect their old http:// address to https://.
+        // HttpURLConnection never follows that by itself, so ExoPlayer would get
+        // the 301/302 and fail with ERROR_CODE_IO_BAD_HTTP_STATUS.
+        val http = DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+            .setUserAgent("OrthoTips/${BuildConfig.VERSION_NAME} (Android) ExoPlayer")
+            .setConnectTimeoutMs(15_000)
+            .setReadTimeoutMs(20_000)
         val player = ExoPlayer.Builder(this)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(this, http)))
             .setAudioAttributes(
                 AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(),
                 /* handleAudioFocus = */ true          // pauses for calls, lowers for other apps

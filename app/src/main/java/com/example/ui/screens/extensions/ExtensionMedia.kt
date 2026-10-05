@@ -6,10 +6,14 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.example.data.extensions.media.ExtensionMediaService
@@ -23,6 +27,7 @@ import org.json.JSONObject
  * Every change, whoever made it, is pushed to the page through [push].
  * Must be used on the main thread (Media3 requirement).
  */
+@OptIn(UnstableApi::class) // PlaybackException details and the HTTP status of a failed stream.
 internal class ExtensionMedia(
     private val context: Context,
     private val extensionId: String,
@@ -71,7 +76,7 @@ internal class ExtensionMedia(
         }
         return JSONObject()
             .put("status", status)
-            .put("error", if (item != null) c.playerError?.errorCodeName.orEmpty() else "")
+            .put("error", if (item != null) errorText(c.playerError) else "")
             .put("volume", c.volume.toDouble())
             .put("item", item?.let {
                 JSONObject().put("id", it.mediaId.removePrefix(prefix))
@@ -80,6 +85,20 @@ internal class ExtensionMedia(
                     .put("artist", it.mediaMetadata.artist?.toString().orEmpty())
                     .put("artworkUrl", it.mediaMetadata.artworkUri?.toString().orEmpty())
             } ?: JSONObject.NULL)
+    }
+
+    /**
+     * "ERROR_CODE_IO_BAD_HTTP_STATUS (403)": the error name plus the HTTP status
+     * when the server answered one, so the page can tell blocked (403) from
+     * dead (404). Across the controller's Binder link Media3 only keeps the
+     * cause's message ("Response code: 403"), hence the fallback on the text.
+     */
+    private fun errorText(error: PlaybackException?): String {
+        if (error == null) return ""
+        val cause = error.cause
+        val code = (cause as? HttpDataSource.InvalidResponseCodeException)?.responseCode
+            ?: cause?.message?.let { RESPONSE_CODE.find(it)?.groupValues?.get(1)?.toIntOrNull() }
+        return error.errorCodeName + (code?.let { " ($it)" } ?: "")
     }
 
     /** `media.play` …; [done] settles the page's promise with the state JSON, or an error message. */
@@ -130,6 +149,8 @@ internal class ExtensionMedia(
     }
 
     companion object {
+        private val RESPONSE_CODE = Regex("Response code: (\\d{3})")
+
         /**
          * Stops [extensionId]'s stream (deleted, data cleared, or updated
          * without `background`). Safe from any thread.
