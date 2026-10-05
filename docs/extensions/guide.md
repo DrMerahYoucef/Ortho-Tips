@@ -323,6 +323,11 @@ State: `{ status: 'idle'|'buffering'|'playing'|'paused'|'error', item: { id, url
 
 - An extension only sees and controls **its own** item: another extension's
   stream reads as `idle`.
+- `error` names the failure, with the HTTP status when the server answered one:
+  `ERROR_CODE_IO_BAD_HTTP_STATUS (403)` (blocked), `… (404)` (dead stream),
+  `ERROR_CODE_IO_NETWORK_CONNECTION_FAILED` (no connection). The service
+  follows `http` ↔ `https` redirects, so a station that moved to `https` plays
+  from its old address.
 - `artworkUrl` must be `https://` (otherwise no artwork).
 - Calls, Bluetooth and unplugged headphones are handled by the service (pause on
   a call, pause when headphones are unplugged).
