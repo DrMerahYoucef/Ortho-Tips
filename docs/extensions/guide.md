@@ -29,7 +29,7 @@ Where it runs:
 | | |
 |---|---|
 | Engine | Android System WebView (Chromium, recent). Modern JS (ES2020+) and CSS are fine. |
-| Screen | A phone in portrait, about **360–430 px wide**, under the app's top bar. |
+| Screen | A phone in portrait, about **360–430 px wide**, **full screen** below the status bar. The app only draws a small round back button over the **top-left corner** (keep about 56 × 56 px there free). |
 | Network | **Blocked unless the extension declares and is granted the `internet` permission** (section 4). Without it the file must work fully offline. |
 | Local database | **Blocked unless the extension declares and is granted the `database` permission** (section 4). |
 | Origin | Its own private origin, `https://<id>.ext.orthotips.invalid/`. |
@@ -84,7 +84,7 @@ quotes, and do not put `>` inside a `content` value.
 | Name | Required | Meaning |
 |---|---|---|
 | `ortho-ext-id` | **yes** | Permanent identity: lowercase letters, digits and `-`, 48 characters maximum. **Never change it** in later versions. Installing an `.OTips` package whose id is already installed **replaces** the program and **keeps its data**; that is how updates work. |
-| `ortho-ext-name` | **yes** | Name shown in the list and the top bar. Short, about 30 characters. |
+| `ortho-ext-name` | **yes** | Name shown in the Extensions grid and the import screen. Short, about 30 characters. |
 | `ortho-ext-description` | recommended | One sentence, shown under the name (2 lines maximum). |
 | `ortho-ext-version` | recommended | Free text such as `1.0` or `2.3`. Raise it for every new version. |
 | `ortho-ext-icon` | recommended | **One emoji**. The default is 🧩. |
@@ -163,7 +163,7 @@ The host must check permissions on every gated call, not just at import:
   synchronously or crash the WebView.
 - Network access without `internet` should behave like it does today — requests
   simply fail (offline-style), not a crash.
-- Denied calls should still be visible in the extension's **⋮ → Console** so a
+- Denied calls should still be visible in the extension's console (**long press on the back button → Console**) so a
   missing permission is easy to diagnose while writing an extension.
 
 ### 4.5 Security & best practices
@@ -530,7 +530,7 @@ OrthoTips.onBack(() => {
 ```
 
 Return `true` only when you actually handled it, otherwise the user cannot leave.
-The arrow in the app's top bar always closes the extension.
+The app's round back button (top-left corner) always closes the extension; its long press opens Reload and Console.
 
 ### Other
 
@@ -617,9 +617,11 @@ in-page UI or `toast` for non-blocking messages.
   or shadow, and 16 px page padding.
 - System font stack: `system-ui, Roboto, sans-serif`. Monospace:
   `ui-monospace, "Roboto Mono", monospace`.
-- Do not add a big header with the extension's name: the app's top bar already
-  shows the icon and name. Start with the content.
-- Keep a sticky toolbar, if any, compact: it sits under the app bar.
+- The extension is **full screen**: no app bar shows its name. A compact title
+  is fine when it helps, but keep the **top-left 56 × 56 px clear** for the app's
+  back button (e.g. `padding-left: 56px` on the first header row).
+- Keep a sticky toolbar, if any, compact: it sits at the very top of the screen,
+  so leave its top-left corner to the app's back button.
 - Suggested palette (adjust freely), light / dark:
   background `#f6f7f9` / `#121417`, surface `#ffffff` / `#1d2025`,
   text `#1b1d22` / `#e6e9ee`, secondary text `#5f6b76` / `#a3adb8`,
@@ -689,8 +691,9 @@ This is what was done to `programme-dems.html`:
 3. Export a backup, change something, restore the backup, and confirm the change is undone.
 4. Watch the DevTools console: there must be **no errors**.
 5. In the app: package it as `.OTips`, install it, open it, switch the app theme,
-   press Back from a secondary view, then use **⋮ → Console** in the extension's
-   top bar to see any JavaScript errors from the phone.
+   press Back from a secondary view, then **long-press the round back button →
+   Console** to see any JavaScript errors from the phone (a red dot on the
+   button means there are some). Check nothing important hides under the button.
    **Also in the app, not only in a browser:** open **every** sheet and dialog, tap
    each field so the keyboard opens, and check nothing is cut off or hidden
    under the keyboard (section 6, point 8). Chrome does not reproduce this.
@@ -709,12 +712,12 @@ This is what was done to `programme-dems.html`:
 | « Ce fichier n’est pas une extension .OTips » | You picked the `.html`; package it first (section 1). |
 | « Cette extension est endommagée ou a été modifiée » | The file was altered, truncated or corrupted in transfer. Export or package it again. |
 | « … créé par une ancienne version de test » | An unencrypted package from a pre-release build. Export it again from the app. |
-| Blank page | A JavaScript error at load: check ⋮ → Console. Often a remote script that could not load. |
+| Blank page | A JavaScript error at load: long-press the back button → Console. Often a remote script that could not load. |
 | Fonts or icons missing | They were loaded from the internet. Inline them or use system fonts / inline SVG. |
 | Data gone after an update | The id changed, or `migrate()` discarded the old shape. |
 | Export does nothing | The file picker was cancelled (`saveFile` resolved `false`), or `import_export` isn't in `ortho-ext-permissions`. |
 | Theme does not follow the app | The code did not use `OrthoTips.theme` / `onThemeChange`, or the page hard-codes colors instead of CSS variables. |
-| A gated call silently rejects | The needed permission isn't listed in `ortho-ext-permissions` — check with `OrthoTips.permissions.has(...)` and the console (⋮ → Console). |
+| A gated call silently rejects | The needed permission isn't listed in `ortho-ext-permissions` — check with `OrthoTips.permissions.has(...)` and the console (long press on the back button → Console). |
 | A bottom sheet or dialog opens cut off, only a field visible at the bottom (fine in Chrome) | A field is focused automatically on opening, or the panel is sized in `vh` / shown by a `requestAnimationFrame` transition. Apply section 6, point 8. |
 | Import summary lists more than expected | A later version's `ortho-ext-permissions` grew — compare it against what the code actually calls. |
 

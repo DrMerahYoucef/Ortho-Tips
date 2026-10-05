@@ -1,5 +1,16 @@
 package com.example.ui.screens.extensions
 
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.runtime.saveable.rememberSaveable
 import java.io.File
 import androidx.compose.runtime.DisposableEffect
@@ -39,7 +50,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -51,8 +61,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -341,61 +349,12 @@ fun ExtensionRunnerScreen(
         }
     }
 
-    var menuOpen by remember { mutableStateOf(false) }
     var consoleOpen by remember { mutableStateOf(false) }
     val ready = content as? RunnerContent.Ready
 
+    // Full screen: no app bar, only a small floating back button over the page
+    // (long press: Reload, Console). The page starts below the status bar.
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = ready?.extension?.let { "${it.icon}  ${it.manifest.label()}" }.orEmpty(),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.ext_back))
-                    }
-                },
-                actions = {
-                    if (ready != null) {
-                        IconButton(onClick = { menuOpen = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.ext_more))
-                        }
-                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.ext_reload)) },
-                                onClick = {
-                                    menuOpen = false
-                                    host.console.clear()
-                                    host.webView?.loadDataWithBaseURL(
-                                        ExtensionRepository.baseUrl(ready.extension.id),
-                                        ready.page, "text/html", "UTF-8", null
-                                    )
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    val errors = host.console.count { it.isError }
-                                    Text(
-                                        if (errors > 0) stringResource(R.string.ext_console_errors, errors)
-                                        else stringResource(R.string.ext_console)
-                                    )
-                                },
-                                onClick = {
-                                    menuOpen = false
-                                    consoleOpen = true
-                                }
-                            )
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
-            )
-        },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(
@@ -405,6 +364,22 @@ fun ExtensionRunnerScreen(
                 .consumeWindowInsets(padding)
                 .imePadding()
         ) {
+            ExtensionBackButton(
+                errorCount = host.console.count { it.isError },
+                menuEnabled = ready != null,
+                onBack = onNavigateBack,
+                onReload = {
+                    ready?.let { r ->
+                        host.console.clear()
+                        host.webView?.loadDataWithBaseURL(ExtensionRepository.baseUrl(r.extension.id), r.page, "text/html", "UTF-8", null)
+                    }
+                },
+                onConsole = { consoleOpen = true },
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(8.dp)
+                    .zIndex(1f)
+            )
             when (val state = content) {
                 RunnerContent.Loading ->
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -725,4 +700,77 @@ private fun Context.findActivity(): android.app.Activity? {
         c = c.baseContext
     }
     return null
+}
+
+/**
+ * The only control the app draws over a full-screen extension: a small round
+ * back button in the top-left corner (40 dp, 8 dp from the edges; the guide asks
+ * extensions to keep that corner clear). Tap: leave the extension. Long press:
+ * Reload and Console. A red dot means the console has errors.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ExtensionBackButton(
+    errorCount: Int,
+    menuEnabled: Boolean,
+    onBack: () -> Unit,
+    onReload: () -> Unit,
+    onConsole: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    val haptics = LocalHapticFeedback.current
+    Box(modifier = modifier) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(40.dp)
+                .shadow(3.dp, CircleShape)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.85f))
+                .combinedClickable(
+                    onClick = onBack,
+                    onClickLabel = stringResource(R.string.ext_back),
+                    onLongClick = {
+                        if (menuEnabled) {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            menuOpen = true
+                        }
+                    },
+                    onLongClickLabel = stringResource(R.string.ext_more)
+                )
+                .testTag("extension_back")
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.ext_back),
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+        if (errorCount > 0) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.error)
+            )
+        }
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.ext_reload)) },
+                onClick = { menuOpen = false; onReload() }
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (errorCount > 0) stringResource(R.string.ext_console_errors, errorCount)
+                        else stringResource(R.string.ext_console)
+                    )
+                },
+                onClick = { menuOpen = false; onConsole() }
+            )
+        }
+    }
 }
