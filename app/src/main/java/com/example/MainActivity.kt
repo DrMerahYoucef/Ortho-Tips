@@ -848,7 +848,8 @@ fun OrthoAppNavHost(appModule: AppModule) {
                 repository = appModule.extensionRepository,
                 databaseAccess = appModule.extensionDatabaseAccess,
                 extensionId = extensionId,
-                onNavigateBack = { navController.popFrom(entry) }
+                onNavigateBack = { navController.popFrom(entry) },
+                onOpenGeminiSettings = { navController.navigateFrom(entry, OrthoDestinations.GEMINI_SETTINGS) }
             )
         }
 

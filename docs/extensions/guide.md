@@ -112,6 +112,7 @@ permissions.
 | `internet` | `fetch`, `XMLHttpRequest`, `WebSocket`, and loading remote images/fonts at runtime. | Does **not** relax rule 4 in section 2 — the file itself must still ship complete and inline. This is about what the *running* page may reach out to, e.g. calling a public API for reference data. |
 | `database` | `OrthoTips.database.*` (section 5) — read access to Ortho Tips' local clinical reference data (bones, regions, chapters, figures — see the `clinical-bones-app` data model). | Patient records stay out of scope regardless of this permission; extensions are study/reference tools (section 8). |
 | `patients` | `OrthoTips.patients.*`: search, read, **create and update** patient records and add their photos/videos (section 5). Never delete. | **Sensitive data.** The import review says so. Combined with `internet`, the extension can send records off the phone: only install extensions you trust. |
+| `gemini` | `OrthoTips.gemini.*`: Gemini through **the app's key** (Réglages → Gemini), without asking the user for another key (section 5). | The key never reaches the extension; the app's model choice and fallbacks apply. |
 | `storage` | `OrthoTips.files.*` (section 5) — a private on-disk folder for the extension, for data bigger than the ~2 MB key/value store is meant for. | Separate from the always-available `OrthoTips.storage` key/value API, which needs no permission. |
 | `assets` | `OrthoTips.assets.read(path)` (section 5) — read-only access to extra files bundled alongside the extension. | Only meaningful for multi-file extension packages; a single `.html` file has nothing to read here. |
 | `import_export` | `OrthoTips.saveFile(...)` and the `<input type="file">` flow: file picker, or the camera for `capture` inputs (section 5). | Previously always available to every extension; now explicit like everything else. |
@@ -195,7 +196,7 @@ const HOST = window.OrthoTips || null;   // always feature-detect
 
 | Property | Type | Notes |
 |---|---|---|
-| `bridgeVersion` | number | `5` for this guide (`2` added the permission system, `3` notifications, `4` patients, `5` background audio and exact reminders). |
+| `bridgeVersion` | number | `6` for this guide (`2` added the permission system, `3` notifications, `4` patients, `5` background audio and exact reminders, `6` Gemini with the app's key). |
 | `extensionId` | string | The `ortho-ext-id` of this file. |
 | `extensionVersion` | string | The installed version. |
 | `appVersion` | string | Ortho Tips version name. |
@@ -335,6 +336,43 @@ for (const img of images) await P.addMedia(id, { data: img.blob, mimeType: img.t
 
 Show the user what will be written **before** writing it (a review screen), and
 say which records were created or updated afterwards.
+
+### Gemini — requires `gemini`
+
+Uses the Gemini key the user set **once** in the app (Réglages → Gemini), so an
+extension does not have to ask for its own key. The app adds the key, picks the
+model (the user's choice, newest first, with fallbacks) and returns Google's
+answer unchanged. **The key never reaches the page.**
+
+```js
+await OrthoTips.gemini.status()       // → { available: true, configured, model }  configured: a key is set in the app
+await OrthoTips.gemini.generate({ body, model })  // → { model, response }
+                                      //   body: a generateContent request (contents, systemInstruction,
+                                      //   generationConfig, tools…) — no key, no model in it
+                                      //   model: optional preferred model, tried first
+                                      //   response: Google's JSON (candidates, usageMetadata…)
+await OrthoTips.gemini.openSettings() // opens Réglages → Gemini; the page reloads on return
+```
+
+- Errors reject with `name: 'GeminiError'` and a `kind`: `no_key` (nothing set in
+  the app), `key` (refused), `quota` (limit reached: retry later), `model`,
+  `server`, `network`, `blocked`, `format`; the `message` is ready to show.
+- **Offer both, with the app's key as the default**: a setting « Clé de l'app
+  (par défaut) / Ma propre clé ». Feature-detect: `window.OrthoTips &&
+  OrthoTips.gemini` (bridge ≥ 6); on older apps, or when the user prefers it,
+  use the extension's own key as before.
+
+```js
+const G = window.OrthoTips && OrthoTips.gemini;
+async function askGemini(body) {
+  if (settings.keyMode !== 'own' && G) {
+    const st = await G.status();
+    if (st.configured) return (await G.generate({ body })).response;   // same JSON as fetch()
+    throw new Error('Configurez Gemini dans les Réglages de l’app, ou choisissez « Ma propre clé ».');
+  }
+  return callGeminiWithOwnKey(body);    // the extension's previous code
+}
+```
 
 ### Background audio — requires `background`
 
@@ -939,7 +977,8 @@ render();
 | `data/extensions/ExtensionRepository.kt` | Inspect, install (atomic, verified), update, delete, export, HTML → `.OTips`, legacy migration. Layout: `filesDir/extensions/<id>/{install.json,content/,files/}`. |
 | `data/extensions/*ExtensionHandler*`, `OperativeGuideExtension.kt`, `ClassificationsExtension.kt` | Kind-specific validation and activation. |
 | `OperativeGuideMigration` (in `OperativeGuideExtension.kt`) | For updates only: guide data already on the phone gets its extension installed silently. Nothing is ever installed automatically on a new installation; bundled extensions are installed by the user from the import screen. |
-| `ui/screens/extensions/ExtensionBridge.kt` + `assets/extension_host/ortho-bridge.js` | `window.OrthoTips` (bridge v5); permissions enforced on every call. |
+| `ui/screens/extensions/ExtensionBridge.kt` + `assets/extension_host/ortho-bridge.js` | `window.OrthoTips` (bridge v6); permissions enforced on every call. |
+| `data/ai/GeminiService.kt` (`generateRaw`) + `ExtensionBridge.kt` (`gemini.*`) | `OrthoTips.gemini`: extensions use the app's Gemini key through the app; the key never reaches the page. |
 | `data/extensions/media/ExtensionMediaService.kt` + `ui/screens/extensions/ExtensionMedia.kt` | `OrthoTips.media`: the Media3 service (screen off, notification, lock screen, headsets) and the per-extension controller that pushes its state to the page. |
 | `data/extensions/ExtensionPatients.kt` + `ExtensionPatientRules.kt` | `OrthoTips.patients`: field whitelist and validation, records and media written through `PatientRepository` (never deleted). |
 | `data/reminders/*` + `ui/screens/extensions/ExtensionNotificationRouter.kt` | `OrthoTips.notifications`: rules and storage (`ReminderRules`, `ExtensionReminderStore`), alarms and notifications (`ExtensionReminders`), boot/alarm receivers, taps routed to `onOpen` / `launch`. |

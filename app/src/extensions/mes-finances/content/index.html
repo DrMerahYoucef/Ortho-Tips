@@ -1,0 +1,1677 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="ortho-ext-id" content="mes-finances">
+<meta name="ortho-ext-name" content="Mes finances">
+<meta name="ortho-ext-description" content="Comptes, cachette, dettes et objectifs d'épargne (voiture, maison, PS5…) en DA, € et $, avec taux officiels ou parallèles.">
+<meta name="ortho-ext-version" content="1.9">
+<meta name="ortho-ext-icon" content="💰">
+<meta name="ortho-ext-author" content="Ortho Tips">
+<meta name="ortho-ext-permissions" content="import_export, internet, sms">
+<title>Mes finances</title>
+<style>
+:root{
+  --bg:#f6f7f9;--surface:#fff;--surface2:#f0f2f6;--text:#1b1d22;--muted:#5f6b76;--line:#e3e6eb;
+  --accent:#3f51b5;--on-accent:#ffffff;--accent-soft:#e8eaf8;--good:#1e8e5a;--good-soft:#e3f5ec;--bad:#c62828;--bad-soft:#fdecec;
+  --warn:#b26a00;--warn-soft:#fff3dd;--shadow:0 1px 2px rgba(0,0,0,.06),0 2px 8px rgba(0,0,0,.04);
+  --radius:16px;--nav:64px;
+  --c1:#3f51b5;--c2:#00897b;--c3:#f4511e;--c4:#8e24aa;--c5:#fbc02d;--c6:#039be5;--c7:#6d4c41;
+}
+html[data-theme="dark"]{
+  --bg:#121417;--surface:#1d2025;--surface2:#262a31;--text:#e6e9ee;--muted:#a3adb8;--line:#30353d;
+  --accent:#9fa8ff;--on-accent:#11131a;--accent-soft:#2a2f4d;--good:#5fd39a;--good-soft:#193528;--bad:#ff8a80;--bad-soft:#3d2020;
+  --warn:#ffc15e;--warn-soft:#3a2e17;--shadow:none;
+  --c1:#9fa8ff;--c2:#4dd0c1;--c3:#ff8a65;--c4:#ce93d8;--c5:#ffe082;--c6:#4fc3f7;--c7:#bcaaa4;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,Roboto,sans-serif}
+body{padding-bottom:calc(var(--nav) + env(safe-area-inset-bottom))}
+button,input,select,textarea{font:inherit;color:inherit}
+.num{font-variant-numeric:tabular-nums}
+main{padding:12px 16px 24px;max-width:720px;margin:0 auto}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:10px}
+.between{justify-content:space-between}
+.grow{flex:1;min-width:0}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.tiny{font-size:12px}
+.good{color:var(--good)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+.ellipsis{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:18px 2px 8px;font-weight:600}
+h3{margin:0;font-size:16px}
+.hero{background:var(--accent);background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 60%,#00897b));color:#fff;border:0}
+html[data-theme="dark"] .hero{color:#11131a}
+.hero .label{opacity:.85;font-size:13px}
+.hero .big{font-size:30px;font-weight:700;letter-spacing:-.5px;margin:2px 0}
+.hero .sub{opacity:.9;font-size:12px}
+.icon-btn{min-width:44px;min-height:44px;border-radius:12px;border:0;background:transparent;display:inline-flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer}
+.hero .icon-btn{background:rgba(255,255,255,.18)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.stat{background:rgba(255,255,255,.16);border-radius:12px;padding:8px}
+html[data-theme="dark"] .stat{background:rgba(0,0,0,.12)}
+.stat .v{font-weight:700;font-size:14px}
+.stat .k{font-size:11px;opacity:.85}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.qa{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 4px;min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;font-size:12px}
+.qa span{font-size:20px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;min-height:36px;cursor:pointer;font-size:13px}
+.chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.pill{display:inline-block;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:600}
+.pill.good{background:var(--good-soft)}.pill.bad{background:var(--bad-soft)}.pill.warn{background:var(--warn-soft)}.pill.acc{background:var(--accent-soft);color:var(--accent)}
+.list .item{display:flex;align-items:center;gap:12px;padding:10px 2px;border-top:1px solid var(--line);cursor:pointer;min-height:52px}
+.list .item:first-child{border-top:0}
+.avatar{width:40px;height:40px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}
+.amount{font-weight:650;text-align:right;white-space:nowrap}
+.bar{height:8px;border-radius:99px;background:var(--surface2);overflow:hidden}
+.bar > i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .4s}
+.bar.good > i{background:var(--good)}.bar.bad > i{background:var(--bad)}
+.goal{cursor:pointer}
+.goal .emoji{font-size:30px;width:52px;height:52px;border-radius:16px;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex:none}
+.empty{text-align:center;padding:28px 12px;color:var(--muted)}
+.empty .e{font-size:40px}
+.btn{border:0;border-radius:12px;min-height:44px;padding:0 16px;background:var(--accent);color:var(--on-accent);font-weight:600;cursor:pointer}
+.btn.ghost{background:var(--surface2);color:var(--text)}
+.btn.danger{background:var(--bad-soft);color:var(--bad)}
+.btn.block{width:100%}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btns .btn{flex:1}
+.fab{position:fixed;right:16px;bottom:calc(var(--nav) + 16px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:18px;border:0;background:var(--accent);color:var(--on-accent);font-size:28px;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;z-index:5}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;height:calc(var(--nav) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);z-index:10}
+nav.tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--muted);cursor:pointer}
+nav.tabs button span{font-size:20px;line-height:1;padding:3px 14px;border-radius:99px}
+nav.tabs button.on{color:var(--accent);font-weight:600}
+nav.tabs button.on span{background:var(--accent-soft)}
+.seg{display:flex;background:var(--surface2);border-radius:12px;padding:3px;margin-bottom:12px}
+.seg button{flex:1;border:0;background:none;border-radius:10px;min-height:38px;cursor:pointer;color:var(--muted);font-weight:600}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+/* sheets — the resting state is always "fully visible"; animations only decorate it.
+   --vh is the height really visible (keyboard excluded) and --kb the keyboard
+   overlapping the page, both kept up to date from visualViewport. */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;animation:fade-in .2s ease both}
+.scrim.closing{animation:fade-out .2s ease both}
+.sheet{position:fixed;left:0;right:0;bottom:var(--kb,0px);max-height:calc(var(--vh,100vh) - 24px);overflow:auto;overscroll-behavior:contain;background:var(--surface);border-radius:22px 22px 0 0;z-index:21;padding:8px 16px calc(20px + env(safe-area-inset-bottom));animation:sheet-in .25s ease both}
+.sheet.closing{animation:sheet-out .22s ease both}
+@keyframes sheet-in{from{transform:translateY(100%)}to{transform:none}}
+@keyframes sheet-out{from{transform:none}to{transform:translateY(100%)}}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+@keyframes fade-out{from{opacity:1}to{opacity:0}}
+@media (prefers-reduced-motion: reduce){.sheet,.scrim{animation:none}}
+.sheet .grab{width:40px;height:4px;border-radius:9px;background:var(--line);margin:4px auto 10px}
+.sheet h3{font-size:18px;margin-bottom:10px}
+label.f{display:block;margin:10px 0 4px;font-size:13px;color:var(--muted);font-weight:600}
+.input,select.input,textarea.input{width:100%;min-height:46px;border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:10px 12px;outline:none}
+.input:focus{border-color:var(--accent)}
+.input.big{font-size:24px;font-weight:700}
+.hint{font-size:12px;color:var(--muted);margin-top:4px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kv{display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed var(--line);font-size:14px}
+.kv:first-child{border-top:0}
+.month{font-size:12px;color:var(--muted);font-weight:600;margin:14px 2px 4px;display:flex;justify-content:space-between}
+.chart{display:flex;align-items:flex-end;gap:10px;height:120px;padding-top:8px}
+.chart .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+.chart .bars{display:flex;gap:3px;align-items:flex-end;height:100%}
+.chart .b{width:10px;border-radius:4px 4px 0 0;background:var(--good);min-height:2px}
+.chart .b.e{background:var(--bad)}
+.legend{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+.legend .dot{width:10px;height:10px;border-radius:3px;flex:none}
+.toast{position:fixed;left:50%;bottom:calc(var(--nav) + 24px);transform:translateX(-50%);background:#323232;color:#fff;padding:10px 16px;border-radius:12px;z-index:40;font-size:14px;max-width:90vw}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:50;overflow:hidden}
+.confetti i{position:absolute;top:-20px;font-size:22px;animation:fall 1.8s ease-in forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(540deg);opacity:.6}}
+.search{margin-bottom:10px}
+.hidden{display:none!important}
+/* "≈ N millions" (centimes) under DA amounts */
+.mil{display:block;font-size:11px;font-weight:500;opacity:.75;text-transform:none;letter-spacing:0;margin-top:1px}
+.right{text-align:right}
+.bigv{font-weight:700;font-size:18px}
+/* tappable amounts → "in words" sheet */
+.amt{cursor:pointer;border-radius:6px;text-decoration:underline dotted;text-decoration-color:color-mix(in srgb,currentColor 45%,transparent);text-underline-offset:3px}
+.amt:active{background:var(--accent-soft)}
+.words .wtext{font-size:20px;font-weight:650;line-height:1.45;margin-top:4px;overflow-wrap:anywhere}
+.words .wtext2{font-size:16px;font-weight:600;line-height:1.45;overflow-wrap:anywhere}
+.words [lang="ar"]{font-size:1.1em;text-align:right}
+.cvrow{display:grid;grid-template-columns:1fr 44px 1fr;gap:6px;align-items:end}
+.cvswap{background:var(--surface2);color:var(--text)}
+.btn.wake.on{background:var(--good-soft);color:var(--text);box-shadow:inset 0 0 0 2px var(--good)}
+</style>
+</head>
+<body>
+<main id="view" aria-live="polite"></main>
+<button class="fab hidden" id="fab" data-act="fab" aria-label="+">+</button>
+<nav class="tabs" id="tabs"></nav>
+<input type="file" id="file" class="hidden">
+<script>
+'use strict';
+/* =====================================================================
+   Mes finances — extension Ortho Tips (.OTips)
+   Accounts, stash, debts, goals; DZD / EUR / USD and more; official or
+   parallel (square) rates. One JSON document in the app's storage.
+   ===================================================================== */
+const HOST = window.OrthoTips || null;
+const APP_ID = 'mes-finances';
+const KEY = APP_ID + ':state';
+const SCHEMA = 3;
+
+/* ---------- currencies & reference data ---------- */
+const CURRENCIES = {
+  DZD:{sym:'DA',fr:'Dinar algérien',en:'Algerian dinar',flag:'🇩🇿'},
+  EUR:{sym:'€',fr:'Euro',en:'Euro',flag:'🇪🇺'},
+  USD:{sym:'$',fr:'Dollar US',en:'US dollar',flag:'🇺🇸'},
+  GBP:{sym:'£',fr:'Livre sterling',en:'Pound sterling',flag:'🇬🇧'},
+  CAD:{sym:'CA$',fr:'Dollar canadien',en:'Canadian dollar',flag:'🇨🇦'},
+  CHF:{sym:'CHF',fr:'Franc suisse',en:'Swiss franc',flag:'🇨🇭'},
+  TND:{sym:'DT',fr:'Dinar tunisien',en:'Tunisian dinar',flag:'🇹🇳'},
+  MAD:{sym:'DH',fr:'Dirham marocain',en:'Moroccan dirham',flag:'🇲🇦'},
+  SAR:{sym:'SAR',fr:'Riyal saoudien',en:'Saudi riyal',flag:'🇸🇦'},
+  AED:{sym:'AED',fr:'Dirham des EAU',en:'UAE dirham',flag:'🇦🇪'},
+  TRY:{sym:'₺',fr:'Livre turque',en:'Turkish lira',flag:'🇹🇷'},
+  CNY:{sym:'¥',fr:'Yuan',en:'Yuan',flag:'🇨🇳'}
+};
+/* Indicative values in DZD for 1 unit — the user updates them. */
+const DEFAULT_RATES = {
+  official:{DZD:1,EUR:150,USD:132,GBP:176,CAD:96,CHF:160,TND:44,MAD:14,SAR:35,AED:36,TRY:3.9,CNY:18.5},
+  parallel:{DZD:1,EUR:262,USD:238,GBP:305,CAD:170,CHF:275,TND:75,MAD:24,SAR:62,AED:63,TRY:6.8,CNY:32}
+};
+const ACCOUNT_TYPES = {
+  bank:{e:'🏦',fr:'Banque',en:'Bank'},
+  ccp:{e:'📮',fr:'CCP / BaridiMob',en:'CCP / BaridiMob'},
+  cash:{e:'💵',fr:'Espèces',en:'Cash'},
+  stash:{e:'🫙',fr:'Cachette',en:'Stash'},
+  savings:{e:'🐖',fr:'Épargne',en:'Savings'},
+  card:{e:'💳',fr:'Carte / portefeuille',en:'Card / wallet'},
+  other:{e:'📁',fr:'Autre',en:'Other'}
+};
+const GOAL_TEMPLATES = [
+  ['🚗','car'],['🏠','house'],['🎮','ps5'],['📱','phone'],['💻','laptop'],['🏍️','bike'],
+  ['✈️','travel'],['🕋','omra'],['💍','wedding'],['🎓','studies'],['🛟','emergency'],['⭐','other']
+];
+const CATEGORIES = {
+  income:[['📮','ccpOp'],['💼','salary'],['🩺','oncall'],['🏥','clinic'],['🛒','sale'],['🎁','gift'],['📈','invest'],['➕','otherIn']],
+  expense:[['📮','ccpOp'],['🍽️','food'],['🚕','transport'],['🏠','housing'],['🧾','bills'],['💊','health'],['🛍️','shopping'],['🎉','leisure'],['👨‍👩‍👧','family'],['📚','books'],['➖','otherOut']]
+};
+
+/* ---------- i18n ---------- */
+const T = {
+  fr:{
+    home:'Accueil',accounts:'Comptes',goals:'Objectifs',debts:'Dettes',more:'Plus',
+    netWorth:'Patrimoine net',inAccounts:'Comptes',inGoals:'Objectifs',owedToMe:'On me doit',iOwe:'Je dois',
+    income:'Revenu',expense:'Dépense',transfer:'Virement',save:'Épargner',adjust:'Ajuster le solde',
+    byCurrency:'Par devise',breakdown:'Répartition',flow:'Flux des 6 derniers mois',thisMonth:'Ce mois-ci',
+    topGoals:'Objectifs en cours',dueSoon:'Échéances de dettes',seeAll:'Tout voir',
+    noAccounts:'Aucun compte. Ajoutez votre banque, votre CCP, vos espèces ou votre cachette.',
+    noGoals:'Aucun objectif. Une voiture, une maison, une PS5 ? Fixez un objectif et suivez-le.',
+    noDebts:'Aucune dette enregistrée.',noHistory:'Aucune opération pour l’instant.',
+    addAccount:'Nouveau compte',editAccount:'Modifier le compte',name:'Nom',type:'Type',currency:'Devise',
+    balance:'Solde',initialBalance:'Solde actuel',amount:'Montant',date:'Date',note:'Note',category:'Catégorie',
+    account:'Compte',fromAccount:'Depuis',toAccount:'Vers',received:'Montant reçu',rateUsed:'Taux appliqué',
+    create:'Créer',saveBtn:'Enregistrer',cancel:'Annuler',delete:'Supprimer',edit:'Modifier',close:'Fermer',
+    confirmDelete:'Supprimer définitivement ?',newBalance:'Nouveau solde',
+    addGoal:'Nouvel objectif',editGoal:'Modifier l’objectif',target:'Montant visé',deadline:'Échéance (facultative)',
+    saved:'Épargné',remaining:'Reste',perMonth:'par mois pour tenir l’échéance',atThisPace:'À ce rythme',
+    reached:'Objectif atteint !',contribute:'Ajouter de l’épargne',withdraw:'Retirer',noAccount:'Sans compte (déjà mis de côté)',
+    toNoAccount:'Sans compte',contributions:'Historique',markDone:'Marquer comme atteint',reopen:'Rouvrir',
+    daysLeft:'j restants',overdue:'En retard',late:'dépassée',months:'mois',
+    addDebt:'Nouvelle dette',editDebt:'Modifier la dette',direction:'Sens',person:'Personne / organisme',reason:'Motif',
+    startDate:'Date',dueDate:'À rembourser avant (facultatif)',payments:'Remboursements',addPayment:'Enregistrer un remboursement',
+    paid:'Remboursé',settled:'Soldée',open:'En cours',settledList:'Soldées',
+    history:'Historique',rates:'Taux de change',settings:'Réglages',backup:'Sauvegarde',
+    all:'Tout',search:'Rechercher…',exportCsv:'Exporter en CSV',
+    baseCurrency:'Devise de référence',rateMode:'Taux utilisés',official:'Officiel',parallel:'Parallèle (square)',
+    ratesHint:'Valeur de 1 unité en DA. Valeurs indicatives : mettez-les à jour.',updateOfficial:'Mettre à jour les taux officiels',
+    noInternet:'Autorisation Internet non accordée.',updated:'Taux mis à jour',updateFailed:'Mise à jour impossible (hors ligne ?)',
+    lastUpdate:'Dernière mise à jour',currencies:'Devises affichées',language:'Langue',auto:'Automatique',
+    hideAmounts:'Masquer les montants au démarrage',centimes:'Afficher les DA aussi en millions de centimes',
+    exportJson:'Exporter une sauvegarde',importJson:'Restaurer une sauvegarde',resetAll:'Tout effacer',
+    resetConfirm:'Effacer toutes les données de Mes finances ? Cette action est définitive.',
+    backupSaved:'Sauvegarde enregistrée',backupFailed:'Sauvegarde non enregistrée',restored:'Données restaurées',
+    badBackup:'Ce fichier n’est pas une sauvegarde de Mes finances.',restoreConfirm:'Remplacer toutes les données actuelles par cette sauvegarde ?',
+    required:'Renseignez un nom et un montant valides.',sameAccount:'Choisissez deux comptes différents.',
+    tooMuch:'Montant supérieur au reste.',deleted:'Supprimé',savedMsg:'Enregistré',
+    types:'Types',goalsSaved:'dans les objectifs',millions:'millions',reverted:'Opération annulée et soldes rétablis',
+    txDelete:'Annuler cette opération',txDeleteHint:'Le solde des comptes concernés sera rétabli.',
+    remainingDebt:'Reste dû',total:'Total',goalReachedToast:'🎉 Objectif atteint !',
+    tmpl:{car:'Voiture',house:'Maison',ps5:'PS5',phone:'Téléphone',laptop:'Ordinateur',bike:'Moto',travel:'Voyage',omra:'Omra',wedding:'Mariage',studies:'Études',emergency:'Fonds d’urgence',other:'Autre'},
+    held:'Mis de côté',paidLbl:'Déjà payé',pay:'Payer',payTitle:'Payer',paySource:'L’argent vient de',fromGoalSavings:'L’épargne de l’objectif',
+    paySourceNone:'Déjà payé, hors de mes comptes',payHint:'L’argent payé compte dans la progression de l’objectif, mais ne fait plus partie de votre patrimoine.',
+    payNoteHint:'Vendeur, concessionnaire…',payToast:'💸 Paiement enregistré',paidGoals:'Payé pour vos objectifs',
+    excluded:'Hors comptage',excludeOpt:'Ne pas compter ce compte',excludeHint:'Il n’entre pas dans votre patrimoine, vos totaux ni dans les entrées / sorties. Vous pouvez toujours l’utiliser.',
+    countIt:'Compter ce compte',available:'Disponible :',overBalance:'Plus que le solde : le compte deviendra négatif.',notCounted:'non compté',
+    inclCorrections:'dont soldes initiaux / ajustements :',deletedAccount:'compte supprimé',
+    netExplained:'Sur toute la période, la différence = vos comptes + l’argent mis de côté dans vos objectifs.',
+    moneyIn:'Entrées',moneyOut:'Sorties',netFlow:'Différence',pAll:'Tout',pMonth:'Ce mois',p3m:'3 mois',pYear:'Cette année',
+    smsTitle:'SMS Algérie Poste (CCP)',smsBanner:'Connectez vos SMS CCP : chaque débit et crédit sera enregistré automatiquement, avec votre historique.',
+    smsSetup:'Configurer',later:'Plus tard',smsUnavailable:'Disponible dans l’application Ortho Tips à jour.',
+    smsNoCodes:'Seuls les messages « Débité / Crédité … nouveau solde » sont lus. Les codes de virement ne sont jamais lus.',
+    smsStep1:'1. Autoriser la lecture des SMS',smsStep2:'2. Compte CCP concerné',smsGrant:'Autoriser',smsGranted:'✓ Autorisé',smsNotGranted:'Non autorisé',
+    smsChoose:'— Choisir un compte —',smsCreateCcp:'Créer un compte CCP',smsConnect:'Connecter et importer l’historique',
+    smsLinked:'Compte lié',smsNotLinked:'Aucun compte lié',smsImported:'📩 {n} opération(s) CCP importée(s)',smsNothing:'Aucune nouvelle opération CCP',
+    smsOpening:'Solde initial (SMS)',smsGap:'Frais / écart de solde (SMS)',smsNote:'SMS ALG Poste',smsSync:'Synchroniser maintenant',
+    smsDenied:'Autorisation SMS refusée. Si Android indique « paramètre restreint » : Infos de l’app → ⋮ → Autoriser les paramètres restreints.',
+    smsPendingWait:'{n} SMS CCP en attente d’un compte',
+    converter:'Convertisseur',convTitle:'Convertisseur de devises',convFrom:'De',convTo:'Vers',swap:'Inverser',convRate:'Taux',convOther:'Au taux',convHint:'Taux modifiables dans Plus → Taux de change.',
+    inWords:'Montant en lettres',wordsTip:'Touchez n’importe quel montant de l’application pour l’afficher ici en lettres.',
+    wordsEmpty:'Saisissez un montant.',wordsInvalid:'Montant non valide.',wordsTooBig:'Montant trop grand.',inCentimes:'En centimes',
+    copy:'Copier',copied:'Copié',copyFailed:'Copie impossible',wakeOff:'Garder l’écran allumé',wakeOn:'Écran maintenu allumé',
+    wakeUnsupported:'Maintien de l’écran allumé non disponible sur cet appareil.',wakeFailed:'Impossible de garder l’écran allumé.',
+    cat:{ccpOp:'Opération CCP',salary:'Salaire',oncall:'Gardes',clinic:'Clinique',sale:'Vente',gift:'Cadeau',invest:'Placement',otherIn:'Autre revenu',
+         food:'Nourriture',transport:'Transport',housing:'Logement',bills:'Factures',health:'Santé',shopping:'Achats',leisure:'Loisirs',family:'Famille',books:'Livres',otherOut:'Autre dépense'},
+    tx:{income:'Revenu',expense:'Dépense',transfer:'Virement',adjust:'Ajustement',goalIn:'Épargne objectif',goalOut:'Retrait objectif',goalPay:'Paiement objectif',opening:'Solde initial',debtPay:'Remboursement',debtIn:'Remboursement reçu'}
+  },
+  en:{
+    home:'Home',accounts:'Accounts',goals:'Goals',debts:'Debts',more:'More',
+    netWorth:'Net worth',inAccounts:'Accounts',inGoals:'Goals',owedToMe:'Owed to me',iOwe:'I owe',
+    income:'Income',expense:'Expense',transfer:'Transfer',save:'Save',adjust:'Adjust balance',
+    byCurrency:'By currency',breakdown:'Breakdown',flow:'Last 6 months',thisMonth:'This month',
+    topGoals:'Active goals',dueSoon:'Debt due dates',seeAll:'See all',
+    noAccounts:'No account yet. Add your bank, CCP, cash or stash.',
+    noGoals:'No goal yet. A car, a house, a PS5? Set a goal and track it.',
+    noDebts:'No debt recorded.',noHistory:'No transaction yet.',
+    addAccount:'New account',editAccount:'Edit account',name:'Name',type:'Type',currency:'Currency',
+    balance:'Balance',initialBalance:'Current balance',amount:'Amount',date:'Date',note:'Note',category:'Category',
+    account:'Account',fromAccount:'From',toAccount:'To',received:'Amount received',rateUsed:'Rate used',
+    create:'Create',saveBtn:'Save',cancel:'Cancel',delete:'Delete',edit:'Edit',close:'Close',
+    confirmDelete:'Delete permanently?',newBalance:'New balance',
+    addGoal:'New goal',editGoal:'Edit goal',target:'Target amount',deadline:'Deadline (optional)',
+    saved:'Saved',remaining:'Left',perMonth:'per month to meet the deadline',atThisPace:'At this pace',
+    reached:'Goal reached!',contribute:'Add savings',withdraw:'Withdraw',noAccount:'No account (already set aside)',
+    toNoAccount:'No account',contributions:'History',markDone:'Mark as reached',reopen:'Reopen',
+    daysLeft:'days left',overdue:'Overdue',late:'passed',months:'months',
+    addDebt:'New debt',editDebt:'Edit debt',direction:'Direction',person:'Person / organisation',reason:'Reason',
+    startDate:'Date',dueDate:'Due by (optional)',payments:'Repayments',addPayment:'Record a repayment',
+    paid:'Repaid',settled:'Settled',open:'Open',settledList:'Settled',
+    history:'History',rates:'Exchange rates',settings:'Settings',backup:'Backup',
+    all:'All',search:'Search…',exportCsv:'Export as CSV',
+    baseCurrency:'Reference currency',rateMode:'Rates used',official:'Official',parallel:'Parallel (square)',
+    ratesHint:'Value of 1 unit in DZD. Indicative values: keep them up to date.',updateOfficial:'Update official rates',
+    noInternet:'Internet permission not granted.',updated:'Rates updated',updateFailed:'Update failed (offline?)',
+    lastUpdate:'Last update',currencies:'Currencies shown',language:'Language',auto:'Automatic',
+    hideAmounts:'Hide amounts at start-up',centimes:'Also show DZD in millions of centimes',
+    exportJson:'Export a backup',importJson:'Restore a backup',resetAll:'Erase everything',
+    resetConfirm:'Erase all Mes finances data? This cannot be undone.',
+    backupSaved:'Backup saved',backupFailed:'Backup not saved',restored:'Data restored',
+    badBackup:'This file is not a Mes finances backup.',restoreConfirm:'Replace all current data with this backup?',
+    required:'Enter a valid name and amount.',sameAccount:'Choose two different accounts.',
+    tooMuch:'Amount is more than what is left.',deleted:'Deleted',savedMsg:'Saved',
+    types:'Types',goalsSaved:'in goals',millions:'million',reverted:'Transaction undone and balances restored',
+    txDelete:'Undo this transaction',txDeleteHint:'Account balances will be restored.',
+    remainingDebt:'Still due',total:'Total',goalReachedToast:'🎉 Goal reached!',
+    tmpl:{car:'Car',house:'House',ps5:'PS5',phone:'Phone',laptop:'Laptop',bike:'Motorbike',travel:'Travel',omra:'Umrah',wedding:'Wedding',studies:'Studies',emergency:'Emergency fund',other:'Other'},
+    held:'Set aside',paidLbl:'Already paid',pay:'Pay',payTitle:'Pay',paySource:'Money comes from',fromGoalSavings:'The goal’s savings',
+    paySourceNone:'Already paid, outside my accounts',payHint:'Money paid still counts towards the goal, but is no longer part of your net worth.',
+    payNoteHint:'Seller, dealer…',payToast:'💸 Payment recorded',paidGoals:'Paid towards your goals',
+    excluded:'Not counted',excludeOpt:'Don’t count this account',excludeHint:'It is left out of your net worth, totals and money in / out. You can still use it.',
+    countIt:'Count this account',available:'Available:',overBalance:'More than the balance: the account will go negative.',notCounted:'not counted',
+    inclCorrections:'incl. opening balances / adjustments:',deletedAccount:'deleted account',
+    netExplained:'Over all time, the difference = your accounts + money set aside in your goals.',
+    moneyIn:'Money in',moneyOut:'Money out',netFlow:'Difference',pAll:'All',pMonth:'This month',p3m:'3 months',pYear:'This year',
+    smsTitle:'Algérie Poste SMS (CCP)',smsBanner:'Connect your CCP SMS: every debit and credit is recorded automatically, with your history.',
+    smsSetup:'Set up',later:'Later',smsUnavailable:'Available in an up-to-date Ortho Tips app.',
+    smsNoCodes:'Only “Débité / Crédité … nouveau solde” messages are read. Transfer codes are never read.',
+    smsStep1:'1. Allow reading SMS',smsStep2:'2. Which CCP account',smsGrant:'Allow',smsGranted:'✓ Allowed',smsNotGranted:'Not allowed',
+    smsChoose:'— Choose an account —',smsCreateCcp:'Create a CCP account',smsConnect:'Connect and import history',
+    smsLinked:'Linked account',smsNotLinked:'No account linked',smsImported:'📩 {n} CCP transaction(s) imported',smsNothing:'No new CCP transaction',
+    smsOpening:'Opening balance (SMS)',smsGap:'Fees / balance gap (SMS)',smsNote:'ALG Poste SMS',smsSync:'Sync now',
+    smsDenied:'SMS permission refused. If Android says “restricted setting”: App info → ⋮ → Allow restricted settings.',
+    smsPendingWait:'{n} CCP SMS waiting for an account',
+    converter:'Converter',convTitle:'Currency converter',convFrom:'From',convTo:'To',swap:'Swap',convRate:'Rate',convOther:'At the rate',convHint:'Rates can be edited in More → Exchange rates.',
+    inWords:'Amount in words',wordsTip:'Tap any amount in the app to show it here in words.',
+    wordsEmpty:'Enter an amount.',wordsInvalid:'Invalid amount.',wordsTooBig:'Amount too large.',inCentimes:'In centimes',
+    copy:'Copy',copied:'Copied',copyFailed:'Could not copy',wakeOff:'Keep screen on',wakeOn:'Screen kept on',
+    wakeUnsupported:'Keeping the screen on is not available on this device.',wakeFailed:'Could not keep the screen on.',
+    cat:{ccpOp:'CCP operation',salary:'Salary',oncall:'On-call',clinic:'Clinic',sale:'Sale',gift:'Gift',invest:'Investment',otherIn:'Other income',
+         food:'Food',transport:'Transport',housing:'Housing',bills:'Bills',health:'Health',shopping:'Shopping',leisure:'Leisure',family:'Family',books:'Books',otherOut:'Other expense'},
+    tx:{income:'Income',expense:'Expense',transfer:'Transfer',adjust:'Adjustment',goalIn:'Goal savings',goalOut:'Goal withdrawal',goalPay:'Goal payment',opening:'Opening balance',debtPay:'Repayment',debtIn:'Repayment received'}
+  }
+};
+
+/* ---------- state ---------- */
+function defaults(){
+  return {
+    v:SCHEMA,
+    settings:{base:'DZD',rateMode:'parallel',lang:'auto',hideOnStart:false,centimes:true,currencies:['DZD','EUR','USD'],wordsLang:'auto',convFrom:'EUR',convTo:'DZD'},
+    rates:{official:{...DEFAULT_RATES.official},parallel:{...DEFAULT_RATES.parallel},officialUpdatedAt:null},
+    accounts:[],goals:[],debts:[],tx:[],
+    // Bank SMS: linked account, fingerprints already applied, history imported once.
+    // applied: fingerprints applied, per account (v3; `seen` is the old global list, kept unused).
+    sms:{accountId:null, seen:[], applied:{}, historyDone:false, dismissed:false}
+  };
+}
+/* Every future change of shape goes here; old data is converted, never dropped. */
+function migrate(d){
+  const base = defaults();
+  if(!d || typeof d !== 'object') return base;
+  const out = {...base, ...d};
+  out.settings = {...base.settings, ...(d.settings||{})};
+  out.rates = {official:{...base.rates.official,...((d.rates||{}).official||{})},
+               parallel:{...base.rates.parallel,...((d.rates||{}).parallel||{})},
+               officialUpdatedAt:(d.rates||{}).officialUpdatedAt||null};
+  for(const k of ['accounts','goals','debts','tx']) out[k] = Array.isArray(d[k]) ? d[k] : [];
+  out.sms = {...base.sms, ...(d.sms||{})}; if(!Array.isArray(out.sms.seen)) out.sms.seen = [];
+  out.goals.forEach(g => { g.contributions = Array.isArray(g.contributions) ? g.contributions : []; g.contributions.forEach(c => { if(!c.kind) c.kind = 'save'; }); });
+  out.debts.forEach(x => { x.payments = Array.isArray(x.payments) ? x.payments : []; });
+  if((Number(d.v) || 1) < 2) completeHistory(out);
+  if(!out.sms.applied || typeof out.sms.applied !== 'object' || Array.isArray(out.sms.applied)) out.sms.applied = {};
+  if((Number(d.v) || 1) < 3) smsAppliedFromTx(out);
+  out.v = SCHEMA;
+  return out;
+}
+/* v3: fingerprints applied per account, rebuilt from the SMS transactions each account really holds. */
+function smsAppliedFromTx(o){
+  const m = {};
+  for(const tx of o.tx) if(tx && tx.sms && tx.accountId){ (m[tx.accountId] = m[tx.accountId] || []).push(tx.sms); }
+  o.sms.applied = m;
+}
+function newId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function round2(n){ return Math.round((Number(n) || 0) * 100) / 100; }
+/* What a transaction does to account balances: [[accountId, delta], …]. Pure: usable during migration. */
+function txEffects(tx){
+  switch(tx.type){
+    case 'income': case 'debtIn': case 'goalOut': return [[tx.accountId, tx.amount]];
+    case 'expense': case 'debtPay': case 'goalIn': case 'goalPay': return [[tx.accountId, -tx.amount]];
+    case 'transfer': return [[tx.accountId, -tx.amount], [tx.toAccountId, tx.toAmount]];
+    case 'adjust': case 'opening': return [[tx.accountId, tx.amount]];
+    default: return [];
+  }
+}
+/**
+ * Schema 1 → 2: the history must explain every balance. Adds, without changing
+ * any balance: an opening-balance entry for money typed in when an account was
+ * created, an entry for money set aside in a goal outside any account, and the
+ * source of each goal payment.
+ */
+function completeHistory(st){
+  const txs = st.tx; const byId = new Map(txs.map(x => [x.id, x]));
+  const dateOf = ms => isoDate(ms || Date.now());
+  for(const g of st.goals){
+    for(const c of g.contributions){
+      if(c.kind === 'pay'){ const x = byId.get(c.txId); if(x && !x.source) x.source = c.source; continue; }
+      if(c.txId || !c.amount) continue;
+      const x = {id:newId(), type: c.amount >= 0 ? 'goalIn' : 'goalOut', accountId:null, amount:Math.abs(c.amount), currency:g.currency,
+                 goalId:g.id, date:c.date || dateOf(), note:c.note || '', createdAt:Date.now()};
+      txs.push(x); c.txId = x.id;
+    }
+  }
+  for(const a of st.accounts){
+    let explained = 0, first = null;
+    for(const x of txs){ for(const [id, delta] of txEffects(x)){ if(id === a.id){ explained += Number(delta) || 0; if(!first || x.date < first) first = x.date; } } }
+    const opening = round2(a.balance - explained);
+    if(Math.abs(opening) < 0.005) continue;
+    const created = a.createdAt ? dateOf(a.createdAt) : null;
+    const date = [created, first].filter(Boolean).sort()[0] || dateOf();
+    txs.push({id:newId(), type:'opening', accountId:a.id, amount:opening, currency:a.currency, date, note:'', createdAt:(a.createdAt || 1) - 1});
+  }
+}
+function storeGet(){ try{ return HOST ? HOST.storage.get(KEY) : localStorage.getItem(KEY); }catch(e){ return null; } }
+let loadFailed = false;
+function storeSet(v){ if(loadFailed) return; try{ HOST ? HOST.storage.set(KEY,v) : localStorage.setItem(KEY,v); }catch(e){ toast('⚠️ '+e.message); } }
+let state;
+{ const raw = storeGet();
+  try{ state = migrate(JSON.parse(raw || 'null')); }
+  catch(e){ state = defaults(); loadFailed = !!raw; try{ console.error('Mes finances: data not readable, nothing will be overwritten', e); }catch(x){} } }
+let saveTimer = null;
+function save(){ clearTimeout(saveTimer); saveTimer = setTimeout(flush, 200); }
+function flush(){ clearTimeout(saveTimer); saveTimer = null; storeSet(JSON.stringify(state)); }
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') flush(); });
+window.addEventListener('pagehide', flush);
+
+/* ---------- ui state ---------- */
+const ui = { tab:'home', hide:!!state.settings.hideOnStart, debtSeg:'owe', histType:'all', histAccount:'', histQuery:'', histPeriod:'all', sheets:[] };
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+const r2 = n => Math.round((Number(n)||0)*100)/100;
+function lang(){ const l = state.settings.lang !== 'auto' ? state.settings.lang : (HOST ? HOST.language : (navigator.language||'fr')); return String(l).toLowerCase().startsWith('en') ? 'en' : 'fr'; }
+function t(k){ const L = T[lang()]; return k.split('.').reduce((o,p)=> (o||{})[p], L) ?? k; }
+function today(){ const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function parseAmount(v){ if(v == null) return NaN; const s = String(v).replace(/\s|\u00a0/g,'').replace(',', '.'); if(!/^-?\d*\.?\d+$/.test(s)) return NaN; return r2(parseFloat(s)); }
+function rate(c){ const table = state.rates[state.settings.rateMode] || state.rates.official; return Number(table[c]) || Number(state.rates.official[c]) || 1; }
+function conv(a, from, to){ if(from === to) return r2(a); return r2(a * rate(from) / rate(to)); }
+function sym(c){ return (CURRENCIES[c]||{}).sym || c; }
+function fmtNum(n, dec){ const l = lang()==='en' ? 'en-US' : 'fr-FR'; return Number(n).toLocaleString(l,{minimumFractionDigits:dec,maximumFractionDigits:dec}).replace(/\u202f/g,'\u00a0'); }
+function fmt(n, c, opts){
+  if(ui.hide && !(opts&&opts.show)) return '••••' + '\u00a0' + sym(c);
+  const v = r2(n); const s = fmtNum(Math.abs(v), Number.isInteger(v) ? 0 : 2);
+  const sign = v < 0 ? '−' : (opts&&opts.plus && v>0 ? '+' : '');
+  return sign + (c==='USD' && lang()==='en' ? '$'+s : s + '\u00a0' + sym(c));
+}
+/* 1 million centimes = 10 000 DA — how amounts are usually spoken in Algeria. */
+function centimes(n){ if(ui.hide || !state.settings.centimes) return ''; if(Math.abs(n) < 10000) return ''; return '≈ ' + millions(n) + ' ' + t('millions'); }
+/* ---------- amounts in letters (FR / AR / EN) ---------- */
+/* Tappable amount: same text as fmt(), opens the "in letters" sheet (not when amounts are hidden). */
+function money(n, c, opts){
+  const s = fmt(n, c, opts);
+  if(ui.hide && !(opts && opts.show)) return s;
+  return `<span class="amt" data-amt="${r2(n)}" data-cur="${esc(c)}">${s}</span>`;
+}
+/* Unit names: fr/en [singular, plural]; ar [singular, dual, plural (3–10), accusative (11–99)]; fem = feminine noun. */
+const WORD_CUR = {
+  DZD:{fr:['dinar algérien','dinars algériens'],en:['Algerian dinar','Algerian dinars'],ar:['دينار جزائري','ديناران جزائريان','دنانير جزائرية','ديناراً جزائرياً'],sub:'centime'},
+  EUR:{fr:['euro','euros'],en:['euro','euros'],ar:['يورو','يوروان','يورو','يورو'],sub:'eurocent'},
+  USD:{fr:['dollar américain','dollars américains'],en:['US dollar','US dollars'],ar:['دولار أمريكي','دولاران أمريكيان','دولارات أمريكية','دولاراً أمريكياً'],sub:'cent'},
+  GBP:{fr:['livre sterling','livres sterling'],frFem:true,en:['pound sterling','pounds sterling'],ar:['جنيه إسترليني','جنيهان إسترلينيان','جنيهات إسترلينية','جنيهاً إسترلينياً'],sub:'penny'},
+  CAD:{fr:['dollar canadien','dollars canadiens'],en:['Canadian dollar','Canadian dollars'],ar:['دولار كندي','دولاران كنديان','دولارات كندية','دولاراً كندياً'],sub:'cent'},
+  CHF:{fr:['franc suisse','francs suisses'],en:['Swiss franc','Swiss francs'],ar:['فرنك سويسري','فرنكان سويسريان','فرنكات سويسرية','فرنكاً سويسرياً'],sub:'centime'},
+  TND:{fr:['dinar tunisien','dinars tunisiens'],en:['Tunisian dinar','Tunisian dinars'],ar:['دينار تونسي','ديناران تونسيان','دنانير تونسية','ديناراً تونسياً'],sub:'millime',factor:1000},
+  MAD:{fr:['dirham marocain','dirhams marocains'],en:['Moroccan dirham','Moroccan dirhams'],ar:['درهم مغربي','درهمان مغربيان','دراهم مغربية','درهماً مغربياً'],sub:'centime'},
+  SAR:{fr:['riyal saoudien','riyals saoudiens'],en:['Saudi riyal','Saudi riyals'],ar:['ريال سعودي','ريالان سعوديان','ريالات سعودية','ريالاً سعودياً'],sub:'halala'},
+  AED:{fr:['dirham des EAU','dirhams des EAU'],en:['UAE dirham','UAE dirhams'],ar:['درهم إماراتي','درهمان إماراتيان','دراهم إماراتية','درهماً إماراتياً'],sub:'fils'},
+  TRY:{fr:['livre turque','livres turques'],frFem:true,en:['Turkish lira','Turkish liras'],ar:['ليرة تركية','ليرتان تركيتان','ليرات تركية','ليرةً تركيةً'],arFem:true,sub:'kurus'},
+  CNY:{fr:['yuan','yuans'],en:['yuan','yuan'],ar:['يوان صيني','يوانان صينيان','يوانات صينية','يواناً صينياً'],sub:'fen'}
+};
+const WORD_SUB = {
+  centime:{fr:['centime','centimes'],en:['centime','centimes'],ar:['سنتيم','سنتيمان','سنتيمات','سنتيماً']},
+  cent:{fr:['cent','cents'],en:['cent','cents'],ar:['سنت','سنتان','سنتات','سنتاً']},
+  eurocent:{fr:['centime','centimes'],en:['cent','cents'],ar:['سنت','سنتان','سنتات','سنتاً']},
+  penny:{fr:['penny','pence'],en:['penny','pence'],ar:['بنس','بنسان','بنسات','بنساً']},
+  millime:{fr:['millime','millimes'],en:['millime','millimes'],ar:['مليم','مليمان','مليمات','مليماً']},
+  halala:{fr:['halala','halalas'],en:['halala','halalas'],ar:['هللة','هللتان','هللات','هللةً'],arFem:true},
+  fils:{fr:['fils','fils'],en:['fils','fils'],ar:['فلس','فلسان','فلوس','فلساً']},
+  kurus:{fr:['kuruş','kuruş'],en:['kuruş','kuruş'],ar:['قرش','قرشان','قروش','قرشاً']},
+  fen:{fr:['fen','fen'],en:['fen','fen'],ar:['فن','فنان','فنات','فناً']}
+};
+const WORDS_MAX = 1e12;
+
+// French (traditional spelling: hyphens below 100, "et un", "quatre-vingts", "deux cents").
+const FR_U = ['zéro','un','deux','trois','quatre','cinq','six','sept','huit','neuf','dix','onze','douze','treize','quatorze','quinze','seize','dix-sept','dix-huit','dix-neuf'];
+const FR_T = ['','','vingt','trente','quarante','cinquante','soixante'];
+function fr99(n, final){
+  if(n < 20) return FR_U[n];
+  let d = Math.floor(n / 10), u = n % 10;
+  if(d === 7 || d === 9){ d -= 1; u += 10; }
+  const base = d === 8 ? 'quatre-vingt' : FR_T[d];
+  if(u === 0) return d === 8 && final ? 'quatre-vingts' : base;
+  if(u === 1 && d !== 8) return base + ' et un';
+  if(u === 11 && d === 6) return base + ' et onze';
+  return base + '-' + FR_U[u];
+}
+/* final: nothing, or the noun million/milliard, follows (plural "s" of cents / quatre-vingts kept). */
+function fr999(n, final){
+  const h = Math.floor(n / 100), r = n % 100; let s = '';
+  if(h) s = (h > 1 ? FR_U[h] + ' ' : '') + 'cent' + (h > 1 && !r && final ? 's' : '');
+  if(r) s += (s ? ' ' : '') + fr99(r, final);
+  return s;
+}
+function frInt(n){
+  if(!n) return 'zéro';
+  const out = [];
+  for(const [v, name] of [[1e9,'milliard'],[1e6,'million']]){ const g = Math.floor(n / v); n %= v; if(g) out.push(fr999(g, true) + ' ' + name + (g > 1 ? 's' : '')); }
+  const th = Math.floor(n / 1000); n %= 1000;
+  if(th) out.push(th === 1 ? 'mille' : fr999(th, false) + ' mille');
+  if(n) out.push(fr999(n, true));
+  return out.join(' ');
+}
+function frCount(n, forms, fem){
+  let w = frInt(n); if(fem) w = w.replace(/\bun$/, 'une');
+  const de = n >= 1e6 && n % 1e6 === 0 ? ' de ' : ' ';
+  return w + de + (n > 1 ? forms[1] : forms[0]);
+}
+// English.
+const EN_U = ['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+const EN_T = ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+function en999(n){
+  const h = Math.floor(n / 100), r = n % 100; const out = [];
+  if(h) out.push(EN_U[h] + ' hundred');
+  if(r) out.push(r < 20 ? EN_U[r] : EN_T[Math.floor(r / 10)] + (r % 10 ? '-' + EN_U[r % 10] : ''));
+  return out.join(' ');
+}
+function enInt(n){
+  if(!n) return 'zero';
+  const out = [];
+  for(const [v, name] of [[1e9,'billion'],[1e6,'million'],[1e3,'thousand']]){ const g = Math.floor(n / v); n %= v; if(g) out.push(en999(g) + ' ' + name); }
+  if(n) out.push(en999(n));
+  return out.join(' ');
+}
+function enCount(n, forms){ return enInt(n) + ' ' + (n === 1 ? forms[0] : forms[1]); }
+// Arabic (Modern Standard, as on cheques): number agrees with the counted noun.
+const AR_UM = ['','واحد','اثنان','ثلاثة','أربعة','خمسة','ستة','سبعة','ثمانية','تسعة','عشرة'];
+const AR_UF = ['','واحدة','اثنتان','ثلاث','أربع','خمس','ست','سبع','ثماني','تسع','عشر'];
+const AR_T = ['','','عشرون','ثلاثون','أربعون','خمسون','ستون','سبعون','ثمانون','تسعون'];
+const AR_H = ['','مائة','مائتان','ثلاثمائة','أربعمائة','خمسمائة','ستمائة','سبعمائة','ثمانمائة','تسعمائة'];
+const AR_SCALES = [[1e9,['مليار','ملياران','مليارات','ملياراً']],[1e6,['مليون','مليونان','ملايين','مليوناً']],[1e3,['ألف','ألفان','آلاف','ألفاً']]];
+function ar99(n, fem){
+  const U = fem ? AR_UF : AR_UM;
+  if(n <= 10) return U[n];
+  if(n === 11) return fem ? 'إحدى عشرة' : 'أحد عشر';
+  if(n === 12) return fem ? 'اثنتا عشرة' : 'اثنا عشر';
+  if(n < 20) return U[n - 10] + ' ' + (fem ? 'عشرة' : 'عشر');
+  const u = n % 10; return u ? U[u] + ' و' + AR_T[Math.floor(n / 10)] : AR_T[Math.floor(n / 10)];
+}
+function ar999(n, fem){
+  const h = Math.floor(n / 100), r = n % 100; const out = [];
+  if(h) out.push(h === 2 && !r ? 'مائتا' : AR_H[h]);   // "مائتا دينار", construct before a noun
+  if(r) out.push(ar99(r, fem));
+  return out.join(' و');
+}
+/* Form of a counted noun after the number g (> 2). */
+function arForm(g, forms){ const r = g % 100; return r >= 3 && r <= 10 ? forms[2] : (r >= 11 && r <= 99 ? forms[3] : forms[0]); }
+function arInt(n, fem){
+  const out = [];
+  for(const [v, forms] of AR_SCALES){
+    const g = Math.floor(n / v); n %= v; if(!g) continue;
+    out.push(g === 1 ? forms[0] : g === 2 ? forms[1] : ar999(g, false) + ' ' + arForm(g, forms));
+  }
+  if(n) out.push(ar999(n, fem));
+  return out.join(' و');
+}
+function arCount(n, forms, fem){
+  if(n === 0) return 'صفر ' + forms[0];
+  if(n === 1) return forms[0] + ' ' + (fem ? 'واحدة' : 'واحد');
+  if(n === 2) return forms[1];
+  // Exact thousands/millions: the scale word already carries the number (ألفان، مليونان).
+  // A scale word right before the noun is in construct: ألفا دينار، خمسة عشر ألف دينار.
+  const w = arInt(n, fem).replace(/(ألف|مليون|مليار)ان$/, '$1ا').replace(/(ألف|مليون|مليار)اً$/, '$1');
+  return w + ' ' + arForm(n, forms);
+}
+/* Whole units + sub-units of an amount, e.g. 1250.5 DZD → [1250, 50]. */
+function splitAmount(n, factor){ const total = Math.round(Math.abs(n) * factor); return [Math.floor(total / factor), total % factor]; }
+/** "Cent cinquante mille dinars algériens", "مائة وخمسون ألف دينار جزائري"… null when too large. */
+function amountInWords(n, cur, lg){
+  if(!isFinite(n) || Math.abs(n) >= WORDS_MAX) return null;
+  const C = WORD_CUR[cur] || {fr:[cur,cur],en:[cur,cur],ar:[cur,cur,cur,cur],sub:'cent'};
+  const S = WORD_SUB[C.sub] || WORD_SUB.cent;
+  const [units, subs] = splitAmount(n, C.factor || 100);
+  const neg = n < 0 && (units || subs);
+  let s;
+  if(lg === 'ar'){
+    const a = arCount(units, C.ar, C.arFem), b = subs ? arCount(subs, S.ar, S.arFem) : '';
+    s = !units && subs ? b : a + (b ? ' و' + b : '');
+    return (neg ? 'ناقص ' : '') + s;
+  }
+  if(lg === 'en'){
+    const a = enCount(units, C.en), b = subs ? enCount(subs, S.en) : '';
+    s = !units && subs ? b : a + (b ? ' and ' + b : '');
+    s = (neg ? 'minus ' : '') + s;
+  } else {
+    const a = frCount(units, C.fr, C.frFem), b = subs ? frCount(subs, S.fr, false) : '';
+    s = !units && subs ? b : a + (b ? ' et ' + b : '');
+    s = (neg ? 'moins ' : '') + s;
+  }
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+/** DA as spoken in Algeria: the whole amount in centimes ("quinze millions de centimes"). */
+function centimesInWords(n, lg){
+  const c = Math.round(Math.abs(n) * 100); if(!c || c >= WORDS_MAX) return null;
+  const S = WORD_SUB.centime; const neg = n < 0 ? {fr:'moins ',en:'minus ',ar:'ناقص '}[lg] : '';
+  const s = lg === 'ar' ? arCount(c, S.ar) : lg === 'en' ? enCount(c, S.en) : frCount(c, S.fr);
+  const out = neg + s; return lg === 'ar' ? out : out.charAt(0).toUpperCase() + out.slice(1);
+}
+
+/* Keep the screen on while the converter is open (Screen Wake Lock API). */
+const wake = {want:false, lock:null};
+function wakeSupported(){ return !!(navigator.wakeLock && navigator.wakeLock.request); }
+async function wakeOn(){
+  wake.want = true;
+  if(!wakeSupported()){ wake.want = false; toast(t('wakeUnsupported')); updateWakeBtn(); return; }
+  try{
+    const lock = await navigator.wakeLock.request('screen');
+    if(!wake.want){ try{ lock.release(); }catch(e){} return; }
+    wake.lock = lock;
+    lock.addEventListener && lock.addEventListener('release', () => { if(wake.lock === lock) wake.lock = null; updateWakeBtn(); });
+  }catch(e){ wake.want = false; toast(t('wakeFailed')); }
+  updateWakeBtn();
+}
+function wakeOff(){
+  wake.want = false; const lock = wake.lock; wake.lock = null;
+  if(lock){ try{ lock.release(); }catch(e){} }
+  updateWakeBtn();
+}
+function updateWakeBtn(){
+  const b = ui.wordsSheet && ui.wordsSheet.querySelector('[data-do="wake"]'); if(!b) return;
+  const on = !!(wake.want && wake.lock);
+  b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  b.textContent = on ? '🔆 ' + t('wakeOn') : '💡 ' + t('wakeOff');
+}
+// Android releases the lock when the app goes to the background: take it back on return.
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible' && wake.want && !wake.lock) wakeOn(); });
+
+function wordsLang(){ const l = state.settings.wordsLang; return ['fr','ar','en'].includes(l) ? l : lang(); }
+function wordsForm(amount, cur){
+  cur = CURRENCIES[cur] ? cur : 'DZD';
+  const curs = [...new Set(['DZD', ...state.settings.currencies, cur])];
+  const start = amount == null || isNaN(amount) ? '' : String(r2(amount));
+  const sheet = openSheet(`<h3>🔤 ${esc(t('inWords'))}</h3>
+    <div class="seg" id="wlang" role="group">${[['fr','Français'],['ar','العربية'],['en','English']].map(([k,l]) => `<button type="button" data-wl="${k}" class="${wordsLang()===k?'on':''}" ${k==='ar'?'lang="ar" dir="rtl"':''}>${l}</button>`).join('')}</div>
+    <label class="f">${esc(t('amount'))}</label><input class="input big num" name="amount" inputmode="decimal" data-own-mil placeholder="0" value="${esc(start)}">
+    <div class="hint" id="wmil"></div>
+    <label class="f">${esc(t('currency'))}</label><select class="input" name="currency">${curs.map(c => `<option value="${c}" ${c===cur?'selected':''}>${esc((CURRENCIES[c]||{}).flag||'')} ${c} — ${esc(sym(c))}</option>`).join('')}</select>
+    <div class="card words" id="wout" style="margin-top:12px"></div>
+    <div class="btns"><button class="btn ghost" data-do="copy">📋 ${esc(t('copy'))}</button><button class="btn ghost wake" data-do="wake" aria-pressed="false"></button></div>
+    <div class="hint">💡 ${esc(t('wordsTip'))}</div>`, null, () => { wakeOff(); ui.wordsSheet = null; });
+  ui.wordsSheet = sheet;
+  const input = sheet.querySelector('[name="amount"]');
+  const refresh = () => {
+    const lg = wordsLang(); const c = val(sheet, 'currency'); const raw = input.value.trim(); const v = parseAmount(raw);
+    const out = sheet.querySelector('#wout');
+    // "≈ 15 millions" under the field, for DA — always here, whatever the display setting.
+    sheet.querySelector('#wmil').textContent = c === 'DZD' && Math.abs(v) >= 10000 ? '≈ ' + millions(v) + ' ' + t('millions') : '';
+    const dir = lg === 'ar' ? ' lang="ar" dir="rtl"' : ' lang="' + lg + '"';
+    if(!raw){ out.innerHTML = `<div class="muted">${esc(t('wordsEmpty'))}</div>`; out.dataset.text = ''; return; }
+    const w = isNaN(v) ? null : amountInWords(v, c, lg);
+    if(!w){ out.innerHTML = `<div class="bad">${esc(isNaN(v) ? t('wordsInvalid') : t('wordsTooBig'))}</div>`; out.dataset.text = ''; return; }
+    const cw = c === 'DZD' ? centimesInWords(v, lg) : null;
+    out.innerHTML = `<div class="tiny muted">${esc(fmt(v, c, {show:true}))}</div><div class="wtext"${dir}>${esc(w)}</div>`
+      + (cw ? `<div class="kv" style="margin-top:10px"><span class="muted small">${esc(t('inCentimes'))}</span></div><div class="wtext2"${dir}>${esc(cw)}</div>` : '');
+    out.dataset.text = w + (cw ? '\n' + cw : '');
+  };
+  sheet.querySelector('#wlang').addEventListener('click', e => {
+    const b = e.target.closest('[data-wl]'); if(!b) return;
+    state.settings.wordsLang = b.dataset.wl; save();
+    sheet.querySelectorAll('#wlang button').forEach(x => x.classList.toggle('on', x === b)); refresh();
+  });
+  sheet.addEventListener('input', refresh);
+  sheet.addEventListener('change', refresh);
+  sheet.addEventListener('click', e => {
+    const d = e.target.closest('[data-do]'); if(!d) return;
+    if(d.dataset.do === 'wake'){ if(wake.want && wake.lock) wakeOff(); else wakeOn(); }
+    if(d.dataset.do === 'copy') copyText(sheet.querySelector('#wout').dataset.text || '');
+  });
+  refresh(); updateWakeBtn();
+  return sheet;
+}
+async function copyText(text){
+  if(!text){ toast(t('wordsEmpty')); return; }
+  try{ if(navigator.clipboard && navigator.clipboard.writeText){ await navigator.clipboard.writeText(text); toast(t('copied')); return; } }catch(e){}
+  try{
+    const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta); ta.select(); const ok = document.execCommand && document.execCommand('copy'); ta.remove();
+    toast(ok ? t('copied') : t('copyFailed'));
+  }catch(e){ toast(t('copyFailed')); }
+}
+// Any amount on screen: tap → the same sheet, pre-filled. Runs before row actions.
+document.addEventListener('click', e => {
+  const a = e.target.closest && e.target.closest('.amt'); if(!a) return;
+  e.preventDefault(); e.stopPropagation();
+  wordsForm(Number(a.dataset.amt), a.dataset.cur);
+}, true);
+/* ---------- currency converter ---------- */
+function convAt(a, from, to, mode){
+  const tb = state.rates[mode] || state.rates.official;
+  const r = c => Number(tb[c]) || Number(state.rates.official[c]) || 1;
+  return from === to ? r2(a) : r2(a * r(from) / r(to));
+}
+function convertForm(){
+  const S = state.settings; const all = Object.keys(CURRENCIES);
+  const ok = c => all.includes(c);
+  let from = ok(S.convFrom) ? S.convFrom : 'EUR', to = ok(S.convTo) ? S.convTo : 'DZD';
+  const opts = sel => all.map(c => `<option value="${c}" ${c===sel?'selected':''}>${esc(CURRENCIES[c].flag)} ${c} — ${esc(sym(c))}</option>`).join('');
+  const sheet = openSheet(`<h3>💱 ${esc(t('convTitle'))}</h3>
+    <div class="seg" id="cmode"><button type="button" data-m="official" class="${S.rateMode==='official'?'on':''}">${esc(t('official'))}</button><button type="button" data-m="parallel" class="${S.rateMode==='parallel'?'on':''}">${esc(t('parallel'))}</button></div>
+    <label class="f">${esc(t('amount'))}</label><input class="input big num" name="amount" inputmode="decimal" data-own-mil placeholder="0">
+    <div class="hint" id="cmil"></div>
+    <div class="cvrow"><div><label class="f">${esc(t('convFrom'))}</label><select class="input" name="from">${opts(from)}</select></div>
+      <button type="button" class="icon-btn cvswap" data-do="swap" aria-label="${esc(t('swap'))}">⇅</button>
+      <div><label class="f">${esc(t('convTo'))}</label><select class="input" name="to">${opts(to)}</select></div></div>
+    <div class="card" id="cout" style="margin-top:12px"></div>
+    <div class="hint">${esc(t('convHint'))}</div>`);
+  let mode = S.rateMode === 'official' ? 'official' : 'parallel';
+  const input = sheet.querySelector('[name="amount"]');
+  const refresh = () => {
+    from = val(sheet,'from'); to = val(sheet,'to');
+    if(S.convFrom !== from || S.convTo !== to){ S.convFrom = from; S.convTo = to; save(); }
+    const v = parseAmount(input.value); const out = sheet.querySelector('#cout');
+    sheet.querySelector('#cmil').textContent = from === 'DZD' && Math.abs(v) >= 10000 ? '≈ ' + millions(v) + ' ' + t('millions') : '';
+    const rateTxt = m => '1 ' + from + ' = ' + fmtNum(convAt(1, from, to, m) || 0, 4).replace(/[,.]?0+$/, '') + ' ' + to;
+    if(!input.value.trim() || isNaN(v)){
+      out.innerHTML = `<div class="muted">${esc(isNaN(v) && input.value.trim() ? t('wordsInvalid') : t('wordsEmpty'))}</div><div class="tiny muted" style="margin-top:6px">${esc(t('convRate'))} : ${esc(rateTxt(mode))}</div>`; return;
+    }
+    const other = mode === 'official' ? 'parallel' : 'official';
+    const res = convAt(v, from, to, mode), res2 = convAt(v, from, to, other);
+    out.innerHTML = `<div class="tiny muted">${money(v, from, {show:true})} =</div>
+      <div class="num" style="font-size:28px;font-weight:700">${money(res, to, {show:true})}</div>${to==='DZD'&&Math.abs(res)>=10000?`<div class="muted small">≈ ${esc(millions(res))} ${esc(t('millions'))}</div>`:''}
+      <div class="tiny muted" style="margin-top:4px">${esc(t('convRate'))} ${esc(t(mode))} : ${esc(rateTxt(mode))}</div>
+      ${from!==to?`<div class="kv" style="margin-top:10px"><span class="muted small">${esc(t('convOther'))} ${esc(t(other).toLowerCase())}</span><span class="num right">${money(res2, to, {show:true})}${to==='DZD'&&Math.abs(res2)>=10000?`<span class="mil">≈ ${esc(millions(res2))} ${esc(t('millions'))}</span>`:''}</span></div>`:''}`;
+  };
+  sheet.querySelector('#cmode').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if(!b) return; mode = b.dataset.m; sheet.querySelectorAll('#cmode button').forEach(x => x.classList.toggle('on', x === b)); refresh(); });
+  sheet.addEventListener('input', refresh); sheet.addEventListener('change', refresh);
+  sheet.addEventListener('click', e => { if(!e.target.closest('[data-do="swap"]')) return;
+    const f = sheet.querySelector('[name="from"]'), tt = sheet.querySelector('[name="to"]'); [f.value, tt.value] = [tt.value, f.value]; refresh(); });
+  refresh();
+  return sheet;
+}
+function acc(id){ return state.accounts.find(a => a.id === id); }
+/* An account counts in net worth and money in/out unless the user set it "hors comptage". */
+function counted(id){ const a = acc(id); return !!a && !a.excluded; }
+function accLabel(id){ if(!id) return t('toNoAccount'); const a = acc(id); return a ? (ACCOUNT_TYPES[a.type]||ACCOUNT_TYPES.other).e + ' ' + a.name : '🗑 ' + t('deletedAccount'); }
+/* A goal holds money set aside (an asset) and money already paid for it (gone).
+   Both count towards the goal; only what is set aside counts in net worth. */
+function goalHeld(g){ return r2(g.contributions.reduce((s,c)=> s + (c.kind === 'pay' ? (c.source === 'goal' ? -c.amount : 0) : c.amount), 0)); }
+function goalPaid(g){ return r2(g.contributions.reduce((s,c)=> s + (c.kind === 'pay' ? c.amount : 0), 0)); }
+function goalSaved(g){ return r2(goalHeld(g) + goalPaid(g)); }
+function progressOf(c){ return c.kind === 'pay' ? (c.source === 'goal' ? 0 : c.amount) : c.amount; }
+/* "≈ 333 millions": amounts in DA are also said in millions of centimes (10 000 DA). */
+function millions(n){ const m = Math.abs(n)/10000; return fmtNum(m, m < 100 ? 1 : 0); }
+function mil(n, c){ if(c !== 'DZD') return ''; const s = centimes(n); return s ? `<span class="mil">${esc(s)}</span>` : ''; }
+function milPair(a, b){ if(ui.hide || !state.settings.centimes || Math.abs(b) < 10000) return ''; return '≈ ' + millions(a) + ' / ' + millions(b) + ' ' + t('millions'); }
+/* Money in and out, for charts and history totals. Transfers, savings moves and adjustments are neither. */
+/**
+ * How a transaction changes what you own, in the reference currency: > 0 money
+ * in, < 0 money out, 0 a move between your own accounts and goals. Summed over
+ * all time it equals your accounts plus the money set aside in goals.
+ */
+function paySource(tx){
+  if(tx.source) return tx.source;
+  for(const g of state.goals){ const c = g.contributions.find(x => x.txId === tx.id); if(c) return c.source; }
+  return 'account';
+}
+function flowOf(tx){
+  const b = state.settings.base; const a = counted(tx.accountId) ? acc(tx.accountId) : null;
+  const cur = tx.currency || (a && a.currency) || b; const v = conv(Math.abs(tx.amount), cur, b);
+  switch(tx.type){
+    case 'income': case 'debtIn': return a ? v : 0;
+    case 'expense': case 'debtPay': return a ? -v : 0;
+    case 'opening': case 'adjust': return a ? conv(tx.amount, cur, b) : 0;
+    case 'transfer': { const to = counted(tx.toAccountId) ? acc(tx.toAccountId) : null;
+      if(a && !to) return -v;
+      if(!a && to) return conv(tx.toAmount, to.currency, b);
+      return 0; }
+    case 'goalIn': return a ? 0 : v;   // from outside the counted accounts
+    case 'goalOut': return a ? 0 : -v;
+    case 'goalPay': { const src = paySource(tx); return src === 'goal' ? -v : (src === 'account' && a ? -v : 0); }
+    default: return 0;
+  }
+}
+const isCorrection = tx => tx.type === 'opening' || tx.type === 'adjust';
+function debtPaid(d){ return r2(d.payments.reduce((s,p)=> s + p.amount, 0)); }
+function debtLeft(d){ return r2(Math.max(0, d.amount - debtPaid(d))); }
+function daysBetween(a, b){ return Math.round((new Date(b+'T00:00') - new Date(a+'T00:00'))/86400000); }
+function fmtDate(d){ if(!d) return ''; const x = new Date(d+'T00:00'); return x.toLocaleDateString(lang()==='en'?'en-GB':'fr-FR',{day:'numeric',month:'short',year:'numeric'}); }
+function monthKey(d){ return d.slice(0,7); }
+function monthLabel(k){ const x = new Date(k+'-01T00:00'); return x.toLocaleDateString(lang()==='en'?'en-GB':'fr-FR',{month:'long',year:'numeric'}); }
+function toast(msg){ if(HOST && HOST.toast){ HOST.toast(msg); return; } const el = document.createElement('div'); el.className='toast'; el.textContent = msg; document.body.appendChild(el); setTimeout(()=>el.remove(), 2200); }
+function currencyOptions(sel){ return state.settings.currencies.map(c => `<option value="${c}" ${c===sel?'selected':''}>${esc((CURRENCIES[c]||{}).flag||'')} ${c} — ${esc(sym(c))}</option>`).join(''); }
+function accountOptions(sel, withNone, noneLabel){ return (withNone ? `<option value="">${esc(noneLabel||t('noAccount'))}</option>` : '') + state.accounts.map(a => `<option value="${a.id}" ${a.id===sel?'selected':''}>${esc(accLabel(a.id))} (${a.currency})</option>`).join(''); }
+
+/* ---------- totals ---------- */
+function totals(){
+  const base = state.settings.base; let accounts=0, goals=0, paid=0, owed=0, owe=0; const byCur = {}; const byType = {};
+  let excluded = 0;
+  for(const a of state.accounts){ const v = conv(a.balance, a.currency, base); if(a.excluded){ excluded += v; continue; } accounts += v; byCur[a.currency] = r2((byCur[a.currency]||0) + a.balance); byType[a.type] = (byType[a.type]||0) + v; }
+  for(const g of state.goals){ const h = goalHeld(g); goals += conv(h, g.currency, base); paid += conv(goalPaid(g), g.currency, base); if(h) byCur[g.currency] = r2((byCur[g.currency]||0) + h); }
+  for(const d of state.debts){ const l = conv(debtLeft(d), d.currency, base); if(d.direction==='owed') owed += l; else owe += l; }
+  return {base, accounts:r2(accounts), excluded:r2(excluded), goals:r2(goals), paid:r2(paid), owed:r2(owed), owe:r2(owe), net:r2(accounts+goals+owed-owe), byCur, byType};
+}
+
+/* ---------- transactions: every balance change goes through here ---------- */
+function applyTx(tx, sign){
+  for(const [id, delta] of txEffects(tx)){ const a = acc(id); if(a) a.balance = r2(a.balance + sign*delta); }
+}
+function addTx(tx){ tx.id = tx.id || uid(); tx.createdAt = tx.createdAt || Date.now(); applyTx(tx, +1); state.tx.push(tx); return tx; }
+function removeTx(id){
+  const i = state.tx.findIndex(x => x.id === id); if(i < 0) return;
+  const tx = state.tx[i]; applyTx(tx, -1); state.tx.splice(i,1);
+  // Linked goal contribution or debt payment goes with it.
+  for(const g of state.goals) g.contributions = g.contributions.filter(c => c.txId !== id);
+  for(const d of state.debts) d.payments = d.payments.filter(p => p.txId !== id);
+}
+
+/* ---------- rendering ---------- */
+const TABS = [['home','🏠'],['accounts','👛'],['goals','🎯'],['debts','🤝'],['more','⋯']];
+function renderTabs(){ $('#tabs').innerHTML = TABS.map(([k,e]) => `<button data-act="tab" data-tab="${k}" class="${ui.tab===k?'on':''}" aria-label="${esc(t(k))}"><span>${e}</span>${esc(t(k))}</button>`).join(''); }
+function render(){
+  document.documentElement.lang = lang();
+  renderTabs();
+  const v = $('#view');
+  v.innerHTML = ({home:viewHome, accounts:viewAccounts, goals:viewGoals, debts:viewDebts, more:viewMore}[ui.tab])();
+  const fab = $('#fab'); fab.classList.toggle('hidden', !['accounts','goals','debts'].includes(ui.tab));
+}
+
+function viewHome(){
+  const x = totals(); const b = x.base;
+  const curChips = Object.entries(x.byCur).filter(([,v])=>v).map(([c,v]) => `<div class="kv"><span>${esc((CURRENCIES[c]||{}).flag||'')} ${c}</span><span class="num right"><b>${money(v,c)}</b>${mil(v,c)}${c!==b?`<span class="muted small" style="display:block">≈ ${money(conv(v,c,b),b)}</span>`:''}</span></div>`).join('');
+  const goals = state.goals.filter(g => !g.done).sort((a,b)=> goalSaved(b)/b.target - goalSaved(a)/a.target).slice(0,3);
+  const debts = state.debts.filter(d => debtLeft(d) > 0 && d.due).sort((a,b)=> a.due.localeCompare(b.due)).slice(0,3);
+  const stat = (k, v) => `<div class="stat"><div class="k">${esc(t(k))}</div><div class="v num">${money(v,b)}</div>${mil(v,b)}</div>`;
+  return `
+  <div class="card hero">
+    <div class="row between"><div class="label">${esc(t('netWorth'))} · ${esc(b)}</div>
+      <button class="icon-btn" data-act="toggleHide" aria-label="👁">${ui.hide?'🙈':'👁️'}</button></div>
+    <div class="big num">${money(x.net,b)}</div>
+    <div class="sub">${esc(centimes(x.net))} ${esc(state.settings.rateMode==='parallel'?t('parallel'):t('official'))}</div>
+    <div class="stats">${stat('inAccounts',x.accounts)}${stat('inGoals',x.goals)}${stat('iOwe',-x.owe)}</div>
+    ${x.owed?`<div class="sub" style="margin-top:8px">${esc(t('owedToMe'))} : <b class="num">${money(x.owed,b)}</b> ${esc(centimes(x.owed))}</div>`:''}
+    ${x.paid?`<div class="sub" style="margin-top:4px">💸 ${esc(t('paidGoals'))} : <b class="num">${money(x.paid,b)}</b> ${esc(centimes(x.paid))}</div>`:''}
+  </div>
+  <div class="quick">
+    <button class="qa" data-act="txForm" data-type="income"><span>⬇️</span>${esc(t('income'))}</button>
+    <button class="qa" data-act="txForm" data-type="expense"><span>⬆️</span>${esc(t('expense'))}</button>
+    <button class="qa" data-act="transferForm"><span>⇄</span>${esc(t('transfer'))}</button>
+    <button class="qa" data-act="quickSave"><span>🎯</span>${esc(t('save'))}</button>
+  </div>
+  <div class="btns" style="margin-top:8px"><button class="btn ghost" data-act="words">🔤 ${esc(t('inWords'))}</button><button class="btn ghost" data-act="convert">💱 ${esc(t('converter'))}</button></div>
+  ${smsBanner()}
+  ${curChips?`<h2>${esc(t('byCurrency'))}</h2><div class="card">${curChips}</div>`:''}
+  ${state.accounts.length?`<h2>${esc(t('breakdown'))}</h2><div class="card">${donut(x)}</div>`:''}
+  ${state.tx.length?`<h2>${esc(t('flow'))}</h2><div class="card">${flowChart()}</div>`:''}
+  ${goals.length?`<h2 class="row between"><span>${esc(t('topGoals'))}</span></h2>${goals.map(goalCard).join('')}`:''}
+  ${debts.length?`<h2>${esc(t('dueSoon'))}</h2><div class="card list">${debts.map(debtRow).join('')}</div>`:''}
+  ${!state.accounts.length?`<div class="card empty"><div class="e">👛</div><p>${esc(t('noAccounts'))}</p><button class="btn" data-act="accountForm">${esc(t('addAccount'))}</button></div>`:''}`;
+}
+
+function donut(x){
+  const parts = Object.entries(x.byType).filter(([,v]) => v > 0);
+  if(x.goals > 0) parts.push(['__goals', x.goals]);
+  const total = parts.reduce((s,[,v])=>s+v,0); if(!total) return `<div class="muted small">—</div>`;
+  const colors = ['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)','var(--c7)','var(--c1)'];
+  let off = 0; const R = 15.9155;
+  const segs = parts.map(([k,v],i) => { const p = v/total*100; const s = `<circle r="${R}" cx="21" cy="21" fill="none" stroke="${colors[i%colors.length]}" stroke-width="6" stroke-dasharray="${p} ${100-p}" stroke-dashoffset="${25-off}"></circle>`; off += p; return s; }).join('');
+  const legend = parts.map(([k,v],i) => { const label = k==='__goals' ? '🎯 '+t('inGoals') : (ACCOUNT_TYPES[k]||ACCOUNT_TYPES.other).e+' '+(ACCOUNT_TYPES[k]||ACCOUNT_TYPES.other)[lang()];
+    return `<div class="row small"><i class="dot" style="background:${colors[i%colors.length]}"></i><span class="grow ellipsis">${esc(label)}</span><b class="num">${Math.round(v/total*100)}%</b></div>`; }).join('');
+  return `<div class="row" style="gap:16px"><svg viewBox="0 0 42 42" width="120" height="120" style="flex:none"><circle r="${R}" cx="21" cy="21" fill="none" stroke="var(--surface2)" stroke-width="6"></circle>${segs}</svg><div class="legend">${legend}</div></div>`;
+}
+
+function flowChart(){
+  const b = state.settings.base; const months = [];
+  const now = new Date(); for(let i=5;i>=0;i--){ const d = new Date(now.getFullYear(), now.getMonth()-i, 1); months.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')); }
+  const data = months.map(m => { let inc=0, exp=0; for(const tx of state.tx){ if(monthKey(tx.date)!==m) continue; const f = flowOf(tx); if(f > 0) inc += f; else exp -= f; } return {m,inc,exp}; });
+  const max = Math.max(1, ...data.map(d => Math.max(d.inc,d.exp)));
+  const cur = data[data.length-1];
+  const cols = data.map(d => { const lbl = new Date(d.m+'-01T00:00').toLocaleDateString(lang()==='en'?'en-GB':'fr-FR',{month:'short'});
+    return `<div class="col"><div class="bars"><i class="b" style="height:${d.inc/max*100}%"></i><i class="b e" style="height:${d.exp/max*100}%"></i></div><div class="tiny muted">${esc(lbl)}</div></div>`; }).join('');
+  return `<div class="tiny muted">${esc(t('thisMonth'))}</div>
+    <div class="two"><div><b class="good num">${money(cur.inc,b,{plus:true})}</b>${mil(cur.inc,b)}</div><div class="right"><b class="bad num">${money(-cur.exp,b)}</b>${mil(cur.exp,b)}</div></div>
+    <div class="chart">${cols}</div>`;
+}
+
+function viewAccounts(){
+  if(!state.accounts.length) return `<div class="card empty"><div class="e">👛</div><p>${esc(t('noAccounts'))}</p><button class="btn" data-act="accountForm">${esc(t('addAccount'))}</button></div>`;
+  const b = state.settings.base; const groups = {};
+  for(const a of state.accounts) if(!a.excluded) (groups[a.type] = groups[a.type] || []).push(a);
+  const out = state.accounts.filter(a => a.excluded);
+  const outTot = out.reduce((s,a)=> s + conv(a.balance,a.currency,b), 0);
+  const outList = out.length ? `<h2 class="row between"><span>🚫 ${esc(t('excluded'))}</span><span class="num right muted">${money(outTot,b)}${mil(outTot,b)}</span></h2>
+    <div class="card list" style="opacity:.75">${out.map(a => `<div class="item" data-act="accountDetail" data-id="${a.id}">
+      <div class="avatar">${(ACCOUNT_TYPES[a.type]||ACCOUNT_TYPES.other).e}</div>
+      <div class="grow"><div class="ellipsis"><b>${esc(a.name)}</b></div><div class="tiny muted">${esc(a.currency)} · ${esc(t('notCounted'))}</div></div>
+      <div class="amount num">${money(a.balance,a.currency)}${mil(a.balance,a.currency)}</div></div>`).join('')}</div>` : '';
+  return Object.keys(ACCOUNT_TYPES).filter(k => groups[k]).map(k => {
+    const list = groups[k]; const tot = list.reduce((s,a)=> s + conv(a.balance,a.currency,b), 0);
+    return `<h2 class="row between"><span>${ACCOUNT_TYPES[k].e} ${esc(ACCOUNT_TYPES[k][lang()])}</span><span class="num right">${money(tot,b)}${mil(tot,b)}</span></h2>
+    <div class="card list">${list.map(a => `<div class="item" data-act="accountDetail" data-id="${a.id}">
+      <div class="avatar">${ACCOUNT_TYPES[a.type].e}</div>
+      <div class="grow"><div class="ellipsis"><b>${esc(a.name)}</b></div><div class="tiny muted">${esc(a.currency)}${a.currency!==b?' · ≈ '+money(conv(a.balance,a.currency,b),b):''}</div></div>
+      <div class="amount num ${a.balance<0?'bad':''}">${money(a.balance,a.currency)}${mil(a.balance,a.currency)}</div></div>`).join('')}</div>`;
+  }).join('') + outList;
+}
+
+function goalStats(g){
+  const held = goalHeld(g), paid = goalPaid(g), saved = r2(held + paid);
+  const left = r2(Math.max(0, g.target - saved)); const pct = g.target ? Math.min(100, saved/g.target*100) : 0;
+  let perMonth = null, daysLeft = null;
+  if(g.deadline){ daysLeft = daysBetween(today(), g.deadline); if(daysLeft > 0 && left > 0) perMonth = r2(left / Math.max(1, daysLeft/30.44)); }
+  // Pace: progress made over the last 90 days, projected.
+  const since = new Date(); since.setDate(since.getDate()-90); const s90 = since.toISOString().slice(0,10);
+  const recent = g.contributions.filter(c => c.date >= s90).reduce((s,c)=> s + progressOf(c), 0);
+  let eta = null; if(left > 0 && recent > 0){ const monthly = recent/3; const m = left/monthly; const d = new Date(); d.setDate(d.getDate() + Math.ceil(m*30.44)); eta = d.toISOString().slice(0,10); }
+  return {saved, held, paid, left, pct, perMonth, daysLeft, eta};
+}
+function goalCard(g){
+  const s = goalStats(g); const c = g.currency;
+  const badge = g.done || s.left === 0 ? `<span class="pill good">✓ ${esc(t('reached'))}</span>`
+    : s.daysLeft != null ? (s.daysLeft < 0 ? `<span class="pill bad">${esc(t('deadline').split(' (')[0])} ${esc(t('late'))}</span>` : `<span class="pill acc">${s.daysLeft} ${esc(t('daysLeft'))}</span>`) : '';
+  const pair = c === 'DZD' ? milPair(s.saved, g.target) : '';
+  return `<div class="card goal" data-act="goalDetail" data-id="${g.id}">
+    <div class="row"><div class="emoji">${esc(g.emoji||'⭐')}</div>
+      <div class="grow"><div class="row between"><h3 class="ellipsis">${esc(g.name)}</h3>${badge}</div>
+      <div class="small muted num">${money(s.saved,c)} / ${money(g.target,c)}</div>
+      ${pair?`<div class="tiny muted">${esc(pair)}</div>`:''}
+      ${s.paid?`<div class="tiny" style="margin-top:4px"><span class="pill good">💸 ${esc(t('paidLbl'))} ${money(s.paid,c)}</span> <span class="muted">${esc(t('held'))} ${money(s.held,c)}</span></div>`:''}</div></div>
+    <div class="bar ${s.pct>=100?'good':''}" style="margin-top:10px"><i style="width:${s.pct}%"></i></div>
+    <div class="row between tiny muted" style="margin-top:6px"><span>${Math.floor(s.pct)}%</span>
+      <span class="right">${s.perMonth!=null?`<b class="num">${money(s.perMonth,c)}</b> ${esc(t('perMonth'))}${mil(s.perMonth,c)}`: s.eta?`${esc(t('atThisPace'))} : ${esc(fmtDate(s.eta))}`: s.left>0?`${esc(t('remaining'))} <b class="num">${money(s.left,c)}</b>${mil(s.left,c)}`:''}</span></div>
+  </div>`;
+}
+function viewGoals(){
+  if(!state.goals.length) return `<div class="card empty"><div class="e">🎯</div><p>${esc(t('noGoals'))}</p><button class="btn" data-act="goalForm">${esc(t('addGoal'))}</button></div>`;
+  const active = state.goals.filter(g => !g.done), done = state.goals.filter(g => g.done);
+  return active.map(goalCard).join('') + (done.length ? `<h2>✓ ${esc(t('reached'))}</h2>` + done.map(goalCard).join('') : '');
+}
+
+function debtRow(d){
+  const left = debtLeft(d); const pct = d.amount ? Math.min(100, debtPaid(d)/d.amount*100) : 0;
+  const late = d.due && left > 0 && d.due < today();
+  const when = d.due ? (late ? `<span class="pill bad">${esc(t('overdue'))}</span>` : `<span class="tiny muted">${esc(fmtDate(d.due))}</span>`) : '';
+  return `<div class="item" data-act="debtDetail" data-id="${d.id}">
+    <div class="avatar">${d.direction==='owed'?'📥':'📤'}</div>
+    <div class="grow"><div class="row between"><b class="ellipsis">${esc(d.person)}</b>${when}</div>
+      <div class="tiny muted ellipsis">${esc(d.reason||'')}</div>
+      <div class="bar good" style="margin-top:6px"><i style="width:${pct}%"></i></div></div>
+    <div class="amount num ${d.direction==='owed'?'good':'bad'}">${left?money(left,d.currency)+mil(left,d.currency):'✓'}</div></div>`;
+}
+function viewDebts(){
+  const list = state.debts.filter(d => d.direction === ui.debtSeg);
+  const open = list.filter(d => debtLeft(d) > 0), closed = list.filter(d => debtLeft(d) === 0);
+  const b = state.settings.base; const tot = open.reduce((s,d)=> s + conv(debtLeft(d), d.currency, b), 0);
+  return `<div class="seg"><button data-act="debtSeg" data-seg="owe" class="${ui.debtSeg==='owe'?'on':''}">📤 ${esc(t('iOwe'))}</button><button data-act="debtSeg" data-seg="owed" class="${ui.debtSeg==='owed'?'on':''}">📥 ${esc(t('owedToMe'))}</button></div>
+  ${open.length?`<div class="card"><div class="row between"><span class="muted">${esc(t('remainingDebt'))}</span><span class="num right ${ui.debtSeg==='owe'?'bad':'good'}"><b>${money(tot,b)}</b>${mil(tot,b)}</span></div></div>`:''}
+  ${open.length?`<div class="card list">${open.map(debtRow).join('')}</div>`:`<div class="card empty"><div class="e">🤝</div><p>${esc(t('noDebts'))}</p><button class="btn" data-act="debtForm">${esc(t('addDebt'))}</button></div>`}
+  ${closed.length?`<h2>${esc(t('settledList'))}</h2><div class="card list">${closed.map(debtRow).join('')}</div>`:''}`;
+}
+
+function txLabel(tx){
+  if(tx.type==='income'||tx.type==='expense'){ const c = (CATEGORIES[tx.type]||[]).find(x=>x[1]===tx.category); return (c?c[0]+' '+t('cat.'+c[1]):t('tx.'+tx.type)); }
+  if(tx.type==='transfer') return '⇄ ' + t('tx.transfer');
+  if(tx.type==='goalPay'){ const g = state.goals.find(x=>x.id===tx.goalId); return '💸 ' + (g ? g.name : t('tx.goalPay')); }
+  if(tx.type==='goalIn'||tx.type==='goalOut'){ const g = state.goals.find(x=>x.id===tx.goalId); return '🎯 ' + (g?g.name:t('tx.'+tx.type)); }
+  if(tx.type==='debtPay'||tx.type==='debtIn'){ const d = state.debts.find(x=>x.id===tx.debtId); return '🤝 ' + (d?d.person:t('tx.'+tx.type)); }
+  if(tx.type==='opening') return '🏁 ' + t('tx.opening');
+  return '✎ ' + t('tx.adjust');
+}
+function txAmount(tx){
+  const a = acc(tx.accountId); const c = a ? a.currency : (tx.currency||state.settings.base);
+  const neg = ['expense','debtPay','goalIn','goalPay'].includes(tx.type) || ((tx.type==='adjust' || tx.type==='opening') && tx.amount<0);
+  if(tx.type==='transfer') return `<span class="num">${money(tx.amount,c)}</span>${mil(tx.amount,c)}`;
+  return `<span class="num ${neg?'bad':'good'}">${neg?money(-Math.abs(tx.amount),c):money(Math.abs(tx.amount),c,{plus:true})}</span>${mil(tx.amount,c)}`;
+}
+function periodStart(){
+  const d = new Date();
+  if(ui.histPeriod === 'month') return today().slice(0,8) + '01';
+  if(ui.histPeriod === '3m'){ d.setMonth(d.getMonth()-3); return isoDate(d.getTime()); }
+  if(ui.histPeriod === 'year') return d.getFullYear() + '-01-01';
+  return '';
+}
+function historyList(filter){
+  const q = ui.histQuery.trim().toLowerCase(); const from = periodStart(); const b = state.settings.base;
+  const txs = state.tx.filter(filter).filter(tx => !from || tx.date >= from)
+    .filter(tx => !q || (txLabel(tx)+' '+(tx.note||'')+' '+accLabel(tx.accountId)).toLowerCase().includes(q))
+    .sort((a,b)=> (b.date+b.createdAt).localeCompare(a.date+a.createdAt));
+  let inn = 0, out = 0, corrIn = 0, corrOut = 0;
+  for(const tx of txs){ const f = flowOf(tx); if(f > 0){ inn += f; if(isCorrection(tx)) corrIn += f; } else if(f < 0){ out -= f; if(isCorrection(tx)) corrOut -= f; } }
+  inn = r2(inn); out = r2(out); const net = r2(inn - out);
+  const unfiltered = !q && ui.histType === 'all' && !ui.histAccount && ui.histPeriod === 'all';
+  const incl = v => v ? `<div class="tiny muted">${esc(t('inclCorrections'))} ${money(v,b)}</div>` : '';
+  const summary = `<div class="card"><div class="two">
+      <div><div class="tiny muted">⬇️ ${esc(t('moneyIn'))}</div><div class="good num bigv">${money(inn,b,{plus:true})}</div>${mil(inn,b)}${incl(r2(corrIn))}</div>
+      <div class="right"><div class="tiny muted">⬆️ ${esc(t('moneyOut'))}</div><div class="bad num bigv">${money(-out,b)}</div>${mil(out,b)}${incl(r2(corrOut))}</div></div>
+    <div class="kv" style="margin-top:8px"><span class="muted">${esc(t('netFlow'))}</span><span class="num right ${net<0?'bad':'good'}"><b>${money(net,b,{plus:true})}</b>${mil(net,b)}</span></div>
+    ${unfiltered ? `<div class="hint">${esc(t('netExplained'))}</div>` : ''}</div>`;
+  if(!txs.length) return summary + `<div class="card empty"><div class="e">🧾</div><p>${esc(t('noHistory'))}</p></div>`;
+  let list = '', month = '';
+  for(const tx of txs){
+    const m = monthKey(tx.date); if(m !== month){ if(month) list += '</div>'; month = m; list += `<div class="month"><span>${esc(monthLabel(m))}</span></div><div class="card list">`; }
+    list += `<div class="item" data-act="txDetail" data-id="${tx.id}"><div class="grow"><div class="ellipsis"><b>${esc(txLabel(tx))}</b></div>
+      <div class="tiny muted ellipsis">${esc(fmtDate(tx.date))} · ${esc(accLabel(tx.accountId))}${tx.type==='transfer'?' → '+esc(accLabel(tx.toAccountId)):''}${tx.note?' · '+esc(tx.note):''}</div></div><div class="amount">${txAmount(tx)}</div></div>`;
+  }
+  return summary + list + '</div>';
+}
+
+function histFilter(tx){
+  return (ui.histType==='all' || tx.type===ui.histType || (ui.histType==='goal'&&tx.type.startsWith('goal')) || (ui.histType==='debt'&&tx.type.startsWith('debt')))
+    && (!ui.histAccount || tx.accountId===ui.histAccount || tx.toAccountId===ui.histAccount);
+}
+function viewMore(){
+  const s = state.settings; const b = s.base;
+  const types = [['all',t('all')],['income',t('income')],['expense',t('expense')],['transfer',t('transfer')],['goal','🎯'],['debt','🤝']];
+  const rates = s.currencies.filter(c => c !== 'DZD').map(c => `<div class="two" style="align-items:center;margin-top:6px">
+      <div>${esc((CURRENCIES[c]||{}).flag||'')} <b>1 ${c}</b></div>
+      <div class="row"><input class="input num" inputmode="decimal" data-rate="${c}" value="${esc(String(state.rates[s.rateMode][c] ?? ''))}"><span class="muted small">DA</span></div></div>`).join('');
+  const allCur = Object.keys(CURRENCIES).map(c => `<button class="chip ${s.currencies.includes(c)?'on':''}" data-act="toggleCur" data-cur="${c}">${esc(CURRENCIES[c].flag)} ${c}</button>`).join('');
+  return `
+  <h2>${esc(t('history'))}</h2>
+  <input class="input search" placeholder="${esc(t('search'))}" data-input="histQuery" value="${esc(ui.histQuery)}">
+  <div class="chips" style="margin-bottom:8px">${types.map(([k,l]) => `<button class="chip ${ui.histType===k?'on':''}" data-act="histType" data-type="${k}">${esc(l)}</button>`).join('')}</div>
+  ${state.accounts.length?`<select class="input" data-input="histAccount" style="margin-bottom:10px"><option value="">${esc(t('accounts'))} : ${esc(t('all'))}</option>${accountOptions(ui.histAccount)}</select>`:''}
+  <div class="chips" style="margin-bottom:10px">${[['all','pAll'],['month','pMonth'],['3m','p3m'],['year','pYear']].map(([k,l]) => `<button class="chip ${ui.histPeriod===k?'on':''}" data-act="histPeriod" data-p="${k}">${esc(t(l))}</button>`).join('')}</div>
+  <div id="histList">${historyList(histFilter)}</div>
+  ${state.tx.length?`<button class="btn ghost block" data-act="exportCsv" style="margin-top:4px">📄 ${esc(t('exportCsv'))}</button>`:''}
+
+  ${smsAvailable()?`<h2>📩 ${esc(t('smsTitle'))}</h2><div class="card">
+    <div class="kv"><span class="muted">SMS</span><span>${ui.smsStatus&&ui.smsStatus.granted?esc(t('smsGranted')):esc(t('smsNotGranted'))}</span></div>
+    <div class="kv"><span class="muted">${esc(t('smsLinked'))}</span><span>${acc(state.sms.accountId)?esc(accLabel(state.sms.accountId)):esc(t('smsNotLinked'))}</span></div>
+    <div class="btns"><button class="btn ghost" data-act="smsSetup">${esc(t('smsSetup'))}</button>${acc(state.sms.accountId)?`<button class="btn ghost" data-act="smsSyncNow">🔄 ${esc(t('smsSync'))}</button>`:''}</div>
+    <div class="hint">${esc(t('smsNoCodes'))}</div></div>`:''}
+
+  <h2>${esc(t('rates'))}</h2>
+  <div class="card">
+    <div class="seg"><button data-act="rateMode" data-mode="official" class="${s.rateMode==='official'?'on':''}">${esc(t('official'))}</button><button data-act="rateMode" data-mode="parallel" class="${s.rateMode==='parallel'?'on':''}">${esc(t('parallel'))}</button></div>
+    <div class="hint">${esc(t('ratesHint'))}</div>
+    ${rates}
+    ${s.rateMode==='official'?`<button class="btn ghost block" data-act="fetchRates" style="margin-top:12px">🌐 ${esc(t('updateOfficial'))}</button>${state.rates.officialUpdatedAt?`<div class="hint">${esc(t('lastUpdate'))} : ${esc(fmtDate(state.rates.officialUpdatedAt.slice(0,10)))}</div>`:''}`:''}
+  </div>
+
+  <h2>${esc(t('settings'))}</h2>
+  <div class="card">
+    <label class="f">${esc(t('baseCurrency'))}</label>
+    <select class="input" data-input="base">${currencyOptions(b)}</select>
+    <label class="f">${esc(t('currencies'))}</label>
+    <div class="chips">${allCur}</div>
+    <label class="f">${esc(t('language'))}</label>
+    <select class="input" data-input="lang"><option value="auto" ${s.lang==='auto'?'selected':''}>${esc(t('auto'))}</option><option value="fr" ${s.lang==='fr'?'selected':''}>Français</option><option value="en" ${s.lang==='en'?'selected':''}>English</option></select>
+    <label class="row" style="margin-top:12px;min-height:44px"><input type="checkbox" data-input="hideOnStart" ${s.hideOnStart?'checked':''}> <span class="grow">${esc(t('hideAmounts'))}</span></label>
+    <label class="row" style="min-height:44px"><input type="checkbox" data-input="centimes" ${s.centimes?'checked':''}> <span class="grow">${esc(t('centimes'))}</span></label>
+  </div>
+
+  <h2>${esc(t('backup'))}</h2>
+  <div class="card">
+    <button class="btn block" data-act="exportJson">💾 ${esc(t('exportJson'))}</button>
+    <button class="btn ghost block" data-act="importJson" style="margin-top:8px">📂 ${esc(t('importJson'))}</button>
+    <button class="btn danger block" data-act="resetAll" style="margin-top:8px">🗑️ ${esc(t('resetAll'))}</button>
+  </div>`;
+}
+
+/* ---------- bottom sheets (with Back support) ---------- */
+function openSheet(html, onMount, onClose){
+  const scrim = document.createElement('div'); scrim.className = 'scrim';
+  const sheet = document.createElement('div'); sheet.className = 'sheet'; sheet.setAttribute('role','dialog');
+  sheet.innerHTML = '<div class="grab"></div>' + html;
+  document.body.append(scrim, sheet);
+  const entry = {scrim, sheet, onClose}; ui.sheets.push(entry);
+  scrim.addEventListener('click', closeSheet);
+  // No automatic focus: opening the keyboard while the sheet slides in made the
+  // app's WebView resize and scroll mid-animation, leaving the sheet off-screen.
+  // Once the user taps a field and the keyboard is up, bring that field into view.
+  sheet.addEventListener('focusin', e => {
+    const field = e.target; if(!field.matches || !field.matches('input,select,textarea')) return;
+    setTimeout(() => { fitViewport(); field.scrollIntoView({block:'center', behavior:'smooth'}); }, 320);
+  });
+  if(onMount) onMount(sheet);
+  setupMilHints(sheet);
+  return sheet;
+}
+function closeSheet(){
+  const e = ui.sheets.pop(); if(!e) return false;
+  if(e.onClose){ try{ e.onClose(); }catch(x){ try{ console.warn(x); }catch(y){} } }
+  if(document.activeElement && e.sheet.contains(document.activeElement)) document.activeElement.blur();
+  e.scrim.classList.add('closing'); e.sheet.classList.add('closing');
+  setTimeout(() => { e.scrim.remove(); e.sheet.remove(); }, 230);
+  return true;
+}
+/* "≈ N millions" under every money field, live while typing (DA amounts only). */
+function milCurrency(input){
+  if(input.dataset.cur) return input.dataset.cur;
+  const sheet = input.closest('.sheet'); const pick = n => sheet && sheet.querySelector(`[name="${n}"]`);
+  if(input.name === 'toAmount'){ const a = acc((pick('to')||{}).value); if(a) return a.currency; }
+  const cur = pick('currency'); if(cur && cur.value) return cur.value;
+  for(const n of ['from','account','source']){ const el = pick(n); const a = el && acc(el.value); if(a) return a.currency; }
+  return input.dataset.fallbackCur || state.settings.base;
+}
+function updateMil(input){
+  let hint = input.nextElementSibling;
+  if(!hint || !hint.classList.contains('milhint')){ hint = document.createElement('div'); hint.className = 'hint milhint'; input.insertAdjacentElement('afterend', hint); }
+  const v = parseAmount(input.value);
+  hint.textContent = milCurrency(input) === 'DZD' && v > 0 ? centimes(v) : '';
+}
+function setupMilHints(root){ root.querySelectorAll('input[inputmode="decimal"]:not([data-rate]):not([data-own-mil])').forEach(updateMil); }
+document.addEventListener('input', e => { const el = e.target; if(el.matches && el.matches('.sheet input[inputmode="decimal"]:not([data-rate]):not([data-own-mil])')) updateMil(el); });
+document.addEventListener('change', e => { const sh = e.target.closest && e.target.closest('.sheet'); if(sh && e.target.tagName === 'SELECT') setupMilHints(sh); });
+
+/* Keeps sheets inside what is really visible, whether the keyboard resizes the page or covers it. */
+function fitViewport(){
+  const root = document.documentElement.style; const vv = window.visualViewport;
+  const visible = vv ? vv.height : window.innerHeight;
+  const keyboard = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+  root.setProperty('--vh', visible + 'px'); root.setProperty('--kb', keyboard + 'px');
+}
+if(window.visualViewport){ visualViewport.addEventListener('resize', fitViewport); visualViewport.addEventListener('scroll', fitViewport); }
+window.addEventListener('resize', fitViewport);
+fitViewport();
+function closeAllSheets(){ while(ui.sheets.length) closeSheet(); }
+function commit(msg){ save(); closeAllSheets(); render(); if(msg) toast(msg); }
+function val(sheet, name){ const el = sheet.querySelector(`[name="${name}"]`); return el ? el.value : ''; }
+
+/* ---------- forms ---------- */
+function accountForm(id){
+  const a = id ? acc(id) : null; const type = a ? a.type : 'bank';
+  const sheet = openSheet(`<h3>${esc(a?t('editAccount'):t('addAccount'))}</h3>
+    <label class="f">${esc(t('type'))}</label><div class="chips" id="typeChips">${Object.entries(ACCOUNT_TYPES).map(([k,v]) => `<button class="chip ${k===type?'on':''}" data-type="${k}" type="button">${v.e} ${esc(v[lang()])}</button>`).join('')}</div>
+    <label class="f">${esc(t('name'))}</label><input class="input" name="name" value="${esc(a?a.name:'')}" maxlength="40">
+    <div class="two"><div><label class="f">${esc(t('currency'))}</label><select class="input" name="currency" ${a?'disabled':''}>${currencyOptions(a?a.currency:state.settings.base)}</select></div>
+    <div><label class="f">${esc(a?t('balance'):t('initialBalance'))}</label><input class="input num" name="balance" inputmode="decimal" value="${a?esc(String(a.balance)):''}" ${a?'disabled':''} placeholder="0"></div></div>
+    <label class="row" style="margin-top:12px;min-height:44px"><input type="checkbox" name="excluded" ${a&&a.excluded?'checked':''}> <span class="grow">🚫 ${esc(t('excludeOpt'))}<div class="tiny muted">${esc(t('excludeHint'))}</div></span></label>
+    <div class="btns">${a?`<button class="btn danger" data-do="del">${esc(t('delete'))}</button>`:''}<button class="btn" data-do="ok">${esc(a?t('saveBtn'):t('create'))}</button></div>`);
+  let chosen = type;
+  sheet.querySelector('#typeChips').addEventListener('click', e => { const b = e.target.closest('[data-type]'); if(!b) return; chosen = b.dataset.type; sheet.querySelectorAll('#typeChips .chip').forEach(c => c.classList.toggle('on', c===b)); });
+  sheet.addEventListener('click', e => {
+    const d = e.target.closest('[data-do]'); if(!d) return;
+    if(d.dataset.do === 'del'){ if(!confirm(t('confirmDelete'))) return; state.accounts = state.accounts.filter(x => x.id !== a.id); commit(t('deleted')); return; }
+    const name = val(sheet,'name').trim(); if(!name){ toast(t('required')); return; }
+    const excluded = sheet.querySelector('[name="excluded"]').checked;
+    if(a){ a.name = name; a.type = chosen; a.excluded = excluded; commit(t('savedMsg')); return; }
+    const bal = val(sheet,'balance').trim() === '' ? 0 : parseAmount(val(sheet,'balance')); if(isNaN(bal)){ toast(t('required')); return; }
+    const created = {id:uid(), name, type:chosen, currency:val(sheet,'currency'), balance:0, excluded, createdAt:Date.now()};
+    state.accounts.push(created);
+    if(bal) addTx({type:'opening', accountId:created.id, amount:bal, currency:created.currency, date:today(), note:''});
+    commit(t('savedMsg'));
+  });
+}
+
+function accountDetail(id){
+  const a = acc(id); if(!a) return;
+  const txs = state.tx.filter(x => x.accountId===id || x.toAccountId===id).sort((x,y)=> (y.date+y.createdAt).localeCompare(x.date+x.createdAt)).slice(0,30);
+  const b = state.settings.base;
+  const sheet = openSheet(`<div class="row"><div class="avatar">${ACCOUNT_TYPES[a.type].e}</div><div class="grow"><h3 style="margin:0">${esc(a.name)}</h3><div class="tiny muted">${esc(ACCOUNT_TYPES[a.type][lang()])} · ${esc(a.currency)}${a.excluded?` · <span class="pill warn">🚫 ${esc(t('excluded'))}</span>`:''}</div></div><button class="icon-btn" data-do="edit" aria-label="${esc(t('edit'))}">✎</button></div>
+    <div class="card" style="margin-top:12px;text-align:center"><div class="muted small">${esc(t('balance'))}</div><div class="num" style="font-size:28px;font-weight:700">${money(a.balance,a.currency)}</div>
+    ${a.currency!==b?`<div class="muted small num">≈ ${money(conv(a.balance,a.currency,b),b)}</div>`:''}${a.currency==='DZD'&&centimes(a.balance)?`<div class="muted small">${esc(centimes(a.balance))}</div>`:''}</div>
+    <div class="quick"><button class="qa" data-do="income"><span>⬇️</span>${esc(t('income'))}</button><button class="qa" data-do="expense"><span>⬆️</span>${esc(t('expense'))}</button><button class="qa" data-do="transfer"><span>⇄</span>${esc(t('transfer'))}</button><button class="qa" data-do="adjust"><span>✎</span>${esc(t('balance'))}</button></div>
+    <button class="btn ghost block" data-do="exclude" style="margin-top:8px">${a.excluded ? '✓ ' + esc(t('countIt')) : '🚫 ' + esc(t('excludeOpt'))}</button>
+    <h2>${esc(t('history'))}</h2><div class="card list">${txs.length?txs.map(tx => `<div class="item" data-do="tx" data-id="${tx.id}"><div class="grow"><b class="ellipsis">${esc(txLabel(tx))}</b><div class="tiny muted">${esc(fmtDate(tx.date))}${tx.note?' · '+esc(tx.note):''}</div></div><div class="amount">${tx.type==='transfer'&&tx.toAccountId===id?`<span class="num good">${money(tx.toAmount,a.currency,{plus:true})}</span>${mil(tx.toAmount,a.currency)}`:txAmount(tx)}</div></div>`).join(''):`<div class="empty small">${esc(t('noHistory'))}</div>`}</div>`);
+  sheet.addEventListener('click', e => {
+    const d = e.target.closest('[data-do]'); if(!d) return;
+    ({exclude:()=>{ a.excluded = !a.excluded; commit(t('savedMsg')); }, edit:()=>accountForm(id), income:()=>txForm('income',id), expense:()=>txForm('expense',id), transfer:()=>transferForm(id), adjust:()=>adjustForm(id), tx:()=>txDetail(d.dataset.id)})[d.dataset.do]();
+  });
+}
+
+function txForm(type, accountId){
+  if(!state.accounts.length){ toast(t('noAccounts')); accountForm(); return; }
+  const cats = CATEGORIES[type]; let cat = cats[0][1];
+  const sheet = openSheet(`<h3>${type==='income'?'⬇️':'⬆️'} ${esc(t(type))}</h3>
+    <label class="f">${esc(t('amount'))}</label><input class="input big num" name="amount" inputmode="decimal" placeholder="0">
+    <label class="f">${esc(t('account'))}</label><select class="input" name="account">${accountOptions(accountId||state.accounts[0].id)}</select>
+    <label class="f">${esc(t('category'))}</label><div class="chips" id="cats">${cats.map(([e,k],i) => `<button class="chip ${i===0?'on':''}" data-cat="${k}" type="button">${e} ${esc(t('cat.'+k))}</button>`).join('')}</div>
+    <div class="two"><div><label class="f">${esc(t('date'))}</label><input class="input" type="date" name="date" value="${today()}"></div><div><label class="f">${esc(t('note'))}</label><input class="input" name="note" maxlength="80"></div></div>
+    <div class="btns"><button class="btn" data-do="ok">${esc(t('saveBtn'))}</button></div>`);
+  sheet.querySelector('#cats').addEventListener('click', e => { const b = e.target.closest('[data-cat]'); if(!b) return; cat = b.dataset.cat; sheet.querySelectorAll('#cats .chip').forEach(c => c.classList.toggle('on', c===b)); });
+  sheet.addEventListener('click', e => {
+    if(!e.target.closest('[data-do="ok"]')) return;
+    const amount = parseAmount(val(sheet,'amount')); if(!(amount > 0)){ toast(t('required')); return; }
+    const a = acc(val(sheet,'account'));
+    addTx({type, accountId:a.id, amount, currency:a.currency, category:cat, date:val(sheet,'date')||today(), note:val(sheet,'note').trim()});
+    commit(t('savedMsg'));
+  });
+}
+
+function transferForm(fromId){
+  if(state.accounts.length < 2){ toast(t('sameAccount')); accountForm(); return; }
+  const from0 = fromId || state.accounts[0].id; const to0 = (state.accounts.find(a => a.id !== from0)||{}).id;
+  const sheet = openSheet(`<h3>⇄ ${esc(t('transfer'))}</h3>
+    <div class="two"><div><label class="f">${esc(t('fromAccount'))}</label><select class="input" name="from">${accountOptions(from0)}</select></div>
+    <div><label class="f">${esc(t('toAccount'))}</label><select class="input" name="to">${accountOptions(to0)}</select></div></div>
+    <label class="f">${esc(t('amount'))} <span id="fromCur"></span></label><input class="input big num" name="amount" inputmode="decimal" placeholder="0">
+    <div id="fx" class="hidden"><label class="f">${esc(t('received'))} <span id="toCur"></span></label><input class="input num" name="toAmount" inputmode="decimal"><div class="hint" id="rateHint"></div></div>
+    <div class="two"><div><label class="f">${esc(t('date'))}</label><input class="input" type="date" name="date" value="${today()}"></div><div><label class="f">${esc(t('note'))}</label><input class="input" name="note" maxlength="80"></div></div>
+    <div class="btns"><button class="btn" data-do="ok">${esc(t('saveBtn'))}</button></div>`);
+  let touched = false;
+  const refresh = () => {
+    const f = acc(val(sheet,'from')), to = acc(val(sheet,'to')); if(!f||!to) return;
+    sheet.querySelector('#fromCur').textContent = '(' + f.currency + ')';
+    const cross = f.currency !== to.currency; sheet.querySelector('#fx').classList.toggle('hidden', !cross);
+    if(cross){ sheet.querySelector('#toCur').textContent = '(' + to.currency + ')';
+      const amt = parseAmount(val(sheet,'amount')); if(!touched && amt > 0) sheet.querySelector('[name="toAmount"]').value = String(conv(amt, f.currency, to.currency));
+      sheet.querySelector('#rateHint').textContent = t('rateUsed') + ' : 1 ' + f.currency + ' = ' + fmtNum(conv(1,f.currency,to.currency), 4).replace(/[,.]?0+$/,'') + ' ' + to.currency + ' (' + (state.settings.rateMode==='parallel'?t('parallel'):t('official')) + ')'; }
+  };
+  sheet.addEventListener('input', e => { if(e.target.name === 'toAmount') touched = true; refresh(); });
+  sheet.addEventListener('change', e => { if(e.target.name==='from'||e.target.name==='to') touched = false; refresh(); });
+  refresh();
+  sheet.addEventListener('click', e => {
+    if(!e.target.closest('[data-do="ok"]')) return;
+    const f = acc(val(sheet,'from')), to = acc(val(sheet,'to'));
+    if(!f || !to || f.id === to.id){ toast(t('sameAccount')); return; }
+    const amount = parseAmount(val(sheet,'amount')); if(!(amount > 0)){ toast(t('required')); return; }
+    const toAmount = f.currency === to.currency ? amount : parseAmount(val(sheet,'toAmount'));
+    if(!(toAmount > 0)){ toast(t('required')); return; }
+    addTx({type:'transfer', accountId:f.id, toAccountId:to.id, amount, toAmount, currency:f.currency, date:val(sheet,'date')||today(), note:val(sheet,'note').trim()});
+    commit(t('savedMsg'));
+  });
+}
+
+function adjustForm(id){
+  const a = acc(id);
+  const sheet = openSheet(`<h3>✎ ${esc(t('adjust'))}</h3><div class="muted small">${esc(a.name)} · ${money(a.balance,a.currency,{show:true})}</div>
+    <label class="f">${esc(t('newBalance'))} (${a.currency})</label><input class="input big num" name="nb" data-cur="${a.currency}" inputmode="decimal" value="${esc(String(a.balance))}">
+    <div class="btns"><button class="btn" data-do="ok">${esc(t('saveBtn'))}</button></div>`);
+  sheet.addEventListener('click', e => {
+    if(!e.target.closest('[data-do="ok"]')) return;
+    const nb = parseAmount(val(sheet,'nb')); if(isNaN(nb)){ toast(t('required')); return; }
+    const delta = r2(nb - a.balance); if(delta) addTx({type:'adjust', accountId:a.id, amount:delta, currency:a.currency, date:today(), note:''});
+    commit(t('savedMsg'));
+  });
+}
+
+function txDetail(id){
+  const tx = state.tx.find(x => x.id === id); if(!tx) return;
+  const sheet = openSheet(`<h3>${esc(txLabel(tx))}</h3><div class="card">
+    <div class="kv"><span class="muted">${esc(t('amount'))}</span>${txAmount(tx)}</div>
+    ${tx.type==='transfer'?`<div class="kv"><span class="muted">${esc(t('received'))}</span><span class="num right">${money(tx.toAmount,(acc(tx.toAccountId)||{}).currency||'')}${mil(tx.toAmount,(acc(tx.toAccountId)||{}).currency||'')}</span></div>`:''}
+    <div class="kv"><span class="muted">${esc(t('account'))}</span><span>${esc(accLabel(tx.accountId))}${tx.toAccountId?' → '+esc(accLabel(tx.toAccountId)):''}</span></div>
+    <div class="kv"><span class="muted">${esc(t('date'))}</span><span>${esc(fmtDate(tx.date))}</span></div>
+    ${tx.note?`<div class="kv"><span class="muted">${esc(t('note'))}</span><span>${esc(tx.note)}</span></div>`:''}</div>
+    <div class="hint">${esc(t('txDeleteHint'))}</div>
+    <div class="btns"><button class="btn danger" data-do="del">↩️ ${esc(t('txDelete'))}</button></div>`);
+  sheet.addEventListener('click', e => {
+    if(!e.target.closest('[data-do="del"]')) return;
+    if(!confirm(t('confirmDelete'))) return;
+    removeTx(id); commit(t('reverted'));
+  });
+}
+
+/* ---------- goals ---------- */
+function goalForm(id){
+  const g = id ? state.goals.find(x => x.id === id) : null; let emoji = g ? g.emoji : '🚗';
+  const sheet = openSheet(`<h3>${esc(g?t('editGoal'):t('addGoal'))}</h3>
+    <div class="chips" id="tmpl">${GOAL_TEMPLATES.map(([e,k]) => `<button class="chip ${e===emoji?'on':''}" data-e="${e}" data-k="${k}" type="button">${e} ${esc(t('tmpl.'+k))}</button>`).join('')}</div>
+    <label class="f">${esc(t('name'))}</label><input class="input" name="name" value="${esc(g?g.name:t('tmpl.car'))}" maxlength="40">
+    <div class="two"><div><label class="f">${esc(t('target'))}</label><input class="input num" name="target" inputmode="decimal" value="${g?esc(String(g.target)):''}" placeholder="0"></div>
+    <div><label class="f">${esc(t('currency'))}</label><select class="input" name="currency" ${g&&g.contributions.length?'disabled':''}>${currencyOptions(g?g.currency:state.settings.base)}</select></div></div>
+    <div class="hint" id="targetHint"></div>
+    <label class="f">${esc(t('deadline'))}</label><input class="input" type="date" name="deadline" value="${g&&g.deadline?g.deadline:''}">
+    <label class="f">${esc(t('note'))}</label><input class="input" name="note" value="${esc(g?g.note||'':'')}" maxlength="120">
+    <div class="btns">${g?`<button class="btn danger" data-do="del">${esc(t('delete'))}</button>`:''}<button class="btn" data-do="ok">${esc(g?t('saveBtn'):t('create'))}</button></div>`);
+  let nameTouched = !!g;
+  const hint = () => { const v = parseAmount(val(sheet,'target')), c = val(sheet,'currency') || (g&&g.currency); const b = state.settings.base; sheet.querySelector('#targetHint').textContent = v > 0 ? (c!==b?'≈ '+fmt(conv(v,c,b),b,{show:true}):'') : ''; };
+  sheet.addEventListener('input', e => { if(e.target.name==='name') nameTouched = true; hint(); });
+  sheet.addEventListener('change', hint);
+  sheet.querySelector('#tmpl').addEventListener('click', e => { const b = e.target.closest('[data-e]'); if(!b) return; emoji = b.dataset.e; sheet.querySelectorAll('#tmpl .chip').forEach(c => c.classList.toggle('on', c===b)); if(!nameTouched) sheet.querySelector('[name="name"]').value = t('tmpl.'+b.dataset.k); });
+  sheet.addEventListener('click', e => {
+    const d = e.target.closest('[data-do]'); if(!d) return;
+    if(d.dataset.do === 'del'){
+      if(!confirm(t('confirmDelete'))) return;
+      // Money set aside from accounts goes back to them.
+      g.contributions.filter(c => c.txId).forEach(c => removeTx(c.txId));
+      state.goals = state.goals.filter(x => x.id !== g.id); commit(t('deleted')); return;
+    }
+    const name = val(sheet,'name').trim(), target = parseAmount(val(sheet,'target'));
+    if(!name || !(target > 0)){ toast(t('required')); return; }
+    if(g){ Object.assign(g, {name, target, emoji, deadline:val(sheet,'deadline')||null, note:val(sheet,'note').trim()}); if(!g.contributions.length) g.currency = val(sheet,'currency'); commit(t('savedMsg')); return; }
+    state.goals.push({id:uid(), name, emoji, target, currency:val(sheet,'currency'), deadline:val(sheet,'deadline')||null, note:val(sheet,'note').trim(), contributions:[], done:false, createdAt:Date.now()});
+    commit(t('savedMsg'));
+  });
+}
+
+function goalDetail(id){
+  const g = state.goals.find(x => x.id === id); if(!g) return; const s = goalStats(g); const c = g.currency; const b = state.settings.base;
+  const moneyKv = v => `<span class="num right">${money(v,c)}${mil(v,c)}</span>`;
+  const hist = g.contributions.slice().sort((x,y)=> y.date.localeCompare(x.date));
+  const row = e => { const pay = e.kind === 'pay';
+    const what = pay ? '💸 ' + t('paidLbl') + (e.source === 'goal' ? ' · ' + t('fromGoalSavings') : '') : (e.amount < 0 ? '➖ ' + t('withdraw') : '➕ ' + t('held'));
+    const where = e.accountId ? accLabel(e.accountId) : (pay && e.source === 'goal' ? '🎯 ' + t('inGoals') : t('toNoAccount'));
+    return `<div class="item" data-do="c" data-id="${e.id}"><div class="grow"><b class="num ${pay?'':(e.amount<0?'bad':'good')}">${pay?money(e.amount,c):money(e.amount,c,{plus:true})}</b>${mil(e.amount,c)}
+      <div class="tiny muted">${esc(what)} · ${esc(fmtDate(e.date))} · ${esc(where)}${e.note?' · '+esc(e.note):''}</div></div><span class="muted">✕</span></div>`; };
+  const sheet = openSheet(`<div class="row"><div class="goal"><div class="emoji">${esc(g.emoji)}</div></div><div class="grow"><h3 style="margin:0">${esc(g.name)}</h3><div class="tiny muted">${esc(g.note||'')}</div></div><button class="icon-btn" data-do="edit">✎</button></div>
+    <div class="card" style="margin-top:12px">
+      <div class="row between"><span class="muted small">${Math.floor(s.pct)}%</span><span class="num right"><b>${money(s.saved,c)}</b>${mil(s.saved,c)}</span></div>
+      <div class="bar ${s.pct>=100?'good':''}" style="margin:8px 0"><i style="width:${s.pct}%"></i></div>
+      <div class="kv"><span class="muted">${esc(t('target'))}</span>${moneyKv(g.target)}</div>
+      <div class="kv"><span class="muted">🎯 ${esc(t('held'))}</span>${moneyKv(s.held)}</div>
+      ${s.paid?`<div class="kv"><span class="muted">💸 ${esc(t('paidLbl'))}</span>${moneyKv(s.paid)}</div>`:''}
+      <div class="kv"><span class="muted">${esc(t('remaining'))}</span>${moneyKv(s.left)}</div>
+      ${c!==b?`<div class="kv"><span class="muted">≈ ${esc(b)}</span><span class="num right">${money(conv(s.left,c,b),b)}${mil(conv(s.left,c,b),b)}</span></div>`:''}
+      ${g.deadline?`<div class="kv"><span class="muted">${esc(t('deadline').split(' (')[0])}</span><span>${esc(fmtDate(g.deadline))}${s.daysLeft!=null&&s.daysLeft>=0?` · ${s.daysLeft} ${esc(t('daysLeft'))}`:` · <b class="bad">${esc(t('late'))}</b>`}</span></div>`:''}
+      ${s.perMonth!=null?`<div class="kv"><span class="muted">📅 ${esc(t('perMonth'))}</span>${moneyKv(s.perMonth)}</div>`:''}
+      ${s.eta?`<div class="kv"><span class="muted">${esc(t('atThisPace'))}</span><span>${esc(fmtDate(s.eta))}</span></div>`:''}
+    </div>
+    ${s.paid?`<div class="hint">${esc(t('payHint'))}</div>`:''}
+    <div class="btns"><button class="btn" data-do="add">➕ ${esc(t('contribute'))}</button>${s.held>0?`<button class="btn ghost" data-do="out">➖ ${esc(t('withdraw'))}</button>`:''}</div>
+    <div class="btns"><button class="btn ghost" data-do="pay">💸 ${esc(t('pay'))}</button><button class="btn ghost" data-do="done">${g.done?'↺ '+esc(t('reopen')):'✓ '+esc(t('markDone'))}</button></div>
+    <h2>${esc(t('contributions'))}</h2><div class="card list">${hist.length?hist.map(row).join(''):`<div class="empty small">${esc(t('noHistory'))}</div>`}</div>`);
+  sheet.addEventListener('click', e => {
+    const d = e.target.closest('[data-do]'); if(!d) return;
+    if(d.dataset.do==='edit') goalForm(id);
+    if(d.dataset.do==='add') contributeForm(id, +1);
+    if(d.dataset.do==='out') contributeForm(id, -1);
+    if(d.dataset.do==='pay') payForm(id);
+    if(d.dataset.do==='done'){ g.done = !g.done; commit(g.done ? t('goalReachedToast') : t('savedMsg')); if(g.done) celebrate(); }
+    if(d.dataset.do==='c'){ if(!confirm(t('confirmDelete'))) return; const x = g.contributions.find(y => y.id === d.dataset.id); if(x && x.txId) removeTx(x.txId); g.contributions = g.contributions.filter(y => y.id !== d.dataset.id); commit(t('deleted')); }
+  });
+}
+
+function contributeForm(goalId, sign){
+  const g = state.goals.find(x => x.id === goalId); const s = goalStats(g);
+  const sheet = openSheet(`<h3>${sign>0?'➕ '+esc(t('contribute')):'➖ '+esc(t('withdraw'))} · ${esc(g.emoji)} ${esc(g.name)}</h3>
+    <label class="f">${esc(sign>0?t('fromAccount'):t('toAccount'))}</label><select class="input" name="account">${accountOptions('', true, sign>0?t('noAccount'):t('toNoAccount'))}</select>
+    <div class="hint" id="avail"></div>
+    <label class="f">${esc(t('amount'))} <span id="cur">(${g.currency})</span></label><input class="input big num" name="amount" inputmode="decimal" placeholder="0">
+    <div class="hint" id="fxHint"></div>
+    <div class="two"><div><label class="f">${esc(t('date'))}</label><input class="input" type="date" name="date" value="${today()}"></div><div><label class="f">${esc(t('note'))}</label><input class="input" name="note" maxlength="80"></div></div>
+    <div class="btns"><button class="btn" data-do="ok">${esc(t('saveBtn'))}</button></div>`);
+  const refresh = () => { const a = acc(val(sheet,'account')); const cur = a ? a.currency : g.currency; sheet.querySelector('#cur').textContent = '(' + cur + ')';
+    const v = parseAmount(val(sheet,'amount')); sheet.querySelector('#fxHint').textContent = a && a.currency !== g.currency && v > 0 ? '→ ' + fmt(conv(v,a.currency,g.currency), g.currency, {show:true}) + ' ' + t('goalsSaved') : '';
+    showAvailable(sheet, sign > 0 ? a : null, v); };
+  sheet.querySelector('[name="amount"]').dataset.fallbackCur = g.currency; setupMilHints(sheet);
+  sheet.addEventListener('input', refresh);
+  sheet.addEventListener('change', e => { if(e.target.name === 'account' && sign > 0){ const a = acc(e.target.value); if(a){ const inp = sheet.querySelector('[name="amount"]'); inp.value = String(Math.max(0, a.balance)); updateMil(inp); } } refresh(); });
+  sheet.addEventListener('click', e => {
+    if(!e.target.closest('[data-do="ok"]')) return;
+    const a = acc(val(sheet,'account')); const amount = parseAmount(val(sheet,'amount'));
+    if(!(amount > 0)){ toast(t('required')); return; }
+    const inGoal = a ? conv(amount, a.currency, g.currency) : amount;
+    if(sign < 0 && inGoal > goalHeld(g) + 0.005){ toast(t('tooMuch')); return; }
+    const date = val(sheet,'date') || today(); const note = val(sheet,'note').trim(); let txId = null;
+    txId = addTx({type: sign>0?'goalIn':'goalOut', accountId: a ? a.id : null, amount: a ? amount : inGoal, currency: a ? a.currency : g.currency, goalId, date, note}).id;
+    const before = goalSaved(g);
+    g.contributions.push({id:uid(), kind:'save', amount:r2(sign*inGoal), accountId:a?a.id:null, txId, date, note});
+    const reached = before < g.target && goalSaved(g) >= g.target;
+    commit(reached ? t('goalReachedToast') : t('savedMsg')); if(reached) celebrate();
+  });
+}
+/* Money handed over for the goal (a car paid in instalments…): progress, not an asset any more. */
+function payForm(goalId){
+  const g = state.goals.find(x => x.id === goalId); const held = goalHeld(g); const left = goalStats(g).left;
+  const options = (held > 0 ? `<option value="__goal">🎯 ${esc(t('fromGoalSavings'))} (${esc(fmt(held,g.currency,{show:true}))})</option>` : '')
+    + state.accounts.map(a => `<option value="${a.id}">${esc(accLabel(a.id))} (${a.currency})</option>`).join('')
+    + `<option value="__none">${esc(t('paySourceNone'))}</option>`;
+  const sheet = openSheet(`<h3>💸 ${esc(t('payTitle'))} · ${esc(g.emoji)} ${esc(g.name)}</h3>
+    <div class="hint">${esc(t('payHint'))}</div>
+    <label class="f">${esc(t('paySource'))}</label><select class="input" name="source">${options}</select>
+    <div class="hint" id="avail"></div>
+    <label class="f">${esc(t('amount'))} <span id="cur">(${g.currency})</span></label><input class="input big num" name="amount" inputmode="decimal" value="${esc(String(held > 0 ? held : left))}">
+    <div class="hint" id="fxHint"></div>
+    <div class="two"><div><label class="f">${esc(t('date'))}</label><input class="input" type="date" name="date" value="${today()}"></div><div><label class="f">${esc(t('note'))}</label><input class="input" name="note" maxlength="80" placeholder="${esc(t('payNoteHint'))}"></div></div>
+    <div class="btns"><button class="btn" data-do="ok">${esc(t('saveBtn'))}</button></div>`);
+  const amountInput = sheet.querySelector('[name="amount"]'); amountInput.dataset.fallbackCur = g.currency;
+  // What the chosen source holds: all of an account's balance, or the goal's savings.
+  const defaultFor = src => { const a = acc(src); return String(src === '__goal' ? held : a ? Math.max(0, a.balance) : left); };
+  const refresh = () => { const src = val(sheet,'source'); const a = acc(src); sheet.querySelector('#cur').textContent = '(' + (a ? a.currency : g.currency) + ')';
+    const v = parseAmount(val(sheet,'amount')); sheet.querySelector('#fxHint').textContent = a && a.currency !== g.currency && v > 0 ? '→ ' + fmt(conv(v,a.currency,g.currency), g.currency, {show:true}) : '';
+    showAvailable(sheet, a, v); setupMilHints(sheet); };
+  sheet.addEventListener('input', refresh);
+  sheet.addEventListener('change', e => { if(e.target.name === 'source') amountInput.value = defaultFor(e.target.value); refresh(); });
+  amountInput.value = defaultFor(val(sheet,'source'));
+  refresh();
+  sheet.addEventListener('click', e => {
+    if(!e.target.closest('[data-do="ok"]')) return;
+    const src = val(sheet,'source'); const a = acc(src); const amount = parseAmount(val(sheet,'amount'));
+    if(!(amount > 0)){ toast(t('required')); return; }
+    const inGoal = a ? conv(amount, a.currency, g.currency) : amount;
+    if(src === '__goal' && inGoal > held + 0.005){ toast(t('tooMuch')); return; }
+    const date = val(sheet,'date') || today(); const note = val(sheet,'note').trim(); const before = goalSaved(g);
+    const source = a ? 'account' : (src === '__goal' ? 'goal' : 'none');
+    const tx = addTx({type:'goalPay', accountId: a ? a.id : null, amount, currency: a ? a.currency : g.currency, goalId, source, date, note});
+    g.contributions.push({id:uid(), kind:'pay', source, amount:r2(inGoal), accountId: a ? a.id : null, txId: tx.id, date, note});
+    const reached = before < g.target && goalSaved(g) >= g.target;
+    commit(reached ? t('goalReachedToast') : t('payToast')); if(reached) celebrate();
+  });
+}
+/* "Available: 12 000 DA" under a source account, with a warning when the amount goes beyond it. */
+function showAvailable(sheet, a, amount){
+  const el = sheet.querySelector('#avail'); if(!el) return;
+  if(!a){ el.textContent = ''; return; }
+  const over = amount > a.balance + 0.005;
+  el.innerHTML = `${esc(t('available'))} <b class="num">${money(a.balance, a.currency, {show:true})}</b>${a.currency==='DZD'&&centimes(a.balance)?' '+esc(centimes(a.balance)):''}${over?`<div class="bad">⚠️ ${esc(t('overBalance'))}</div>`:''}`;
+}
+function quickSave(){
+  const open = state.goals.filter(g => !g.done);
+  if(!open.length){ goalForm(); return; }
+  if(open.length === 1){ contributeForm(open[0].id, +1); return; }
+  const sheet = openSheet(`<h3>🎯 ${esc(t('save'))}</h3><div class="card list">${open.map(g => `<div class="item" data-g="${g.id}"><div class="avatar">${esc(g.emoji)}</div><div class="grow"><b>${esc(g.name)}</b><div class="bar" style="margin-top:6px"><i style="width:${goalStats(g).pct}%"></i></div></div></div>`).join('')}</div>`);
+  sheet.addEventListener('click', e => { const it = e.target.closest('[data-g]'); if(it) contributeForm(it.dataset.g, +1); });
+}
+function celebrate(){
+  const box = document.createElement('div'); box.className = 'confetti';
+  for(let i=0;i<28;i++){ const s = document.createElement('i'); s.textContent = ['🎉','✨','💰','🎊','⭐'][i%5]; s.style.left = Math.random()*100+'vw'; s.style.animationDelay = Math.random()*.6+'s'; box.appendChild(s); }
+  document.body.appendChild(box); setTimeout(()=> box.remove(), 2600);
+}
+
+/* ---------- debts ---------- */
+function debtForm(id){
+  const d = id ? state.debts.find(x => x.id === id) : null; let dir = d ? d.direction : ui.debtSeg;
+  const sheet = openSheet(`<h3>${esc(d?t('editDebt'):t('addDebt'))}</h3>
+    <div class="seg" id="dir"><button type="button" data-dir="owe" class="${dir==='owe'?'on':''}">📤 ${esc(t('iOwe'))}</button><button type="button" data-dir="owed" class="${dir==='owed'?'on':''}">📥 ${esc(t('owedToMe'))}</button></div>
+    <label class="f">${esc(t('person'))}</label><input class="input" name="person" value="${esc(d?d.person:'')}" maxlength="40">
+    <label class="f">${esc(t('reason'))}</label><input class="input" name="reason" value="${esc(d?d.reason||'':'')}" maxlength="80">
+    <div class="two"><div><label class="f">${esc(t('amount'))}</label><input class="input num" name="amount" inputmode="decimal" value="${d?esc(String(d.amount)):''}" placeholder="0"></div>
+    <div><label class="f">${esc(t('currency'))}</label><select class="input" name="currency" ${d&&d.payments.length?'disabled':''}>${currencyOptions(d?d.currency:state.settings.base)}</select></div></div>
+    <div class="two"><div><label class="f">${esc(t('startDate'))}</label><input class="input" type="date" name="date" value="${d?d.date:today()}"></div><div><label class="f">${esc(t('dueDate'))}</label><input class="input" type="date" name="due" value="${d&&d.due?d.due:''}"></div></div>
+    <div class="btns">${d?`<button class="btn danger" data-do="del">${esc(t('delete'))}</button>`:''}<button class="btn" data-do="ok">${esc(d?t('saveBtn'):t('create'))}</button></div>`);
+  sheet.querySelector('#dir').addEventListener('click', e => { const b = e.target.closest('[data-dir]'); if(!b) return; dir = b.dataset.dir; sheet.querySelectorAll('#dir button').forEach(x => x.classList.toggle('on', x===b)); });
+  sheet.addEventListener('click', e => {
+    const x = e.target.closest('[data-do]'); if(!x) return;
+    if(x.dataset.do === 'del'){ if(!confirm(t('confirmDelete'))) return; d.payments.filter(p => p.txId).forEach(p => removeTx(p.txId)); state.debts = state.debts.filter(y => y.id !== d.id); commit(t('deleted')); return; }
+    const person = val(sheet,'person').trim(), amount = parseAmount(val(sheet,'amount'));
+    if(!person || !(amount > 0)){ toast(t('required')); return; }
+    const data = {person, reason:val(sheet,'reason').trim(), amount, direction:dir, date:val(sheet,'date')||today(), due:val(sheet,'due')||null};
+    if(d){ Object.assign(d, data); if(!d.payments.length) d.currency = val(sheet,'currency'); }
+    else state.debts.push({id:uid(), currency:val(sheet,'currency'), payments:[], createdAt:Date.now(), ...data});
+    ui.debtSeg = dir; commit(t('savedMsg'));
+  });
+}
+function debtDetail(id){
+  const d = state.debts.find(x => x.id === id); if(!d) return; const left = debtLeft(d);
+  const late = d.due && left > 0 && d.due < today();
+  const sheet = openSheet(`<div class="row"><div class="avatar">${d.direction==='owed'?'📥':'📤'}</div><div class="grow"><h3 style="margin:0">${esc(d.person)}</h3><div class="tiny muted">${esc(d.direction==='owed'?t('owedToMe'):t('iOwe'))}${d.reason?' · '+esc(d.reason):''}</div></div><button class="icon-btn" data-do="edit">✎</button></div>
+    <div class="card" style="margin-top:12px">
+      <div class="kv"><span class="muted">${esc(t('total'))}</span><span class="num right">${money(d.amount,d.currency)}${mil(d.amount,d.currency)}</span></div>
+      <div class="kv"><span class="muted">${esc(t('paid'))}</span><span class="num good right">${money(debtPaid(d),d.currency)}${mil(debtPaid(d),d.currency)}</span></div>
+      <div class="kv"><span class="muted">${esc(t('remainingDebt'))}</span><span class="num right ${left?'bad':'good'}"><b>${left?money(left,d.currency):'✓ '+esc(t('settled'))}</b>${left?mil(left,d.currency):''}</span></div>
+      ${d.due?`<div class="kv"><span class="muted">${esc(t('dueDate').split(' (')[0])}</span><span class="${late?'bad':''}">${esc(fmtDate(d.due))}${late?' · '+esc(t('overdue')):''}</span></div>`:''}
+    </div>
+    ${left?`<div class="btns"><button class="btn" data-do="pay">💸 ${esc(t('addPayment'))}</button></div>`:''}
+    <h2>${esc(t('payments'))}</h2><div class="card list">${d.payments.length?d.payments.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(p => `<div class="item" data-do="p" data-id="${p.id}"><div class="grow"><b class="num">${money(p.amount,d.currency)}</b>${mil(p.amount,d.currency)}<div class="tiny muted">${esc(fmtDate(p.date))} · ${esc(p.accountId?accLabel(p.accountId):t('toNoAccount'))}${p.note?' · '+esc(p.note):''}</div></div><span class="muted">✕</span></div>`).join(''):`<div class="empty small">${esc(t('noHistory'))}</div>`}</div>`);
+  sheet.addEventListener('click', e => {
+    const x = e.target.closest('[data-do]'); if(!x) return;
+    if(x.dataset.do==='edit') debtForm(id);
+    if(x.dataset.do==='pay') paymentForm(id);
+    if(x.dataset.do==='p'){ if(!confirm(t('confirmDelete'))) return; const p = d.payments.find(y => y.id === x.dataset.id); if(p && p.txId) removeTx(p.txId); d.payments = d.payments.filter(y => y.id !== x.dataset.id); commit(t('deleted')); }
+  });
+}
+function paymentForm(debtId){
+  const d = state.debts.find(x => x.id === debtId); const left = debtLeft(d);
+  const sheet = openSheet(`<h3>💸 ${esc(t('addPayment'))} · ${esc(d.person)}</h3>
+    <label class="f">${esc(d.direction==='owe'?t('fromAccount'):t('toAccount'))}</label><select class="input" name="account">${accountOptions('', true, t('toNoAccount'))}</select>
+    <label class="f">${esc(t('amount'))} <span id="cur">(${d.currency})</span></label><input class="input big num" name="amount" inputmode="decimal" value="${esc(String(left))}">
+    <div class="hint" id="fxHint"></div>
+    <div class="two"><div><label class="f">${esc(t('date'))}</label><input class="input" type="date" name="date" value="${today()}"></div><div><label class="f">${esc(t('note'))}</label><input class="input" name="note" maxlength="80"></div></div>
+    <div class="btns"><button class="btn" data-do="ok">${esc(t('saveBtn'))}</button></div>`);
+  const refresh = () => { const a = acc(val(sheet,'account')); sheet.querySelector('#cur').textContent = '(' + (a?a.currency:d.currency) + ')'; const v = parseAmount(val(sheet,'amount'));
+    sheet.querySelector('#fxHint').textContent = a && a.currency !== d.currency && v > 0 ? '→ ' + fmt(conv(v,a.currency,d.currency), d.currency, {show:true}) : ''; };
+  sheet.querySelector('[name="amount"]').dataset.fallbackCur = d.currency; setupMilHints(sheet);
+  sheet.addEventListener('input', refresh); sheet.addEventListener('change', e => { if(e.target.name==='account'){ const a = acc(e.target.value); sheet.querySelector('[name="amount"]').value = String(a ? conv(left, d.currency, a.currency) : left); } refresh(); });
+  sheet.addEventListener('click', e => {
+    if(!e.target.closest('[data-do="ok"]')) return;
+    const a = acc(val(sheet,'account')); const amount = parseAmount(val(sheet,'amount'));
+    if(!(amount > 0)){ toast(t('required')); return; }
+    const inDebt = a ? conv(amount, a.currency, d.currency) : amount;
+    if(inDebt > left + 0.5){ toast(t('tooMuch')); return; }
+    const date = val(sheet,'date') || today(); const note = val(sheet,'note').trim(); let txId = null;
+    if(a) txId = addTx({type: d.direction==='owe'?'debtPay':'debtIn', accountId:a.id, amount, currency:a.currency, debtId, date, note}).id;
+    d.payments.push({id:uid(), amount:r2(Math.min(inDebt, left)), accountId:a?a.id:null, txId, date, note});
+    commit(debtLeft(d) === 0 ? '✓ ' + t('settled') : t('savedMsg'));
+  });
+}
+
+/* ---------- bank SMS (Algérie Poste) ---------- */
+function smsAvailable(){ return !!(HOST && HOST.sms && HOST.permissions && HOST.permissions.has('sms')); }
+function smsBanner(){
+  if(!smsAvailable() || state.sms.dismissed || (acc(state.sms.accountId) && ui.smsStatus && ui.smsStatus.granted)) return '';
+  const waiting = ui.smsWaiting ? `<div class="small warn" style="margin-top:6px">${esc(t('smsPendingWait').replace('{n}', ui.smsWaiting))}</div>` : '';
+  return `<div class="card"><div class="row"><div class="avatar">📩</div><div class="grow"><b>${esc(t('smsTitle'))}</b><div class="small muted">${esc(t('smsBanner'))}</div>${waiting}</div></div>
+    <div class="btns"><button class="btn ghost" data-act="smsDismiss">${esc(t('later'))}</button><button class="btn" data-act="smsSetup">${esc(t('smsSetup'))}</button></div></div>`;
+}
+function isoDate(ms){ const d = new Date(ms); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+/**
+ * Applies bank movements to the linked account: one income or expense each,
+ * then a correction so the balance equals the one the bank reported (fees show
+ * up here). Fingerprints are remembered per account, so a re-created account
+ * still gets its history and nothing is counted twice. Movements older than the
+ * account's first SMS are already inside its opening balance and are skipped.
+ * A movement found late (missed live) is added, then the balance is reconciled
+ * to the newest reported balance.
+ */
+function smsFp(m){ return m.fingerprint || (m.kind+'|'+m.amount+'|'+m.balance+'|'+(m.sentAt||'')); }
+function smsTime(m){ return Number(m.sentAt) || Number(m.receivedAt) || 0; }
+function applyMovements(list, initial){
+  const a = acc(state.sms.accountId); if(!a || !Array.isArray(list)) return 0;
+  const applied = new Set(state.sms.applied[a.id] || []);
+  const mine = state.tx.filter(x => x.sms && x.accountId === a.id);
+  mine.forEach(x => applied.add(x.sms));
+  let first = mine.length ? Math.min(...mine.map(x => x.createdAt || 0)) : null;
+  let last = mine.length ? Math.max(...mine.map(x => x.createdAt || 0)) : null;
+  const byFp = new Map(); for(const m of list){ if(m && isFinite(Number(m.amount))){ const fp = smsFp(m); if(!byFp.has(fp)) byFp.set(fp, m); } }
+  const todo = [...byFp.entries()].filter(([fp]) => !applied.has(fp)).sort((x, y) => smsTime(x[1]) - smsTime(y[1]));
+  const dzd = a.currency === 'DZD'; let n = 0, late = false;
+  for(const [fp, m] of todo){
+    applied.add(fp);
+    const at = smsTime(m) || Date.now();
+    if(first != null && at < first) continue;
+    const kind = m.kind === 'debit' || m.kind === 'credit' ? m.kind : (Number(m.amount) < 0 ? 'debit' : 'credit');
+    const raw = Math.abs(Number(m.amount)); const amount = dzd ? r2(raw) : conv(raw, 'DZD', a.currency);
+    const reported = dzd && m.balance != null && isFinite(Number(m.balance)) ? r2(Number(m.balance)) : null;
+    const date = isoDate(at);
+    if(initial && first == null && reported != null){
+      const opening = r2(kind === 'debit' ? reported + amount : reported - amount);
+      const delta = r2(opening - a.balance);
+      if(delta) addTx({type:'adjust', accountId:a.id, amount:delta, currency:a.currency, date, note:t('smsOpening'), createdAt:at-1});
+    }
+    addTx({type: kind === 'debit' ? 'expense' : 'income', accountId:a.id, amount, currency:a.currency, category:'ccpOp', date, note:'📩 '+t('smsNote'), sms:fp, createdAt:at});
+    if(last == null || at >= last){
+      if(reported != null){ const delta = r2(reported - a.balance); if(delta) addTx({type:'adjust', accountId:a.id, amount:delta, currency:a.currency, date, note:t('smsGap'), createdAt:at+1}); }
+      last = at;
+    } else late = true;
+    if(first == null) first = at;
+    n++;
+  }
+  if(late && dzd){
+    const newest = [...byFp.entries()].filter(([fp, m]) => applied.has(fp) && smsTime(m) >= first && m.balance != null && isFinite(Number(m.balance)))
+      .sort((x, y) => smsTime(y[1]) - smsTime(x[1]))[0];
+    if(newest){ const at = smsTime(newest[1]); const delta = r2(r2(Number(newest[1].balance)) - a.balance);
+      if(delta) addTx({type:'adjust', accountId:a.id, amount:delta, currency:a.currency, date:isoDate(at), note:t('smsGap'), createdAt:at+2}); }
+  }
+  state.sms.applied[a.id] = [...applied].slice(-5000);
+  return n;
+}
+let smsBusy = false;
+async function smsSync(announceEmpty){
+  if(!smsAvailable() || smsBusy) return; smsBusy = true;
+  try{
+    ui.smsStatus = await HOST.sms.status();
+    if(!ui.smsStatus || !ui.smsStatus.granted) return;
+    if(!acc(state.sms.accountId)){ const p = await HOST.sms.pending(); ui.smsWaiting = p.length; if(ui.tab==='home') render(); return; }
+    let added = 0;
+    // The inbox is read on every sync: an SMS missed by the live queue is still found.
+    added += applyMovements(await HOST.sms.history(), !state.sms.historyDone); state.sms.historyDone = true;
+    const pending = await HOST.sms.pending();
+    added += applyMovements(pending, false);
+    flush(); // saved before acknowledging: a crash can repeat, never lose
+    const upTo = pending.reduce((m,e)=> Math.max(m, e.seq||0), 0); if(upTo) await HOST.sms.ack(upTo);
+    ui.smsWaiting = 0;
+    if(added){ render(); toast(t('smsImported').replace('{n}', added)); }
+    else if(announceEmpty) toast(t('smsNothing'));
+  }catch(e){ try{ console.warn('SMS sync failed', e); }catch(x){} }
+  finally{ smsBusy = false; }
+}
+function smsSetupForm(){
+  const dzd = state.accounts.filter(a => a.currency === 'DZD');
+  const pre = state.sms.accountId || (dzd.find(a => a.type === 'ccp') || {}).id || '';
+  const sheet = openSheet(`<h3>📩 ${esc(t('smsTitle'))}</h3><div class="small muted">${esc(t('smsBanner'))}</div>
+    <label class="f">${esc(t('smsStep1'))}</label>
+    <div class="row between"><span id="smsState">${ui.smsStatus&&ui.smsStatus.granted?esc(t('smsGranted')):esc(t('smsNotGranted'))}</span><button class="btn ghost" data-do="grant">${esc(t('smsGrant'))}</button></div>
+    <label class="f">${esc(t('smsStep2'))}</label>
+    <select class="input" name="account"><option value="">${esc(t('smsChoose'))}</option>${state.accounts.map(a => `<option value="${a.id}" ${a.id===pre?'selected':''}>${esc(accLabel(a.id))} (${a.currency})</option>`).join('')}</select>
+    <button class="btn ghost block" data-do="create" style="margin-top:8px">📮 ${esc(t('smsCreateCcp'))}</button>
+    <div class="hint">${esc(t('smsNoCodes'))}</div>
+    <div class="btns"><button class="btn" data-do="ok">${esc(t('smsConnect'))}</button></div>`);
+  sheet.addEventListener('click', async e => {
+    const d = e.target.closest('[data-do]'); if(!d) return;
+    if(d.dataset.do === 'grant'){
+      ui.smsStatus = await HOST.sms.requestAccess();
+      sheet.querySelector('#smsState').textContent = ui.smsStatus && ui.smsStatus.granted ? t('smsGranted') : t('smsNotGranted');
+      if(!(ui.smsStatus && ui.smsStatus.granted)) toast(t('smsDenied'));
+    }
+    if(d.dataset.do === 'create'){
+      const a = {id:uid(), name:'CCP', type:'ccp', currency:'DZD', balance:0, createdAt:Date.now()}; state.accounts.push(a); save();
+      const sel = sheet.querySelector('[name="account"]'); sel.insertAdjacentHTML('beforeend', `<option value="${a.id}">${esc(accLabel(a.id))} (DZD)</option>`); sel.value = a.id;
+    }
+    if(d.dataset.do === 'ok'){
+      const id = val(sheet,'account'); if(!acc(id)){ toast(t('smsChoose')); return; }
+      if(!(ui.smsStatus && ui.smsStatus.granted)){ ui.smsStatus = await HOST.sms.requestAccess(); if(!(ui.smsStatus && ui.smsStatus.granted)){ toast(t('smsDenied')); return; } }
+      if(state.sms.accountId !== id){ state.sms.accountId = id; state.sms.historyDone = false; }
+      commit(); await smsSync(true);
+    }
+  });
+}
+
+/* ---------- rates, export, import ---------- */
+async function fetchRates(){
+  if(HOST && HOST.permissions && !HOST.permissions.has('internet')){ toast(t('noInternet')); return; }
+  try{
+    const res = await fetch('https://open.er-api.com/v6/latest/DZD'); if(!res.ok) throw new Error(res.status);
+    const j = await res.json(); if(!j || !j.rates) throw new Error('bad');
+    for(const c of Object.keys(CURRENCIES)){ if(c !== 'DZD' && j.rates[c]) state.rates.official[c] = r2(1 / j.rates[c]); }
+    state.rates.officialUpdatedAt = new Date().toISOString(); save(); render(); toast(t('updated'));
+  }catch(e){ toast(t('updateFailed')); }
+}
+async function saveOut(name, data, mime){
+  if(HOST && HOST.saveFile){ const ok = await HOST.saveFile(name, data, mime); toast(ok ? t('backupSaved') : t('backupFailed')); return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data],{type:mime})); a.download = name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+function exportJson(){ flush(); saveOut(`mes-finances-${today()}.json`, JSON.stringify({app:APP_ID, v:SCHEMA, date:new Date().toISOString(), data:state}, null, 2), 'application/json'); }
+function exportCsv(){
+  const q = v => '"' + String(v ?? '').replace(/"/g,'""') + '"';
+  const rows = [['date','type','label','account','to_account','amount','currency','received','note'].join(',')];
+  for(const tx of state.tx.slice().sort((a,b)=> a.date.localeCompare(b.date))){
+    const a = acc(tx.accountId), b = acc(tx.toAccountId);
+    rows.push([tx.date, tx.type, q(txLabel(tx)), q(a?a.name:''), q(b?b.name:''), tx.amount, a?a.currency:(tx.currency||''), tx.toAmount ?? '', q(tx.note)].join(','));
+  }
+  saveOut(`mes-finances-${today()}.csv`, '\ufeff' + rows.join('\n'), 'text/csv');
+}
+/* File.text() where available, FileReader on older WebViews. */
+function readText(f){
+  if(typeof f.text === 'function') return f.text();
+  return new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = () => ko(r.error); r.readAsText(f); });
+}
+$('#file').addEventListener('change', async e => {
+  const f = e.target.files && e.target.files[0]; e.target.value = ''; if(!f) return;
+  try{
+    const j = JSON.parse(await readText(f));
+    if(!j || j.app !== APP_ID || !j.data || !Array.isArray(j.data.accounts)) throw new Error('shape');
+    if(!confirm(t('restoreConfirm'))) return;
+    state = migrate(j.data); flush(); ui.hide = !!state.settings.hideOnStart; closeAllSheets(); render(); toast(t('restored'));
+  }catch(err){ toast(t('badBackup')); }
+});
+
+/* ---------- actions (event delegation) ---------- */
+const ACT = {
+  tab:d => { ui.tab = d.tab; closeAllSheets(); render(); window.scrollTo(0,0); },
+  toggleHide:() => { ui.hide = !ui.hide; render(); },
+  fab:() => ({accounts:accountForm, goals:goalForm, debts:debtForm}[ui.tab]||(()=>{}))(),
+  accountForm:() => accountForm(), accountDetail:d => accountDetail(d.id),
+  words:() => wordsForm(null, state.settings.base),
+  convert:() => convertForm(),
+  txForm:d => txForm(d.type), transferForm:() => transferForm(), quickSave,
+  goalForm:() => goalForm(), goalDetail:d => goalDetail(d.id),
+  debtForm:() => debtForm(), debtDetail:d => debtDetail(d.id), debtSeg:d => { ui.debtSeg = d.seg; render(); },
+  txDetail:d => txDetail(d.id), histType:d => { ui.histType = d.type; render(); },
+  histPeriod:d => { ui.histPeriod = d.p; render(); },
+  rateMode:d => { state.settings.rateMode = d.mode; save(); render(); },
+  fetchRates, exportJson, exportCsv, importJson:() => $('#file').click(),
+  toggleCur:d => { const s = state.settings; const c = d.cur;
+    if(s.currencies.includes(c)){ const used = state.accounts.some(a=>a.currency===c) || state.goals.some(g=>g.currency===c) || state.debts.some(x=>x.currency===c); if(used || c===s.base || s.currencies.length===1) return toast('🔒 ' + c); s.currencies = s.currencies.filter(x=>x!==c); }
+    else s.currencies.push(c);
+    save(); render(); },
+  smsSetup:() => smsSetupForm(),
+  smsDismiss:() => { state.sms.dismissed = true; save(); render(); },
+  smsSyncNow:() => smsSync(true),
+  resetAll:() => { if(!confirm(t('resetConfirm'))) return; state = defaults(); flush(); ui.tab = 'home'; render(); toast(t('deleted')); }
+};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if(!el || el.closest('.sheet')) return;
+  const fn = ACT[el.dataset.act]; if(fn){ e.preventDefault(); fn(el.dataset, el); }
+});
+document.addEventListener('input', e => {
+  const k = e.target.dataset && e.target.dataset.input; if(!k) return;
+  // Only the list is redrawn, so the search field keeps focus and the keyboard stays.
+  if(k === 'histQuery'){ ui.histQuery = e.target.value; const box = $('#histList'); if(box) box.innerHTML = historyList(histFilter); }
+});
+document.addEventListener('change', e => {
+  const el = e.target; const k = el.dataset && el.dataset.input; const s = state.settings;
+  if(el.dataset && el.dataset.rate){ const v = parseAmount(el.value); if(v > 0){ state.rates[s.rateMode][el.dataset.rate] = v; save(); render(); } return; }
+  if(!k) return;
+  if(k === 'histAccount'){ ui.histAccount = el.value; render(); return; }
+  if(k === 'base'){ s.base = el.value; }
+  if(k === 'lang'){ s.lang = el.value; }
+  if(k === 'hideOnStart'){ s.hideOnStart = el.checked; }
+  if(k === 'centimes'){ s.centimes = el.checked; }
+  save(); render();
+});
+
+/* ---------- host: theme & back ---------- */
+function applyTheme(th){ document.documentElement.dataset.theme = th === 'dark' ? 'dark' : 'light'; }
+if(HOST){ applyTheme(HOST.theme); if(HOST.onThemeChange) HOST.onThemeChange(applyTheme);
+  if(HOST.onBack) HOST.onBack(() => { if(ui.sheets.length){ closeSheet(); return true; } if(ui.tab !== 'home'){ ui.tab = 'home'; render(); return true; } return false; }); }
+else { const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null; applyTheme(mq && mq.matches ? 'dark' : 'light'); if(mq && mq.addEventListener) mq.addEventListener('change', e => applyTheme(e.matches ? 'dark' : 'light')); }
+
+render();
+// Bank SMS: apply what arrived while closed, then keep up while open.
+if(smsAvailable()){
+  smsSync(false).then(() => { if(ui.tab === 'home' || ui.tab === 'more') render(); });
+  HOST.sms.onMessage(() => smsSync(false));
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') smsSync(false); });
+}
+</script>
+</body>
+</html>

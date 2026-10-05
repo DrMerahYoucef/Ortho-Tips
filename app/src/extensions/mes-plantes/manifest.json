@@ -1,0 +1,19 @@
+{
+  "entry": "index.html",
+  "contentSchema": 1,
+  "kind": "html",
+  "author": "Ortho Tips",
+  "permissions": [
+    "internet",
+    "storage",
+    "import_export",
+    "notifications"
+  ],
+  "name": "Mes plantes",
+  "icon": "🪴",
+  "description": "Photographiez vos plantes : identification, fiches d'entretien, rappels d'arrosage et diagnostic avec Gemini.",
+  "minAppVersionCode": 0,
+  "attributes": {},
+  "id": "mes-plantes",
+  "version": "1.1"
+}

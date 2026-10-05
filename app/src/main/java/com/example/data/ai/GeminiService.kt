@@ -123,25 +123,46 @@ class GeminiService(context: Context) {
                     .put("responseSchema", schema)
                     .put("temperature", temperature))
                 .toString()
-            var last: GeminiException? = null
-            for (model in GeminiModels.candidates(cachedModels(), preference)) {
-                try {
-                    val json = execute(
-                        Request.Builder().url("$BASE/models/$model:generateContent").header("x-goog-api-key", key)
-                            .post(body.toRequestBody(JSON)).build()
-                    )
-                    val text = extractText(json)
-                    prefs.edit().putString(KEY_LAST_MODEL, model).apply()
-                    return@withContext GeminiResult(model, text)
-                } catch (e: GeminiException) {
-                    last = e
-                    // A missing or busy model: the next one may work. Anything else is final.
-                    if (e.kind != GeminiException.Kind.MODEL && e.kind != GeminiException.Kind.SERVER && e.kind != GeminiException.Kind.QUOTA) throw e
-                    Log.w(TAG, "$model failed (${e.kind}), trying the next model")
-                }
-            }
-            throw last ?: GeminiException(GeminiException.Kind.MODEL, "Aucun modèle Gemini disponible.")
+            val (model, json) = callModels(key, body, preferred = null)
+            GeminiResult(model, extractText(json))
         }
+
+    /**
+     * For extensions holding `gemini` (`OrthoTips.gemini.generate`): sends
+     * [request] — a generateContent body — with the app's key, to
+     * [preferredModel] first when given, then the app's models with the same
+     * fallback. The key never reaches the extension. Returns Google's JSON as is.
+     */
+    suspend fun generateRaw(request: JSONObject, preferredModel: String?): GeminiResult = withContext(Dispatchers.IO) {
+        val key = apiKey() ?: throw GeminiException(GeminiException.Kind.NO_KEY, "Aucune clé Gemini n’est configurée dans Réglages → Gemini.")
+        runCatching { refreshModels(force = false) }.onFailure { Log.w(TAG, "Model list not refreshed", it) }
+        val (model, json) = callModels(key, request.toString(), preferredModel)
+        GeminiResult(model, json.toString())
+    }
+
+    /** POSTs [body] to the candidate models in order ([preferred] first if given); a missing or busy model hands over to the next. */
+    private fun callModels(key: String, body: String, preferred: String?): Pair<String, JSONObject> {
+        val order = LinkedHashSet<String>()
+        preferred?.trim()?.removePrefix("models/")?.takeIf { it.matches(Regex("[A-Za-z0-9._-]{1,80}")) }?.let { order += it }
+        order += GeminiModels.candidates(cachedModels(), preference)
+        var last: GeminiException? = null
+        for (model in order) {
+            try {
+                val json = execute(
+                    Request.Builder().url("$BASE/models/$model:generateContent").header("x-goog-api-key", key)
+                        .post(body.toRequestBody(JSON)).build()
+                )
+                prefs.edit().putString(KEY_LAST_MODEL, model).apply()
+                return model to json
+            } catch (e: GeminiException) {
+                last = e
+                // A missing or busy model: the next one may work. Anything else is final.
+                if (e.kind != GeminiException.Kind.MODEL && e.kind != GeminiException.Kind.SERVER && e.kind != GeminiException.Kind.QUOTA) throw e
+                Log.w(TAG, "$model failed (${e.kind}), trying the next model")
+            }
+        }
+        throw last ?: GeminiException(GeminiException.Kind.MODEL, "Aucun modèle Gemini disponible.")
+    }
 
     /** Settings → Tester: one tiny call. Returns the model that answered. */
     suspend fun test(): String {

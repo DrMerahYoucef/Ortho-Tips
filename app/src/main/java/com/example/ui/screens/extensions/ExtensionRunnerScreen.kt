@@ -170,7 +170,8 @@ fun ExtensionRunnerScreen(
     repository: ExtensionRepository,
     databaseAccess: ExtensionDatabaseAccess,
     extensionId: String,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onOpenGeminiSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -444,6 +445,25 @@ fun ExtensionRunnerScreen(
                                     },
                                     onSettle = host::settle,
                                     onDenied = { host.log(ConsoleLine(isError = true, text = it)) },
+                                    gemini = if (state.extension.has(ExtensionPermission.GEMINI)) {
+                                        val service = (context.applicationContext as com.example.OrthoApplication).appModule.geminiService
+                                        object : ExtensionGeminiAccess {
+                                            override fun status(): JSONObject = JSONObject()
+                                                .put("available", true)
+                                                .put("configured", service.hasKey())
+                                                .put("model", if (service.hasKey()) service.currentModel() else JSONObject.NULL)
+                                            override fun generate(args: JSONObject): JSONObject = kotlinx.coroutines.runBlocking {
+                                                val result = service.generateRaw(
+                                                    args.optJSONObject("body") ?: JSONObject(),
+                                                    args.optString("model").takeIf { it.isNotBlank() }
+                                                )
+                                                JSONObject().put("model", result.model).put("response", JSONObject(result.text))
+                                            }
+                                        }
+                                    } else {
+                                        null
+                                    },
+                                    onOpenGeminiSettings = onOpenGeminiSettings,
                                     media = if (state.extension.has(ExtensionPermission.BACKGROUND)) {
                                         ExtensionMedia(context, state.extension.id) { json ->
                                             val view = host.webView

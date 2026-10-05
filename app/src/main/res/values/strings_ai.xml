@@ -74,4 +74,5 @@
     <string name="assistant_saved">Added to notes</string>
     <string name="assistant_refine">Ask for a change (e.g. allergic to penicillin, child 20 kg…)</string>
     <string name="assistant_refine_send">Send</string>
+    <string name="gemini_extensions_note">Extensions with the « Gemini » permission can use this key through the app, without ever seeing it. The model above is used for them too.</string>
 </resources>

@@ -1,0 +1,2450 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="ortho-ext-id" content="ma-voiture">
+<meta name="ortho-ext-name" content="Ma voiture">
+<meta name="ortho-ext-description" content="Papiers du véhicule, vidange et entretien au kilomètre, carburant, dépenses, rappels et conseils de mécanicien avec Gemini.">
+<meta name="ortho-ext-version" content="1.1">
+<meta name="ortho-ext-icon" content="🚗">
+<meta name="ortho-ext-author" content="Ortho Tips">
+<meta name="ortho-ext-permissions" content="internet, storage, import_export, notifications">
+<title>Ma voiture</title>
+<style>
+
+:root{
+  --bg:#f5f7f4;--surface:#fff;--surface2:#eef2ec;--text:#1b1f1c;--muted:#5b675e;--line:#dfe5dc;
+  --accent:#27702b;--on-accent:#ffffff;--accent-soft:#e3f1e4;--good:#1e7a45;--good-soft:#e2f4ea;--bad:#c62828;--bad-soft:#fdecec;
+  --warn:#8a5300;--warn-soft:#fff1d6;--water:#0b67a8;--water-soft:#e2f0fb;--shadow:0 1px 2px rgba(0,0,0,.06),0 2px 8px rgba(0,0,0,.04);
+  --radius:16px;--nav:64px;
+}
+html[data-theme="dark"]{
+  --bg:#111412;--surface:#1b201c;--surface2:#252c26;--text:#e5ebe5;--muted:#a4b0a6;--line:#303a32;
+  --accent:#81c784;--on-accent:#0f1a10;--accent-soft:#223a25;--good:#6fd69b;--good-soft:#193528;--bad:#ff8a80;--bad-soft:#3d2020;
+  --warn:#ffc15e;--warn-soft:#3a2e17;--water:#7cc4f5;--water-soft:#16303f;--shadow:none;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,Roboto,sans-serif}
+body{padding-bottom:calc(var(--nav) + env(safe-area-inset-bottom))}
+button,input,select,textarea{font:inherit;color:inherit}
+main{padding:12px 16px 88px;max-width:720px;margin:0 auto}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:10px}
+.between{justify-content:space-between}
+.grow{flex:1;min-width:0}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.tiny{font-size:12px}
+.ellipsis{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+h1{font-size:22px;margin:12px 0 2px;overflow-wrap:anywhere}
+h2{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:18px 2px 8px;font-weight:600}
+h3{margin:0 0 10px;font-size:18px}
+h4{margin:12px 0 4px;font-size:14px}
+p{margin:6px 0}
+ul,ol{margin:6px 0;padding-left:20px}
+li{margin:3px 0}
+.pill{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill.good{background:var(--good-soft);color:var(--good)}.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}.pill.water{background:var(--water-soft);color:var(--water)}
+.pill.acc{background:var(--accent-soft);color:var(--accent)}
+.btn{border:0;border-radius:12px;min-height:44px;padding:0 16px;background:var(--accent);color:var(--on-accent);font-weight:600;cursor:pointer}
+.btn.ghost{background:var(--surface2);color:var(--text)}
+.btn.danger{background:var(--bad-soft);color:var(--bad)}
+.btn.water{background:var(--water-soft);color:var(--water)}
+.btn.block{width:100%}
+.btn[disabled]{opacity:.55}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.btns .btn{flex:1}
+.icon-btn{min-width:44px;min-height:44px;border-radius:12px;border:0;background:transparent;display:inline-flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;color:var(--text)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;min-height:40px;cursor:pointer;font-size:13px}
+.chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;cursor:pointer;text-align:left;padding:0;box-shadow:var(--shadow)}
+.pcard .body{padding:8px 10px 10px}
+.pcard .name{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcard .sci{font-size:12px;color:var(--muted);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px}
+.ph{position:relative;aspect-ratio:1/1;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:44px;overflow:hidden}
+.ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ph img:not([src]){display:none}
+.ph.wide{aspect-ratio:4/3;border-radius:var(--radius);font-size:64px}
+.thumb{width:48px;height:48px;border-radius:12px;flex:none;aspect-ratio:auto;font-size:24px}
+.list .item{display:flex;align-items:center;gap:12px;padding:10px 2px;border-top:1px solid var(--line);min-height:56px}
+.list .item:first-child{border-top:0}
+.list .item.click{cursor:pointer}
+.empty{text-align:center;padding:28px 12px;color:var(--muted)}
+.empty .e{font-size:44px}
+.banner{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;font-weight:600;background:var(--water-soft);color:var(--water);border-color:transparent}
+.banner.warn{background:var(--warn-soft);color:var(--warn)}
+.banner .e{font-size:26px}
+.kv{padding:8px 0;border-top:1px dashed var(--line)}
+.kv:first-child{border-top:0}
+.kv b{display:block;font-size:13px;color:var(--muted);font-weight:600}
+.big{font-size:20px;font-weight:700}
+.aibox{border:1px dashed var(--line);border-radius:12px;padding:12px;margin-top:10px;background:var(--surface2)}
+.aibox.err{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-3px;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fab{position:fixed;right:16px;bottom:calc(var(--nav) + 16px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:18px;border:0;background:var(--accent);color:var(--on-accent);font-size:28px;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;z-index:5}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;height:calc(var(--nav) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);z-index:10}
+nav.tabs button{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--muted);cursor:pointer;position:relative}
+nav.tabs button span{font-size:20px;line-height:1;padding:3px 14px;border-radius:99px}
+nav.tabs button.on{color:var(--accent);font-weight:600}
+nav.tabs button.on span{background:var(--accent-soft)}
+nav.tabs .dot{position:absolute;top:6px;left:calc(50% + 10px);min-width:18px;height:18px;border-radius:9px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
+/* sheets: the resting state is the visible state; --vh / --kb come from visualViewport */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;animation:fade-in .2s ease both}
+.scrim.closing{animation:fade-out .2s ease both}
+.sheet{position:fixed;left:0;right:0;bottom:var(--kb,0px);max-height:calc(var(--vh,100vh) - 24px);overflow:auto;overscroll-behavior:contain;background:var(--surface);border-radius:22px 22px 0 0;z-index:21;padding:8px 16px calc(20px + env(safe-area-inset-bottom));animation:sheet-in .25s ease both;max-width:720px;margin:0 auto}
+.sheet.closing{animation:sheet-out .22s ease both}
+@keyframes sheet-in{from{transform:translateY(100%)}to{transform:none}}
+@keyframes sheet-out{from{transform:none}to{transform:translateY(100%)}}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+@keyframes fade-out{from{opacity:1}to{opacity:0}}
+@media (prefers-reduced-motion: reduce){.sheet,.scrim,.spin{animation:none}}
+.sheet .grab{width:40px;height:4px;border-radius:9px;background:var(--line);margin:4px auto 10px}
+label.f{display:block;margin:12px 0 4px;font-size:13px;color:var(--muted);font-weight:600}
+.input,select.input,textarea.input{width:100%;min-height:46px;border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:10px 12px;outline:none}
+textarea.input{min-height:80px;resize:vertical}
+.input:focus{border-color:var(--accent)}
+.hint{font-size:12px;color:var(--muted);margin-top:4px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.log{border-left:4px solid var(--line);padding:8px 10px;margin:8px 0;background:var(--surface2);border-radius:0 10px 10px 0}
+.log.error{border-left-color:var(--bad)}.log.warn{border-left-color:var(--warn)}.log.info{border-left-color:var(--water)}
+.log pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:4px 0 0;font:12px/1.4 ui-monospace,"Roboto Mono",monospace;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(var(--nav) + 24px);transform:translateX(-50%);background:#323232;color:#fff;padding:10px 16px;border-radius:12px;z-index:40;font-size:14px;max-width:90vw}
+details summary{cursor:pointer;min-height:40px;display:flex;align-items:center;font-weight:600}
+a{color:var(--accent)}
+.switch{display:flex;align-items:center;gap:12px;min-height:48px;cursor:pointer;font-weight:600}
+.switch input{width:22px;height:22px;accent-color:var(--accent);flex:none}
+.hidden{display:none!important}
+
+/* ---------- Ma voiture ---------- */
+:root{--accent:#1b5cb8;--on-accent:#ffffff;--accent-soft:#e2ebf8;--bg:#f4f6f9;--surface2:#ebeff5;--line:#dce2ea;--muted:#586273;--text:#171b22}
+html[data-theme="dark"]{--accent:#8ab4f8;--on-accent:#0b1a33;--accent-soft:#1c2c46;--bg:#0f1216;--surface:#191d23;--surface2:#232932;--line:#2e3540;--muted:#a3adbb;--text:#e6eaf0}
+nav.tabs{grid-template-columns:repeat(5,1fr)}
+nav.tabs button span{padding:3px 10px}
+.topbar{display:flex;align-items:center;gap:6px;margin:0 -4px 10px}
+.vbtn{flex:1;min-width:0;display:flex;align-items:center;gap:8px;border:0;background:none;min-height:48px;padding:4px;text-align:left;cursor:pointer;border-radius:12px}
+.vbtn b{display:block;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vbtn .tiny{display:block}
+.plate{display:inline-block;border:1.5px solid var(--text);border-radius:6px;padding:0 6px;font:600 12px/1.6 ui-monospace,"Roboto Mono",monospace;letter-spacing:.04em;white-space:nowrap}
+.hero{display:flex;gap:14px;align-items:center}
+.hero .ph{width:92px;height:92px;flex:none;border-radius:16px;aspect-ratio:auto;font-size:42px}
+.kmbig{font-size:28px;font-weight:750;letter-spacing:-.01em;line-height:1.1}
+.bar{height:10px;border-radius:99px;background:var(--surface2);overflow:hidden;margin:8px 0 6px}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--good)}
+.bar.soon i{background:var(--warn)}.bar.over i{background:var(--bad)}
+.qa{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.qa button{min-height:64px;border:1px solid var(--line);border-radius:14px;background:var(--surface);display:flex;align-items:center;gap:10px;padding:8px 12px;font-weight:600;text-align:left;cursor:pointer;box-shadow:var(--shadow)}
+.qa button span{font-size:24px}
+.alert{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:8px;background:var(--surface);cursor:pointer;min-height:56px}
+.alert .e{font-size:24px;flex:none}
+.alert.over{background:var(--bad-soft);border-color:transparent;color:var(--bad)}
+.alert.soon{background:var(--warn-soft);border-color:transparent;color:var(--warn)}
+.alert.info{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+.seg{display:flex;background:var(--surface2);border-radius:12px;padding:3px;gap:3px;margin-bottom:12px}
+.seg button{flex:1;border:0;background:none;min-height:40px;border-radius:10px;font-weight:600;color:var(--muted);cursor:pointer}
+.seg button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.files{display:flex;gap:8px;overflow-x:auto;padding:4px 0}
+.files .f{position:relative;flex:none;width:96px;height:96px;border-radius:12px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:30px;overflow:hidden;border:1px solid var(--line)}
+.files .f img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.files .f img:not([src]){display:none}
+.files .f .x{position:absolute;top:2px;right:2px;width:30px;height:30px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:14px;cursor:pointer}
+.viewer img{width:100%;border-radius:12px;display:block;margin-bottom:8px;background:var(--surface2)}
+.bubble{background:var(--accent-soft);color:var(--text);border-radius:16px 16px 4px 16px;padding:10px 12px;margin:10px 0 10px 32px;white-space:pre-wrap;overflow-wrap:anywhere}
+.bubble .ph{margin-top:8px;border-radius:10px}
+.answer{background:var(--surface);border:1px solid var(--line);border-radius:16px 16px 16px 4px;padding:12px;margin:10px 32px 10px 0}
+.bars{display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:8px}
+.bars div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;height:100%;font-size:10px;color:var(--muted)}
+.bars i{display:block;width:100%;background:var(--accent);border-radius:4px 4px 0 0;min-height:2px}
+.stat{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat div{background:var(--surface2);border-radius:12px;padding:10px}
+.stat b{display:block;font-size:18px}
+.row-item{display:flex;align-items:center;gap:12px;padding:10px 2px;border-top:1px solid var(--line);min-height:56px;cursor:pointer}
+.row-item:first-child{border-top:0}
+.row-item .e{font-size:24px;width:32px;text-align:center;flex:none}
+.gear{position:relative}
+.dot2{position:absolute;top:8px;right:8px;width:9px;height:9px;border-radius:50%;background:var(--bad)}
+.files .f .ed{position:absolute;bottom:2px;right:2px;width:30px;height:30px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:14px;cursor:pointer}
+/* scanner */
+.sheet.full{top:0;bottom:0;max-height:none;height:var(--vh,100vh);border-radius:0;display:flex;flex-direction:column;gap:6px;padding:4px 12px calc(12px + env(safe-area-inset-bottom));max-width:none}
+.sheet.full .grab{display:none}
+.scan-top{display:flex;align-items:center;gap:6px;min-height:48px}
+.scan-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:#0d0f12;border-radius:14px;overflow:hidden;position:relative;padding:14px}
+.scan-stage .aibox{background:none;border:0;color:#e6eaf0}
+.crop-wrap{position:relative;touch-action:none;line-height:0}
+.crop-wrap canvas.scan-src{display:block;max-width:100%;max-height:calc(var(--vh,100vh) - 280px);width:auto;height:auto}
+.crop-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.crop-svg polygon{fill:rgba(138,180,248,.18);stroke:#8ab4f8;stroke-width:2;vector-effect:non-scaling-stroke}
+.hdl{position:absolute;width:48px;height:48px;margin:-24px 0 0 -24px;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:grab;z-index:2}
+.hdl::after{content:'';width:20px;height:20px;border-radius:50%;background:#1b5cb8;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.5)}
+.hdl.on::after{width:26px;height:26px;background:#8ab4f8}
+.loupe{position:absolute;display:none;width:112px;height:112px;margin-left:-56px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.5);pointer-events:none;z-index:3}
+canvas.scan-out{display:block;max-width:100%;max-height:calc(var(--vh,100vh) - 330px);background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.5)}
+canvas.scan-out.erasing{touch-action:none;cursor:crosshair;outline:2px dashed #8ab4f8}
+.tool-row{display:flex;gap:6px;overflow-x:auto;padding:2px 0}
+.tool{flex:none;min-width:44px;min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--text);font-size:14px;padding:0 12px;white-space:nowrap;cursor:pointer}
+.tool.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.scan-filters{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+.scan-filters .chip{flex:none}
+.check{display:flex;align-items:center;gap:10px;min-height:44px;cursor:pointer}
+.check input{width:22px;height:22px;accent-color:var(--accent);flex:none}
+</style>
+</head>
+<body>
+<main id="view" aria-live="polite"></main>
+<button class="fab hidden" id="fab" data-act="fab" aria-label="+">+</button>
+<nav class="tabs" id="tabs"></nav>
+<input type="file" id="pickCam" accept="image/*" capture="environment" class="hidden">
+<input type="file" id="pickGal" accept="image/*" class="hidden">
+<input type="file" id="pickJson" accept="application/json,.json" class="hidden">
+<script>
+'use strict';
+/* =====================================================================
+   Ma voiture — Ortho Tips extension
+   Keys: <id>:state (JSON), <id>:apikey, <id>:log; photos/PDF in
+   OrthoTips.files (photos/<pid>.txt, data URL) or <id>:photo:<pid>.
+   ===================================================================== */
+const HOST = window.OrthoTips || null;
+const ID = 'ma-voiture';
+const KEY = ID + ':state', KEY_API = ID + ':apikey', KEY_LOG = ID + ':log', KEY_PHOTO = ID + ':photo:';
+const SCHEMA = 1;
+const API = 'https://generativelanguage.googleapis.com/v1beta';
+const LOG_MAX = 300;
+const MODEL_TTL = 12 * 3600 * 1000;
+
+const STR = {
+fr:{
+  tabHome:'Accueil',tabDocs:'Papiers',tabMaint:'Entretien',tabBook:'Carnet',tabAi:'Mécano',
+  save:'Enregistrer',cancel:'Annuler',close:'Fermer',delete:'Supprimer',edit:'Modifier',apply:'Appliquer',saved:'Enregistré',deleted:'Supprimé',
+  notes:'Notes',never:'jamais',aiModel:'Modèle : {m}',date:'Date',back:'Retour',estimate:'estimation',
+  // vehicle
+  addVehicle:'Ajouter un véhicule',editVehicle:'Modifier le véhicule',vehicles:'Véhicules',switchVehicle:'Choisir le véhicule',
+  vName:'Nom (ex. « La Clio »)',make:'Marque',vModel:'Modèle',year:'Année',energy:'Énergie',plate:'Immatriculation',vin:'N° de châssis (VIN)',
+  engine:'Moteur (ex. 1.5 dCi 90 ch)',color:'Couleur',vPhoto:'Photo du véhicule',startKm:'Kilométrage actuel',needVName:'Donnez un nom au véhicule.',
+  en_essence:'Essence',en_diesel:'Diesel',en_gpl:'GPL / Sirghaz',en_hybride:'Hybride',en_electrique:'Électrique',
+  welcome:'Bienvenue 👋',welcomeText:'Ajoutez votre véhicule. Le plus rapide : photographiez la carte grise, Gemini remplit la fiche.',
+  fromCG:'📷 Depuis la carte grise',manual:'✍️ Saisir à la main',
+  confirmDelVehicle:'Supprimer « {n} » avec ses papiers, entretiens, pleins et conversations ?',
+  // km
+  kmSheet:'Relevé du compteur',updateKm:'📍 Kilométrage',readOdo:'📷 Lire le compteur (Gemini)',readingOdo:'Lecture du compteur…',
+  kmRead:'Compteur lu : {n} km. Vérifiez avant d’enregistrer.',kmMiles:'Le compteur semble en miles ({n} mi) : vérifiez.',
+  kmTooLow:'Kilométrage incohérent : {n} km étaient déjà notés le {d}.',kmTooHigh:'Kilométrage incohérent : seulement {n} km notés le {d}.',
+  kmInvalid:'Entrez un kilométrage valide.',lastReading:'Relevé du {d}',estToday:'≈ {n} km aujourd’hui',perDay:'≈ {n} km/jour',
+  noKm:'Kilométrage inconnu',recentReadings:'Relevés récents',kmSaved:'Kilométrage enregistré',
+  odoStale:'Kilométrage non relevé depuis {n} jours',odoNone:'Notez le kilométrage actuel pour suivre la vidange.',
+  // docs
+  addDoc:'Ajouter un papier',editDoc:'Modifier le papier',docType:'Type',
+  dt_carte_grise:'Carte grise',dt_assurance:'Assurance',dt_controle:'Contrôle technique',dt_vignette:'Vignette',dt_permis:'Permis de conduire',dt_procuration:'Procuration',dt_autre:'Autre document',
+  docTitle:'Titre',docNumber:'Numéro',issuer:'Organisme (assureur, centre, wilaya…)',holder:'Titulaire',issueDate:'Date de délivrance / début',
+  expiry:'Date d’expiration / échéance',cost:'Montant payé (DA)',readDoc:'✨ Lire avec Gemini',readingDoc:'Lecture du document…',
+  docRead:'Document lu : vérifiez les champs avant d’enregistrer.',docEmpty:'Aucun papier enregistré',
+  docEmptyHint:'Photographiez carte grise, assurance, contrôle technique… Ils restent sur ce téléphone et vous êtes prévenu avant chaque échéance.',
+  privacy:'La lecture envoie l’image à Google Gemini. Les photos restent enregistrées sur ce téléphone.',
+  addPages:'Photos (recto, verso) ou PDF',needFile:'Ajoutez d’abord une photo ou un PDF.',
+  exp_over:'Expiré depuis {n} j',exp_today:'Expire aujourd’hui',exp_in:'Expire dans {n} j',exp_ok:'Jusqu’au {d}',noExp:'Sans échéance',
+  saveCopy:'💾 Enregistrer une copie',copySaved:'Copie enregistrée',docSaved:'Papier enregistré',confirmDelDoc:'Supprimer « {n} » et ses photos ?',
+  fillVehicle:'✨ Compléter la fiche du véhicule',vehicleFilled:'Fiche du véhicule complétée',extra:'Autres informations',
+  docReminders:'Rappels : {l} avant, puis le jour même.',
+  // maintenance
+  plan:'Plan d’entretien',addItem:'＋ Élément',itemSheet:'Élément d’entretien',itemName:'Nom',itemType:'Type',
+  everyKm:'Tous les (km)',everyMonths:'Tous les (mois)',intervalHint:'Laissez vide ce qui ne s’applique pas. Le premier des deux atteint déclenche le rappel.',
+  needInterval:'Indiquez un intervalle en km ou en mois.',
+  m_oil:'Vidange huile moteur',m_oil_filter:'Filtre à huile',m_air_filter:'Filtre à air',m_cabin_filter:'Filtre d’habitacle',m_fuel_filter:'Filtre à carburant',
+  m_spark_plugs:'Bougies',m_timing_belt:'Courroie de distribution',m_brake_pads:'Plaquettes de frein',m_brake_fluid:'Liquide de frein',
+  m_coolant:'Liquide de refroidissement',m_tires:'Pneus',m_battery:'Batterie',m_ac:'Climatisation (recharge)',m_custom:'Autre',
+  done:'✓ Fait',lastDone:'Dernière fois : {d} · {k}',neverDone:'Jamais noté',noteLast:'✓ Noter la dernière fois',nextDue:'Prochaine : {w}',
+  remKm:'reste {n} km',overKm:'dépassé de {n} km',remDays:'≈ {n} j',overDays:'en retard de {n} j',or:' ou ',
+  st_ok:'OK',st_soon:'Bientôt',st_over:'À faire',st_unknown:'À renseigner',
+  aiPlan:'✨ Plan conseillé (Gemini)',planning:'Recherche du plan du constructeur…',planApply:'Appliquer ce plan',planApplied:'Plan d’entretien mis à jour',
+  planIntro:'Intervalles proposés pour {v}. Comparez avec le carnet du constructeur.',confirmDelItem:'Retirer « {n} » du plan ? L’historique est conservé.',
+  needVehicleInfo:'Renseignez la marque et le modèle du véhicule d’abord.',
+  oilCard:'Vidange',oilDone:'🛢️ Vidange faite',oilNever:'Notez la dernière vidange (date et kilométrage) pour être prévenu à temps.',
+  oilNeedKm:'Relevez le kilométrage pour suivre la prochaine vidange.',
+  // services
+  serviceSheet:'Entretien effectué',serviceDone:'🔧 Entretien fait',works:'Travaux effectués',otherWork:'Autres travaux',garage:'Garage / mécanicien',
+  serviceSaved:'Entretien enregistré',needWork:'Cochez au moins un travail ou décrivez-le.',confirmDelService:'Supprimer cet entretien ?',noServices:'Aucun entretien noté.',
+  // fuel
+  fuelTab:'Carburant',addFuel:'⛽ Plein',fuelSheet:'Plein de carburant',liters:'Litres',pricePerL:'Prix au litre (DA)',total:'Total (DA)',fullTank:'Plein complet',
+  fuelSaved:'Plein enregistré',needLiters:'Indiquez les litres et le montant.',confirmDelFuel:'Supprimer ce plein ?',noFuel:'Aucun plein noté.',
+  consumption:'Consommation',perKm:'Carburant / km',lastPrice:'Dernier prix',l100:'{n} L/100 km',fuelHint:'Notez chaque plein complet (avec le kilométrage) pour calculer la consommation.',
+  // expenses
+  expenses:'Dépenses',servicesTab:'Entretiens',totalYear:'Total {y}',cat_fuel:'Carburant',cat_service:'Entretien',cat_docs:'Papiers',
+  costPerKm:'Coût total / km',millions:'soit {n} millions',noExpenses:'Aucune dépense en {y}.',distYear:'Distance',
+  // mechanic
+  aiTitle:'Mécanicien IA',aiIntro:'Décrivez le problème (bruit, voyant, fumée, odeur…) et ajoutez une photo si utile. Les conseils tiennent compte de votre véhicule et de son entretien.',
+  aiPh:'Ex. : un voyant orange s’allume et la voiture broute en 2e…',ask:'🤖 Demander',asking:'Le mécanicien réfléchit…',followUp:'Question de suivi…',send:'Envoyer',
+  needQuestion:'Décrivez le problème ou ajoutez une photo.',threads:'Conversations',noThreads:'Aucune conversation pour l’instant.',
+  q_light:'🚨 Voyant allumé',q_noise:'🔊 Bruit bizarre',q_smoke:'💨 Fumée',q_start:'🔑 Démarre mal',q_conso:'⛽ Consomme trop',q_trip:'🧳 Long trajet',
+  q_light_t:'Un voyant est allumé sur le tableau de bord (voir photo). Que signifie-t-il ?',q_noise_t:'J’entends un bruit anormal : ',q_smoke_t:'De la fumée sort ',
+  q_start_t:'La voiture a du mal à démarrer : ',q_conso_t:'La consommation a augmenté : ',q_trip_t:'Je prépare un long trajet de ___ km. Que dois-je vérifier avant de partir ?',
+  u_low:'Pas urgent',u_medium:'À surveiller',u_high:'Urgent',u_critical:'Arrêtez-vous',drive_yes:'Vous pouvez rouler',drive_caution:'Roulez avec prudence',drive_no:'Ne roulez pas',
+  causes:'Causes possibles',checks:'Vérifications à faire',fixes:'Solutions',diy:'Faisable soi-même',garageNeeded:'Garage',
+  diff_easy:'facile',diff_medium:'moyen',diff_hard:'difficile',mechanic:'Quand voir un mécanicien',safety:'Sécurité',
+  lk_high:'probable',lk_medium:'possible',lk_low:'peu probable',confirmDelThread:'Supprimer cette conversation ?',
+  aiDisclaimer:'Conseils indicatifs. En cas de doute sur les freins, la direction ou une surchauffe, arrêtez-vous et faites vérifier.',
+  // notifications
+  reminders:'Rappels',notifOn:'🔔 Rappels par notification',
+  notifHint:'Papiers : avant l’échéance puis le jour même. Entretien : 7 jours avant la date estimée puis à l’échéance. Kilométrage : chaque semaine. Même application fermée.',
+  notifAllow:'🔔 Autoriser les notifications',notifAsk:'Android n’autorise pas encore Ortho Tips à afficher des notifications.',
+  notifDenied:'Notifications bloquées pour Ortho Tips. Autorisez-les dans Paramètres Android → Applications → Ortho Tips → Notifications.',
+  notifActive:'✓ {n} rappel(s) programmé(s)',notifNext:'Prochain : {d}',notifOff:'Rappels désactivés.',notifWait:'Vérification…',
+  notifUnsupported:'Cette version d’Ortho Tips ne peut pas encore envoyer de notifications. Mettez l’application à jour, ou utilisez l’agenda ci-dessous.',
+  notifError:'Les rappels n’ont pas pu être programmés. Détails dans Réglages → Journal.',
+  reminderHour:'Heure des rappels',leadDays:'Prévenir avant l’échéance des papiers',calendarAlt:'Agenda du téléphone (facultatif)',
+  remindersText:'Vous pouvez aussi mettre les échéances dans l’agenda du téléphone : ouvrez ensuite le fichier .ics avec votre application Agenda.',
+  exportIcs:'📅 Exporter vers l’agenda (.ics)',icsSaved:'Échéances enregistrées : ouvrez le fichier avec votre Agenda',icsNone:'Aucune échéance à exporter.',
+  nDocSoon:'📄 {doc} expire dans {n} jours',nDocSoonBody:'Échéance le {d}. Pensez au renouvellement.',nDocDue:'⚠️ {doc} expire aujourd’hui',nDocOver:'⛔ {doc} a expiré',
+  nDocDueBody:'Renouvelez-le puis mettez la nouvelle date dans Ma voiture.',nMntSoon:'🔧 {x} : bientôt',nMntDue:'🔧 {x} : à faire',nMntBody:'{w}. Touchez pour voir l’entretien.',
+  nOdo:'📍 Relevez le kilométrage',nOdoBody:'Pour estimer au mieux le prochain entretien de {v}.',
+  // settings
+  settings:'Réglages',gemini:'Gemini',apiKey:'Clé API Gemini',
+  apiKeyHint:'Clé gratuite sur aistudio.google.com/apikey. Elle reste sur ce téléphone et n’est envoyée qu’à Google. Jamais incluse dans les sauvegardes.',
+  getKey:'Obtenir une clé',saveKey:'Enregistrer la clé',testKey:'Tester',removeKey:'Retirer la clé',keySaved:'Clé enregistrée',keyRemoved:'Clé retirée',
+  keyInvalidFormat:'Cette clé ne semble pas valide (trop courte ou avec des espaces).',show:'Afficher',hide:'Masquer',
+  noKeyCard:'Ajoutez votre clé API Gemini pour lire papiers et compteur, obtenir un plan d’entretien et les conseils du mécanicien.',openSettings:'Ouvrir les réglages',
+  modelPref:'Modèle',pref_auto:'Le plus récent (automatique)',pref_flash:'Flash le plus récent',pref_pro:'Pro le plus récent',pref_lite:'Flash-Lite le plus récent',
+  modelNow:'Modèle actuel : {m}',modelNone:'Aucun modèle choisi pour l’instant.',modelChecked:'Liste vérifiée {d}',refreshModels:'🔄 Actualiser les modèles',
+  modelsOk:'✓ Clé valide — modèle : {m}',modelHint:'La liste des modèles est lue chez Google à l’ouverture (au plus toutes les 12 h) : le plus récent est utilisé, et si un modèle échoue le suivant est essayé.',
+  place:'Ville (facultatif)',placeHint:'Aide Gemini pour les prix et le climat, ex. « Oran ».',language:'Langue',auto:'Automatique',
+  log:'Journal des problèmes',logOpen:'📋 Voir le journal ({n})',logEmpty:'Aucun problème enregistré.',logClear:'🗑️ Effacer',logExport:'💾 Exporter',logCleared:'Journal effacé',confirmClearLog:'Effacer le journal ?',
+  backup:'Sauvegarde',exportJson:'💾 Exporter une sauvegarde',importJson:'📂 Restaurer une sauvegarde',backupSaved:'Sauvegarde enregistrée',restored:'Sauvegarde restaurée',
+  badBackup:'Ce fichier n’est pas une sauvegarde de Ma voiture.',confirmRestore:'Remplacer toutes les données par celles de la sauvegarde ?',
+  whereApp:'Enregistré dans Ortho Tips, sur ce téléphone.',whereBrowser:'Enregistré dans ce navigateur.',
+  loadFailed:'Les données enregistrées sont illisibles : rien ne sera enregistré pour ne pas les écraser. Consultez le journal.',
+  // photos + errors (shared code)
+  takePhoto:'📷 Photo',gallery:'🖼️ Galerie / PDF',galleryImg:'🖼️ Galerie',noPhoto:'Pas encore de photo',photoBusy:'Préparation de l’image…',photoTooBig:'Fichier trop volumineux (max 20 Mo, PDF 8 Mo).',
+  photoFailed:'Impossible de lire ce fichier.',photoSaveFailed:'Le fichier n’a pas pu être enregistré.',
+  noPickPerm:'Photos indisponibles : la permission « import_export » n’est pas accordée à l’extension.',
+  err_noKey:'Aucune clé API Gemini. Ajoutez-la dans Réglages.',err_noInternetPerm:'Accès internet non accordé à l’extension.',err_offline:'Pas de connexion internet.',
+  err_network:'Connexion à Gemini impossible.',err_timeout:'Gemini met trop de temps à répondre. Réessayez.',err_badKey:'Clé API refusée par Google. Vérifiez-la dans Réglages.',
+  err_denied:'Accès refusé par Google (clé ou API non activée).',err_quota:'Quota Gemini dépassé. Réessayez plus tard.',err_server:'Service Gemini momentanément indisponible.',
+  err_parse:'Réponse de Gemini illisible.',err_blocked:'Gemini a refusé de répondre à cette demande.',err_http:'Erreur Gemini ({s}).',err_noModel:'Aucun modèle Gemini compatible trouvé pour cette clé.',
+  err_generic:'Une erreur est survenue.',err_notDoc:'Gemini ne reconnaît pas de document sur cette image.',err_notOdo:'Gemini n’arrive pas à lire le compteur. Reprenez la photo de plus près, sans reflet.',
+  seeLog:'Détails dans Réglages → Journal.',
+  scanTitle:'Scanner',scanCorners:'Ajustez les coins',scanCorner:'Coin',scanCornersHint:'Faites glisser les coins sur les bords du document.',
+  scanFound:'Document détecté. Ajustez les coins si besoin.',scanNoDetect:'Bords non trouvés : placez les coins à la main.',
+  scanAuto:'🎯 Auto',scanFull:'⛶ Tout',scanNext:'Suivant ›',scanRetake:'🔄 Reprendre',scanDelete:'🗑️ Supprimer',
+  scanEdit:'Améliorer',scanCrop:'✂️ Recadrer',scanRotL:'Pivoter à gauche',scanRotR:'Pivoter à droite',scanClean:'✨ Nettoyer',scanEraser:'🧽 Gomme',scanUndo:'↶ Annuler',
+  scanCleanHint:'Nettoyage : ombres, taches et doigts effacés. À éviter sur un document avec photo (permis).',
+  scanEraserHint:'Passez le doigt sur les taches ou marques à effacer.',
+  f_original:'Original',f_auto:'Auto',f_vivid:'Couleurs nettes',f_gray:'Gris',f_bw:'Noir & blanc',
+  scanDone:'✓ Valider',scanDoneNext:'✓ + page suivante',scanBusy:'Traitement…',scanBadQuad:'Les coins doivent former un quadrilatère : ajustez-les.',
+  scanFailed:'Le scanner ne peut pas lire cette image : elle est ajoutée telle quelle.',scanConfirmDelete:'Supprimer cette page ?',scanEditPage:'Modifier la page',
+  intervalFmt:'tous les {w}',moUnit:'{n} mois',dayUnit:'j',pdfLabel:'PDF',costInvalid:'Montant invalide.',needName:'Donnez un nom.',
+  ctx_models:'Modèles',ctx_doc:'Lecture de papier',ctx_odo:'Lecture du compteur',ctx_plan:'Plan d’entretien',ctx_mechanic:'Mécanicien',ctx_photo:'Photo / fichier',
+  ctx_storage:'Stockage',ctx_js:'JavaScript',ctx_backup:'Sauvegarde',ctx_ics:'Agenda',ctx_notif:'Notifications'
+},
+en:{
+  tabHome:'Home',tabDocs:'Papers',tabMaint:'Service',tabBook:'Logbook',tabAi:'Mechanic',
+  save:'Save',cancel:'Cancel',close:'Close',delete:'Delete',edit:'Edit',apply:'Apply',saved:'Saved',deleted:'Deleted',
+  notes:'Notes',never:'never',aiModel:'Model: {m}',date:'Date',back:'Back',estimate:'estimate',
+  addVehicle:'Add a vehicle',editVehicle:'Edit vehicle',vehicles:'Vehicles',switchVehicle:'Choose vehicle',
+  vName:'Name (e.g. “The Clio”)',make:'Make',vModel:'Model',year:'Year',energy:'Fuel type',plate:'Registration',vin:'Chassis number (VIN)',
+  engine:'Engine (e.g. 1.5 dCi 90 hp)',color:'Colour',vPhoto:'Vehicle photo',startKm:'Current mileage',needVName:'Give the vehicle a name.',
+  en_essence:'Petrol',en_diesel:'Diesel',en_gpl:'LPG',en_hybride:'Hybrid',en_electrique:'Electric',
+  welcome:'Welcome 👋',welcomeText:'Add your vehicle. Fastest: photograph the registration card and Gemini fills in the details.',
+  fromCG:'📷 From the registration card',manual:'✍️ Enter manually',
+  confirmDelVehicle:'Delete “{n}” with its papers, services, fill-ups and conversations?',
+  kmSheet:'Odometer reading',updateKm:'📍 Mileage',readOdo:'📷 Read the odometer (Gemini)',readingOdo:'Reading the odometer…',
+  kmRead:'Odometer read: {n} km. Check before saving.',kmMiles:'The odometer seems to be in miles ({n} mi): check.',
+  kmTooLow:'Inconsistent mileage: {n} km was already recorded on {d}.',kmTooHigh:'Inconsistent mileage: only {n} km recorded on {d}.',
+  kmInvalid:'Enter a valid mileage.',lastReading:'Reading of {d}',estToday:'≈ {n} km today',perDay:'≈ {n} km/day',
+  noKm:'Mileage unknown',recentReadings:'Recent readings',kmSaved:'Mileage saved',
+  odoStale:'Mileage not updated for {n} days',odoNone:'Record the current mileage to track the oil change.',
+  addDoc:'Add a paper',editDoc:'Edit paper',docType:'Type',
+  dt_carte_grise:'Registration card',dt_assurance:'Insurance',dt_controle:'Roadworthiness test',dt_vignette:'Road tax sticker',dt_permis:'Driving licence',dt_procuration:'Power of attorney',dt_autre:'Other document',
+  docTitle:'Title',docNumber:'Number',issuer:'Issuer (insurer, centre, wilaya…)',holder:'Holder',issueDate:'Issue / start date',
+  expiry:'Expiry / due date',cost:'Amount paid (DA)',readDoc:'✨ Read with Gemini',readingDoc:'Reading the document…',
+  docRead:'Document read: check the fields before saving.',docEmpty:'No papers saved',
+  docEmptyHint:'Photograph the registration card, insurance, roadworthiness test… They stay on this phone and you are reminded before each due date.',
+  privacy:'Reading sends the image to Google Gemini. Photos stay stored on this phone.',
+  addPages:'Photos (front, back) or PDF',needFile:'Add a photo or a PDF first.',
+  exp_over:'Expired {n} d ago',exp_today:'Expires today',exp_in:'Expires in {n} d',exp_ok:'Until {d}',noExp:'No expiry',
+  saveCopy:'💾 Save a copy',copySaved:'Copy saved',docSaved:'Paper saved',confirmDelDoc:'Delete “{n}” and its photos?',
+  fillVehicle:'✨ Complete the vehicle details',vehicleFilled:'Vehicle details completed',extra:'Other information',
+  docReminders:'Reminders: {l} before, then on the day.',
+  plan:'Service plan',addItem:'＋ Item',itemSheet:'Service item',itemName:'Name',itemType:'Type',
+  everyKm:'Every (km)',everyMonths:'Every (months)',intervalHint:'Leave empty what does not apply. Whichever comes first triggers the reminder.',
+  needInterval:'Give an interval in km or months.',
+  m_oil:'Engine oil change',m_oil_filter:'Oil filter',m_air_filter:'Air filter',m_cabin_filter:'Cabin filter',m_fuel_filter:'Fuel filter',
+  m_spark_plugs:'Spark plugs',m_timing_belt:'Timing belt',m_brake_pads:'Brake pads',m_brake_fluid:'Brake fluid',
+  m_coolant:'Coolant',m_tires:'Tyres',m_battery:'Battery',m_ac:'Air conditioning (recharge)',m_custom:'Other',
+  done:'✓ Done',lastDone:'Last: {d} · {k}',neverDone:'Never recorded',noteLast:'✓ Record the last time',nextDue:'Next: {w}',
+  remKm:'{n} km left',overKm:'{n} km over',remDays:'≈ {n} d',overDays:'{n} d overdue',or:' or ',
+  st_ok:'OK',st_soon:'Soon',st_over:'Due',st_unknown:'To fill in',
+  aiPlan:'✨ Recommended plan (Gemini)',planning:'Looking up the manufacturer plan…',planApply:'Apply this plan',planApplied:'Service plan updated',
+  planIntro:'Suggested intervals for {v}. Compare with the manufacturer’s service book.',confirmDelItem:'Remove “{n}” from the plan? History is kept.',
+  needVehicleInfo:'Fill in the vehicle make and model first.',
+  oilCard:'Oil change',oilDone:'🛢️ Oil changed',oilNever:'Record the last oil change (date and mileage) to be reminded in time.',
+  oilNeedKm:'Record the mileage to track the next oil change.',
+  serviceSheet:'Service done',serviceDone:'🔧 Service done',works:'Work done',otherWork:'Other work',garage:'Garage / mechanic',
+  serviceSaved:'Service saved',needWork:'Tick at least one job or describe it.',confirmDelService:'Delete this service?',noServices:'No service recorded.',
+  fuelTab:'Fuel',addFuel:'⛽ Fill-up',fuelSheet:'Fuel fill-up',liters:'Litres',pricePerL:'Price per litre (DA)',total:'Total (DA)',fullTank:'Full tank',
+  fuelSaved:'Fill-up saved',needLiters:'Enter the litres and the amount.',confirmDelFuel:'Delete this fill-up?',noFuel:'No fill-up recorded.',
+  consumption:'Consumption',perKm:'Fuel / km',lastPrice:'Last price',l100:'{n} L/100 km',fuelHint:'Record every full tank (with the mileage) to compute consumption.',
+  expenses:'Expenses',servicesTab:'Services',totalYear:'Total {y}',cat_fuel:'Fuel',cat_service:'Service',cat_docs:'Papers',
+  costPerKm:'Total cost / km',millions:'i.e. {n} million centimes',noExpenses:'No expenses in {y}.',distYear:'Distance',
+  aiTitle:'AI mechanic',aiIntro:'Describe the problem (noise, warning light, smoke, smell…) and add a photo if useful. Advice takes your vehicle and its service history into account.',
+  aiPh:'E.g. an orange light comes on and the car judders in 2nd gear…',ask:'🤖 Ask',asking:'The mechanic is thinking…',followUp:'Follow-up question…',send:'Send',
+  needQuestion:'Describe the problem or add a photo.',threads:'Conversations',noThreads:'No conversation yet.',
+  q_light:'🚨 Warning light',q_noise:'🔊 Strange noise',q_smoke:'💨 Smoke',q_start:'🔑 Hard to start',q_conso:'⛽ Uses too much',q_trip:'🧳 Long trip',
+  q_light_t:'A warning light is on on the dashboard (see photo). What does it mean?',q_noise_t:'I hear an unusual noise: ',q_smoke_t:'Smoke is coming out of ',
+  q_start_t:'The car is hard to start: ',q_conso_t:'Fuel consumption went up: ',q_trip_t:'I am preparing a long trip of ___ km. What should I check before leaving?',
+  u_low:'Not urgent',u_medium:'Keep an eye on it',u_high:'Urgent',u_critical:'Stop driving',drive_yes:'You can drive',drive_caution:'Drive carefully',drive_no:'Do not drive',
+  causes:'Possible causes',checks:'Things to check',fixes:'Solutions',diy:'DIY',garageNeeded:'Garage',
+  diff_easy:'easy',diff_medium:'medium',diff_hard:'hard',mechanic:'When to see a mechanic',safety:'Safety',
+  lk_high:'likely',lk_medium:'possible',lk_low:'unlikely',confirmDelThread:'Delete this conversation?',
+  aiDisclaimer:'Indicative advice. If in doubt about brakes, steering or overheating, stop and have it checked.',
+  reminders:'Reminders',notifOn:'🔔 Notification reminders',
+  notifHint:'Papers: before the due date, then on the day. Service: 7 days before the estimated date, then when due. Mileage: weekly. Even when the app is closed.',
+  notifAllow:'🔔 Allow notifications',notifAsk:'Android does not allow Ortho Tips to show notifications yet.',
+  notifDenied:'Notifications are blocked for Ortho Tips. Allow them in Android Settings → Apps → Ortho Tips → Notifications.',
+  notifActive:'✓ {n} reminder(s) scheduled',notifNext:'Next: {d}',notifOff:'Reminders turned off.',notifWait:'Checking…',
+  notifUnsupported:'This version of Ortho Tips cannot send notifications yet. Update the app, or use the calendar below.',
+  notifError:'Reminders could not be scheduled. Details in Settings → Log.',
+  reminderHour:'Reminder time',leadDays:'Remind me before papers expire',calendarAlt:'Phone calendar (optional)',
+  remindersText:'You can also put the due dates in your phone’s calendar: then open the .ics file with your Calendar app.',
+  exportIcs:'📅 Export to calendar (.ics)',icsSaved:'Due dates saved: open the file with your Calendar',icsNone:'No due date to export.',
+  nDocSoon:'📄 {doc} expires in {n} days',nDocSoonBody:'Due on {d}. Remember to renew it.',nDocDue:'⚠️ {doc} expires today',nDocOver:'⛔ {doc} has expired',
+  nDocDueBody:'Renew it, then enter the new date in Ma voiture.',nMntSoon:'🔧 {x}: soon',nMntDue:'🔧 {x}: due',nMntBody:'{w}. Tap to see the service plan.',
+  nOdo:'📍 Update the mileage',nOdoBody:'To best estimate the next service of {v}.',
+  settings:'Settings',gemini:'Gemini',apiKey:'Gemini API key',
+  apiKeyHint:'Free key at aistudio.google.com/apikey. It stays on this phone and is only sent to Google. Never included in backups.',
+  getKey:'Get a key',saveKey:'Save key',testKey:'Test',removeKey:'Remove key',keySaved:'Key saved',keyRemoved:'Key removed',
+  keyInvalidFormat:'This key does not look valid (too short or contains spaces).',show:'Show',hide:'Hide',
+  noKeyCard:'Add your Gemini API key to read papers and the odometer, get a service plan and the mechanic’s advice.',openSettings:'Open settings',
+  modelPref:'Model',pref_auto:'Newest (automatic)',pref_flash:'Newest Flash',pref_pro:'Newest Pro',pref_lite:'Newest Flash-Lite',
+  modelNow:'Current model: {m}',modelNone:'No model chosen yet.',modelChecked:'List checked {d}',refreshModels:'🔄 Refresh models',
+  modelsOk:'✓ Key valid — model: {m}',modelHint:'The model list is read from Google when you open the extension (at most every 12 h): the newest is used, and if a model fails the next one is tried.',
+  place:'City (optional)',placeHint:'Helps Gemini with prices and climate, e.g. “Oran”.',language:'Language',auto:'Automatic',
+  log:'Problem log',logOpen:'📋 View log ({n})',logEmpty:'No problem recorded.',logClear:'🗑️ Clear',logExport:'💾 Export',logCleared:'Log cleared',confirmClearLog:'Clear the log?',
+  backup:'Backup',exportJson:'💾 Export a backup',importJson:'📂 Restore a backup',backupSaved:'Backup saved',restored:'Backup restored',
+  badBackup:'This file is not a Ma voiture backup.',confirmRestore:'Replace all data with the backup?',
+  whereApp:'Saved in Ortho Tips, on this phone.',whereBrowser:'Saved in this browser.',
+  loadFailed:'Saved data cannot be read: nothing will be saved so it is not overwritten. See the log.',
+  takePhoto:'📷 Photo',gallery:'🖼️ Gallery / PDF',galleryImg:'🖼️ Gallery',noPhoto:'No photo yet',photoBusy:'Preparing the image…',photoTooBig:'File too large (max 20 MB, PDF 8 MB).',
+  photoFailed:'Could not read this file.',photoSaveFailed:'The file could not be saved.',
+  noPickPerm:'Photos unavailable: the “import_export” permission is not granted to the extension.',
+  err_noKey:'No Gemini API key. Add it in Settings.',err_noInternetPerm:'Internet access not granted to the extension.',err_offline:'No internet connection.',
+  err_network:'Cannot reach Gemini.',err_timeout:'Gemini is taking too long. Try again.',err_badKey:'Google refused the API key. Check it in Settings.',
+  err_denied:'Access denied by Google (key or API not enabled).',err_quota:'Gemini quota exceeded. Try again later.',err_server:'Gemini is temporarily unavailable.',
+  err_parse:'Unreadable answer from Gemini.',err_blocked:'Gemini declined to answer this request.',err_http:'Gemini error ({s}).',err_noModel:'No compatible Gemini model found for this key.',
+  err_generic:'Something went wrong.',err_notDoc:'Gemini does not see a document in this image.',err_notOdo:'Gemini cannot read the odometer. Retake the photo closer, without glare.',
+  seeLog:'Details in Settings → Log.',
+  scanTitle:'Scanner',scanCorners:'Adjust the corners',scanCorner:'Corner',scanCornersHint:'Drag the corners onto the edges of the document.',
+  scanFound:'Document detected. Adjust the corners if needed.',scanNoDetect:'Edges not found: place the corners by hand.',
+  scanAuto:'🎯 Auto',scanFull:'⛶ Whole',scanNext:'Next ›',scanRetake:'🔄 Retake',scanDelete:'🗑️ Delete',
+  scanEdit:'Enhance',scanCrop:'✂️ Crop',scanRotL:'Rotate left',scanRotR:'Rotate right',scanClean:'✨ Clean',scanEraser:'🧽 Eraser',scanUndo:'↶ Undo',
+  scanCleanHint:'Cleaning: shadows, stains and fingers removed. Avoid it on a document with a photo (licence).',
+  scanEraserHint:'Swipe over the stains or marks to erase.',
+  f_original:'Original',f_auto:'Auto',f_vivid:'Clean colours',f_gray:'Grey',f_bw:'Black & white',
+  scanDone:'✓ Done',scanDoneNext:'✓ + next page',scanBusy:'Processing…',scanBadQuad:'The corners must form a quadrilateral: adjust them.',
+  scanFailed:'The scanner cannot read this image: it is added as is.',scanConfirmDelete:'Delete this page?',scanEditPage:'Edit page',
+  intervalFmt:'every {w}',moUnit:'{n} months',dayUnit:'d',pdfLabel:'PDF',costInvalid:'Invalid amount.',needName:'Give it a name.',
+  ctx_models:'Models',ctx_doc:'Paper reading',ctx_odo:'Odometer reading',ctx_plan:'Service plan',ctx_mechanic:'Mechanic',ctx_photo:'Photo / file',
+  ctx_storage:'Storage',ctx_js:'JavaScript',ctx_backup:'Backup',ctx_ics:'Calendar',ctx_notif:'Notifications'
+}
+};
+
+/* ---------- storage (function declarations: usable while the page loads) ---------- */
+function storeGet(k){ try{ return HOST ? HOST.storage.get(k) : localStorage.getItem(k); }catch(e){ return null; } }
+function storeSet(k, v){ if(HOST) HOST.storage.set(k, v); else localStorage.setItem(k, v); }
+function storeDel(k){ try{ if(HOST) HOST.storage.remove(k); else localStorage.removeItem(k); }catch(e){} }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function isDate(s){ return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s); }
+function clampInt(n, lo, hi, dflt){ n = Math.round(Number(n)); return Number.isFinite(n) && n >= lo && n <= hi ? n : dflt; }
+function str(x, max){ return x == null ? '' : String(x).slice(0, max || 2000); }
+function strList(a, max){ return Array.isArray(a) ? a.map(x => str(x, 600)).filter(Boolean).slice(0, max || 12) : []; }
+
+/* ---------- problem log (separate key, never contains the API key) ---------- */
+function redact(s){ return String(s == null ? '' : s).replace(/AIza[0-9A-Za-z_\-]{10,}/g, 'AIza…').replace(/([?&]key=)[^&\s"]+/gi, '$1…'); }
+function readLog(){ try{ const a = JSON.parse(storeGet(KEY_LOG) || '[]'); return Array.isArray(a) ? a : []; }catch(e){ return []; } }
+function log(lvl, ctx, msg, detail){
+  try{
+    const list = readLog();
+    list.push({t:Date.now(), lvl, ctx, msg:redact(msg).slice(0, 500), detail: detail == null ? '' : redact(typeof detail === 'string' ? detail : JSON.stringify(detail)).slice(0, 2000)});
+    while(list.length > LOG_MAX) list.shift();
+    storeSet(KEY_LOG, JSON.stringify(list));
+    if(typeof renderTabs === 'function' && document.getElementById('tabs')) renderTabs();
+  }catch(e){ /* the log must never break the page */ }
+}
+
+
+/* ---------- domain constants ---------- */
+const DOC_TYPES = ['carte_grise', 'assurance', 'controle', 'vignette', 'permis', 'procuration', 'autre'];
+const DOC_ICON = {carte_grise:'🪪', assurance:'🛡️', controle:'🔍', vignette:'🏷️', permis:'🚦', procuration:'✍️', autre:'📄'};
+const ENERGIES = ['essence', 'diesel', 'gpl', 'hybride', 'electrique'];
+/* type: [every km, every months, icon] — generic defaults, editable, or replaced by the Gemini plan */
+const MAINT = {oil:[10000, 12, '🛢️'], oil_filter:[10000, 12, '🧴'], air_filter:[20000, 24, '🌬️'], cabin_filter:[15000, 12, '❄️'], fuel_filter:[30000, 24, '⛽'],
+  spark_plugs:[30000, 36, '⚡'], timing_belt:[60000, 60, '⚙️'], brake_pads:[30000, 0, '🛑'], brake_fluid:[0, 24, '💧'], coolant:[60000, 48, '🌡️'],
+  tires:[40000, 60, '🛞'], battery:[0, 48, '🔋'], ac:[0, 24, '🧊'], custom:[0, 12, '🔧']};
+const LEADS = [60, 30, 15, 7, 1];
+
+/* ---------- state (function declarations: usable while the page loads) ---------- */
+function num(x, lo, hi){ if(x === '' || x == null) return null; const n = Number(x); return Number.isFinite(n) && n >= lo && n <= hi ? n : null; }
+function defaultPlan(vid, energy){
+  let types = Object.keys(MAINT).filter(k => k !== 'custom');
+  if(energy === 'electrique') types = ['cabin_filter', 'brake_pads', 'brake_fluid', 'coolant', 'tires', 'battery', 'ac'];
+  else if(energy === 'diesel') types = types.filter(k => k !== 'spark_plugs');
+  return types.map(k => ({id:uid(), vid, type:k, name:'', km:energy === 'diesel' && k === 'fuel_filter' ? 20000 : MAINT[k][0], mo:MAINT[k][1], on:true}));
+}
+function defaults(){
+  return {v:SCHEMA, settings:{lang:'auto', model:'auto', place:'', notify:true, hour:9, leads:[30, 7]}, current:null,
+          vehicles:[], docs:[], plan:[], services:[], fuel:[], threads:[], gemini:{models:[], fetchedAt:0, lastModel:''}, seenLog:0};
+}
+function cleanVehicle(v){
+  if(!v || typeof v !== 'object') return null;
+  return {id:str(v.id, 40) || uid(), name:str(v.name, 80) || '?', make:str(v.make, 60), model:str(v.model, 80), year:num(v.year, 1900, 2100),
+          energy:ENERGIES.includes(v.energy) ? v.energy : 'essence', plate:str(v.plate, 30), vin:str(v.vin, 40), engine:str(v.engine, 80), color:str(v.color, 40),
+          photo:v.photo ? str(v.photo, 60) : null,
+          readings:(Array.isArray(v.readings) ? v.readings : []).filter(r => r && isDate(r.date) && num(r.km, 0, 5e6) != null).map(r => ({date:r.date, km:Math.round(r.km)})),
+          createdAt:Number(v.createdAt) || Date.now()};
+}
+function cleanFiles(a){ return (Array.isArray(a) ? a : []).filter(f => f && f.id).slice(0, 8).map(f => ({id:str(f.id, 60), kind:f.kind === 'pdf' ? 'pdf' : 'img'})); }
+function cleanDoc(d){
+  if(!d || typeof d !== 'object' || !d.vid) return null;
+  return {id:str(d.id, 40) || uid(), vid:str(d.vid, 40), type:DOC_TYPES.includes(d.type) ? d.type : 'autre', title:str(d.title, 120), number:str(d.number, 80),
+          issuer:str(d.issuer, 120), holder:str(d.holder, 120), issueDate:isDate(d.issueDate) ? d.issueDate : null, expiry:isDate(d.expiry) ? d.expiry : null,
+          cost:num(d.cost, 0, 1e9), notes:str(d.notes, 2000), files:cleanFiles(d.files),
+          extra:(Array.isArray(d.extra) ? d.extra : []).filter(x => x && x.label).slice(0, 12).map(x => ({label:str(x.label, 80), value:str(x.value, 300)})),
+          createdAt:Number(d.createdAt) || Date.now()};
+}
+function cleanPlanItem(p){
+  if(!p || typeof p !== 'object' || !p.vid) return null;
+  return {id:str(p.id, 40) || uid(), vid:str(p.vid, 40), type:MAINT[p.type] ? p.type : 'custom', name:str(p.name, 80),
+          km:Math.round(num(p.km, 0, 1e6) || 0), mo:Math.round(num(p.mo, 0, 240) || 0), on:p.on !== false};
+}
+function cleanService(s){
+  if(!s || typeof s !== 'object' || !s.vid) return null;
+  const km = num(s.km, 0, 5e6);
+  return {id:str(s.id, 40) || uid(), vid:str(s.vid, 40), date:isDate(s.date) ? s.date : isoDay(new Date()), km:km == null ? null : Math.round(km),
+          items:(Array.isArray(s.items) ? s.items : []).filter(i => i && i.pid).map(i => ({pid:str(i.pid, 40), name:str(i.name, 120)})),
+          other:str(s.other, 500), cost:num(s.cost, 0, 1e9), garage:str(s.garage, 120), notes:str(s.notes, 2000)};
+}
+function cleanFuel(f){
+  if(!f || typeof f !== 'object' || !f.vid) return null;
+  const km = num(f.km, 0, 5e6);
+  return {id:str(f.id, 40) || uid(), vid:str(f.vid, 40), date:isDate(f.date) ? f.date : isoDay(new Date()), km:km == null ? null : Math.round(km),
+          liters:num(f.liters, 0, 2000), total:num(f.total, 0, 1e8), full:f.full !== false};
+}
+function cleanAnswer(a){
+  a = a && typeof a === 'object' ? a : {};
+  return {summary:str(a.summary), urgency:['low', 'medium', 'high', 'critical'].includes(a.urgency) ? a.urgency : 'medium',
+          canDrive:['yes', 'caution', 'no'].includes(a.canDrive) ? a.canDrive : 'caution',
+          causes:(Array.isArray(a.causes) ? a.causes : []).slice(0, 6).map(x => ({name:str(x && x.name, 200), likelihood:['high', 'medium', 'low'].includes(x && x.likelihood) ? x.likelihood : 'medium', why:str(x && x.why, 600)})).filter(x => x.name),
+          checks:strList(a.checks, 8),
+          fixes:(Array.isArray(a.fixes) ? a.fixes : []).slice(0, 8).map(x => ({action:str(x && x.action, 300), diy:!!(x && x.diy), difficulty:['easy', 'medium', 'hard'].includes(x && x.difficulty) ? x.difficulty : 'medium', cost:str(x && x.cost, 120)})).filter(x => x.action),
+          mechanic:str(a.mechanic, 600), safety:str(a.safety, 600), followUps:strList(a.followUps, 3)};
+}
+function cleanThread(th){
+  if(!th || typeof th !== 'object' || !th.vid) return null;
+  const msgs = (Array.isArray(th.msgs) ? th.msgs : []).slice(0, 40).map(m => m && m.r === 'a' ? {r:'a', a:cleanAnswer(m.a), model:str(m.model, 80)}
+                                                                   : {r:'u', text:str(m && m.text, 2000), photo:m && m.photo ? str(m.photo, 60) : null});
+  return msgs.length ? {id:str(th.id, 40) || uid(), vid:str(th.vid, 40), date:str(th.date, 40) || new Date().toISOString(), msgs} : null;
+}
+/* Every future change of shape goes here; old data is converted, never dropped. */
+function migrate(d){
+  const out = defaults();
+  if(!d || typeof d !== 'object') return out;
+  const s = Object.assign({}, out.settings, d.settings && typeof d.settings === 'object' ? d.settings : {});
+  if(!['auto', 'fr', 'en'].includes(s.lang)) s.lang = 'auto';
+  if(!['auto', 'flash', 'pro', 'lite'].includes(s.model)) s.model = 'auto';
+  s.place = str(s.place, 120); s.notify = s.notify !== false; s.hour = clampInt(s.hour, 0, 23, 9);
+  s.leads = (Array.isArray(s.leads) ? s.leads : [30, 7]).map(Number).filter(n => LEADS.includes(n));
+  out.settings = s;
+  out.vehicles = (Array.isArray(d.vehicles) ? d.vehicles : []).map(cleanVehicle).filter(Boolean);
+  const ids = new Set(out.vehicles.map(v => v.id));
+  const own = (list, fn) => (Array.isArray(list) ? list : []).map(fn).filter(x => x && ids.has(x.vid));
+  out.docs = own(d.docs, cleanDoc); out.plan = own(d.plan, cleanPlanItem); out.services = own(d.services, cleanService);
+  out.fuel = own(d.fuel, cleanFuel); out.threads = own(d.threads, cleanThread);
+  out.current = ids.has(d.current) ? d.current : (out.vehicles[0] ? out.vehicles[0].id : null);
+  const g = d.gemini && typeof d.gemini === 'object' ? d.gemini : {};
+  out.gemini = {models:Array.isArray(g.models) ? g.models.map(x => str(x, 80)).filter(Boolean) : [], fetchedAt:Number(g.fetchedAt) || 0, lastModel:str(g.lastModel, 80)};
+  out.seenLog = Number(d.seenLog) || 0;
+  return out;
+}
+let loadFailed = false;
+let state;
+{
+  const raw = storeGet(KEY);
+  try{ state = migrate(JSON.parse(raw || 'null')); }
+  catch(e){ state = defaults(); loadFailed = !!raw; log('error', 'storage', 'Saved data unreadable — saving disabled', String(e && e.message)); }
+}
+let saveTimer = null;
+function save(){ clearTimeout(saveTimer); saveTimer = setTimeout(flush, 200); try{ Notif.sync(); }catch(e){ /* not initialised yet while the page loads */ } }
+function flush(){
+  clearTimeout(saveTimer); saveTimer = null;
+  if(loadFailed) return;
+  try{ storeSet(KEY, JSON.stringify(state)); }
+  catch(e){ log('error', 'storage', 'Save failed', String(e && e.message)); toast('⚠️ ' + (e && e.message)); }
+}
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'hidden') flush(); });
+window.addEventListener('pagehide', flush);
+window.addEventListener('error', e => log('error', 'js', e.message || 'Error', (e.filename || '') + ':' + (e.lineno || '')));
+window.addEventListener('unhandledrejection', e => log('error', 'js', 'Unhandled promise', String(e.reason && (e.reason.stack || e.reason.message) || e.reason)));
+
+
+/* ---------- ui + helpers ---------- */
+const ui = {tab:'home', view:null, sheets:[], showKey:false, keyMsg:null, keyBusy:false, seg:'services', year:null, aiText:'', aiPhoto:null, aiBusy:false, pending:null};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function lang(){ const l = state.settings.lang !== 'auto' ? state.settings.lang : (HOST ? HOST.language : (navigator.language || 'fr')); return String(l).toLowerCase().startsWith('en') ? 'en' : 'fr'; }
+function t(k, vars){ let s = STR[lang()][k]; if(s == null) s = STR.fr[k] ?? k; if(vars) for(const [a, b] of Object.entries(vars)) s = s.split('{' + a + '}').join(b); return s; }
+function locale(){ return lang() === 'en' ? 'en-GB' : 'fr-FR'; }
+let toastTimer;
+function toast(msg){
+  if(HOST){ try{ HOST.toast(msg); }catch(e){} return; }
+  let el = $('.toast'); if(!el){ el = document.createElement('div'); el.className = 'toast'; document.body.appendChild(el); }
+  el.textContent = msg; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.remove(), 2600);
+}
+
+/* ---------- dates (local calendar days) ---------- */
+function isoDay(d){ d = d || new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function today(){ return isoDay(new Date()); }
+function dayNum(s){ const [y, m, d] = s.split('-').map(Number); return Math.round(Date.UTC(y, m - 1, d) / 86400000); }
+function addDays(s, n){ const [y, m, d] = s.split('-').map(Number); return isoDay(new Date(y, m - 1, d + n)); }
+function fmtDay(s){ if(!s) return t('never'); const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString(locale(), {day:'numeric', month:'short', year:'numeric'}); }
+function fmtTime(ms){ return new Date(ms).toLocaleString(locale(), {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}); }
+function ago(ms){ const m = Math.round((Date.now() - ms) / 60000); const rtf = new Intl.RelativeTimeFormat(locale(), {numeric:'auto'});
+  if(m < 60) return rtf.format(-m, 'minute'); if(m < 1440) return rtf.format(-Math.round(m / 60), 'hour'); return rtf.format(-Math.round(m / 1440), 'day'); }
+
+function addMonths(s, n){ const [y, m, d] = s.split('-').map(Number); const x = new Date(y, m - 1 + n, d); if(x.getDate() !== d) x.setDate(0); return isoDay(x); }
+function nf(n, dec){ return new Intl.NumberFormat(locale(), {maximumFractionDigits:dec || 0}).format(n); }
+function fmtKm(n){ return n == null ? '—' : nf(n) + '\u00a0km'; }
+function fmtDA(n){ return nf(n || 0) + '\u00a0DA'; }
+function fmtMil(n){ return n >= 10000 ? t('millions', {n:nf(n / 10000, 2)}) : ''; }
+function parseNum(s){ if(s == null) return null; s = String(s).replace(/[\s\u00a0\u202f]/g, '').replace(',', '.'); if(s === '') return null; const n = Number(s); return Number.isFinite(n) ? n : NaN; }
+function round2(n){ return Math.round(n * 100) / 100; }
+function unseenErrors(){ return readLog().filter(x => x.lvl === 'error' && x.t > state.seenLog).length; }
+
+/* ---------- vehicles, odometer ---------- */
+function veh(id){ return state.vehicles.find(v => v.id === id) || null; }
+function cur(){ return veh(state.current) || state.vehicles[0] || null; }
+function ofV(list, v){ return v ? list.filter(x => x.vid === v.id) : []; }
+/* Every known odometer value: manual readings, services and fill-ups. */
+function readings(v){
+  const r = v.readings.map(x => ({date:x.date, km:x.km, src:x}));
+  for(const s of ofV(state.services, v)) if(s.km != null) r.push({date:s.date, km:s.km, src:s});
+  for(const f of ofV(state.fuel, v)) if(f.km != null) r.push({date:f.date, km:f.km, src:f});
+  return r.sort((a, b) => a.date.localeCompare(b.date) || a.km - b.km);
+}
+function lastReading(v){ const r = readings(v); return r.length ? r.reduce((m, x) => x.km > m.km || (x.km === m.km && x.date > m.date) ? x : m) : null; }
+function avgKmDay(v){
+  const r = readings(v), L = lastReading(v);
+  if(r.length < 2 || !L) return null;
+  const from = addDays(L.date, -365);
+  const F = r.find(x => x.date >= from && dayNum(L.date) - dayNum(x.date) >= 14) || r.find(x => dayNum(L.date) - dayNum(x.date) >= 14);
+  if(!F) return null;
+  const km = L.km - F.km, days = dayNum(L.date) - dayNum(F.date);
+  return km > 0 ? km / days : null;
+}
+function estKm(v){ const L = lastReading(v); if(!L) return null; const a = avgKmDay(v); return Math.round(L.km + (a ? a * Math.max(0, dayNum(today()) - dayNum(L.date)) : 0)); }
+function kmConflict(v, date, km, skip){
+  for(const r of readings(v)){
+    if(r.src === skip) continue;
+    if(r.date < date && r.km > km) return t('kmTooLow', {n:nf(r.km), d:fmtDay(r.date)});
+    if(r.date > date && r.km < km) return t('kmTooHigh', {n:nf(r.km), d:fmtDay(r.date)});
+  }
+  return null;
+}
+function vehicleTitle(v){ return [v.make, v.model, v.year].filter(Boolean).join(' '); }
+
+/* ---------- maintenance ---------- */
+function planOf(v){ return ofV(state.plan, v).filter(p => p.on); }
+function pname(p){ return p.type === 'custom' ? (p.name || t('m_custom')) : t('m_' + p.type); }
+function picon(p){ return (MAINT[p.type] || MAINT.custom)[2]; }
+function lastService(p){
+  let best = null;
+  for(const s of state.services) if(s.vid === p.vid && s.items.some(i => i.pid === p.id))
+    if(!best || s.date > best.date || (s.date === best.date && (s.km || 0) > (best.km || 0))) best = s;
+  return best;
+}
+function maintStatus(p, v){
+  const last = lastService(p);
+  const r = {last, status:'unknown', dueKm:null, dueDate:null, remKm:null, remDays:null, est:null, frac:0};
+  if(!last) return r;
+  const kmNow = estKm(v), avg = avgKmDay(v), t0 = today();
+  if(p.km && last.km != null){ r.dueKm = last.km + p.km; if(kmNow != null){ r.remKm = r.dueKm - kmNow; r.frac = Math.max(r.frac, (kmNow - last.km) / p.km); } }
+  if(p.mo){ r.dueDate = addMonths(last.date, p.mo); r.frac = Math.max(r.frac, (dayNum(t0) - dayNum(last.date)) / Math.max(1, dayNum(r.dueDate) - dayNum(last.date))); }
+  const c = [];
+  if(r.dueDate) c.push(dayNum(r.dueDate) - dayNum(t0));
+  if(r.remKm != null && avg) c.push(Math.floor(r.remKm / avg));
+  if(c.length){ r.remDays = Math.min(...c); r.est = addDays(t0, r.remDays); }
+  r.status = r.frac >= 1 || (r.remDays != null && r.remDays < 0) || (r.remKm != null && r.remKm < 0) ? 'over'
+    : r.frac >= 0.85 || (r.remDays != null && r.remDays <= 14) || (r.remKm != null && r.remKm <= 1000) ? 'soon' : 'ok';
+  return r;
+}
+function dueText(r){ return [r.dueKm != null ? fmtKm(r.dueKm) : '', r.dueDate ? fmtDay(r.dueDate) : ''].filter(Boolean).join(t('or')); }
+function remText(r){
+  const a = [];
+  if(r.remKm != null) a.push(r.remKm >= 0 ? t('remKm', {n:nf(r.remKm)}) : t('overKm', {n:nf(-r.remKm)}));
+  if(r.remDays != null) a.push(r.remDays >= 0 ? t('remDays', {n:r.remDays}) : t('overDays', {n:-r.remDays}));
+  return a.join(' · ');
+}
+function intervalText(p){ return [p.km ? fmtKm(p.km) : '', p.mo ? t('moUnit', {n:p.mo}) : ''].filter(Boolean).join(t('or')); }
+function stPill(s){ return `<span class="pill ${{ok:'good', soon:'warn', over:'bad', unknown:'acc'}[s]}">${esc(t('st_' + s))}</span>`; }
+
+/* ---------- documents ---------- */
+function docName(d){ return d.title || t('dt_' + d.type); }
+function docStatus(d){ if(!d.expiry) return {s:'none', n:null}; const n = dayNum(d.expiry) - dayNum(today()); return {s:n < 0 ? 'over' : n <= 30 ? 'soon' : 'ok', n}; }
+function docStateText(d){
+  const {s, n} = docStatus(d);
+  return s === 'none' ? t('noExp') : n < 0 ? t('exp_over', {n:-n}) : n === 0 ? t('exp_today') : s === 'soon' ? t('exp_in', {n}) : t('exp_ok', {d:fmtDay(d.expiry)});
+}
+function docPill(d){ const s = docStatus(d).s; return `<span class="pill ${{none:'acc', over:'bad', soon:'warn', ok:'good'}[s]}">${esc(docStateText(d))}</span>`; }
+
+function alertsFor(v){
+  const a = [], lv = {over:0, soon:1, info:2};
+  for(const d of ofV(state.docs, v)){ const st = docStatus(d); if(st.s === 'over' || st.s === 'soon') a.push({lvl:st.s, e:DOC_ICON[d.type], text:docName(d) + ' — ' + docStateText(d), act:'openDoc', id:d.id, rank:st.n}); }
+  for(const p of planOf(v)){ const r = maintStatus(p, v); if(r.status === 'over' || r.status === 'soon') a.push({lvl:r.status, e:picon(p), text:pname(p) + (remText(r) ? ' — ' + remText(r) : ''), act:'tab', tab:'maint', rank:r.remDays ?? 0}); }
+  const L = lastReading(v);
+  if(!L) a.push({lvl:'info', e:'📍', text:t('odoNone'), act:'km', rank:0});
+  else { const n = dayNum(today()) - dayNum(L.date); if(n >= 30 && planOf(v).some(p => p.km)) a.push({lvl:'info', e:'📍', text:t('odoStale', {n}), act:'km', rank:0}); }
+  return a.sort((x, y) => lv[x.lvl] - lv[y.lvl] || x.rank - y.rank);
+}
+
+/* ---------- fuel and expenses (every amount counted exactly once) ---------- */
+function fuelStats(v){
+  const fills = ofV(state.fuel, v).filter(f => f.km != null && f.liters).sort((a, b) => a.km - b.km || a.date.localeCompare(b.date));
+  let prev = null, acc = 0, accCost = 0, L = 0, D = 0, C = 0; const seg = {};
+  for(const f of fills){
+    if(prev){
+      acc += f.liters; accCost += f.total || 0;
+      if(f.full){ const dist = f.km - prev.km; if(dist > 0){ seg[f.id] = acc / dist * 100; L += acc; D += dist; C += accCost; } acc = 0; accCost = 0; prev = f; }
+    } else if(f.full) prev = f;
+  }
+  const last = ofV(state.fuel, v).filter(f => f.liters && f.total).sort((a, b) => b.date.localeCompare(a.date))[0];
+  return {avg:D ? L / D * 100 : null, perKm:D ? C / D : null, seg, lastPrice:last ? last.total / last.liters : null};
+}
+function docCostDate(d){ return d.issueDate || isoDay(new Date(d.createdAt)); }
+function expenses(v, y){
+  const m = Array(12).fill(0), cat = {fuel:0, service:0, docs:0};
+  const add = (date, amt, c) => { if(!amt || !date || !date.startsWith(y + '-')) return; cat[c] += amt; m[Number(date.slice(5, 7)) - 1] += amt; };
+  ofV(state.fuel, v).forEach(f => add(f.date, f.total, 'fuel'));
+  ofV(state.services, v).forEach(s => add(s.date, s.cost, 'service'));
+  ofV(state.docs, v).forEach(d => add(docCostDate(d), d.cost, 'docs'));
+  for(const k in cat) cat[k] = round2(cat[k]);
+  const r = readings(v).filter(x => x.date.startsWith(y + '-'));
+  const dist = r.length > 1 ? Math.max(...r.map(x => x.km)) - Math.min(...r.map(x => x.km)) : 0;
+  return {m, cat, total:round2(cat.fuel + cat.service + cat.docs), dist};
+}
+function yearsOf(v){
+  const ys = new Set([today().slice(0, 4)]);
+  ofV(state.fuel, v).forEach(f => f.total && ys.add(f.date.slice(0, 4)));
+  ofV(state.services, v).forEach(s => s.cost && ys.add(s.date.slice(0, 4)));
+  ofV(state.docs, v).forEach(d => d.cost && ys.add(docCostDate(d).slice(0, 4)));
+  return [...ys].sort().reverse();
+}
+
+/* ---------- photos: OrthoTips.files (storage permission) or the key/value store ---------- */
+const Photos = {
+  mem:new Map(),
+  files(){ return !!(HOST && HOST.permissions.has('storage')); },
+  async put(dataUrl, id){
+    id = id || 'p' + uid();
+    if(this.files()) await HOST.files.write('photos/' + id + '.txt', dataUrl);
+    else storeSet(KEY_PHOTO + id, dataUrl);
+    this.mem.set(id, dataUrl);
+    return id;
+  },
+  async get(id){
+    if(!id) return null;
+    if(this.mem.has(id)) return this.mem.get(id);
+    let v = null;
+    try{ v = this.files() ? await HOST.files.read('photos/' + id + '.txt') : storeGet(KEY_PHOTO + id); }
+    catch(e){ log('warn', 'photo', 'Photo not readable: ' + id, String(e && e.message)); }
+    if(!v && this.files()) v = storeGet(KEY_PHOTO + id);   // in case it was saved before the permission existed
+    if(v) this.mem.set(id, v);
+    return v || null;
+  },
+  async del(id){
+    if(!id) return;
+    this.mem.delete(id);
+    try{ if(this.files()) await HOST.files.delete('photos/' + id + '.txt'); }catch(e){ log('warn', 'photo', 'Photo not deleted: ' + id, String(e && e.message)); }
+    storeDel(KEY_PHOTO + id);
+  }
+};
+function photoHtml(pid, cls, emoji){
+  return `<div class="ph ${cls || ''}">${emoji || '🪴'}${pid ? `<img data-photo="${esc(pid)}" alt="">` : ''}</div>`;
+}
+function hydratePhotos(root){
+  (root || document).querySelectorAll('img[data-photo]:not([src])').forEach(img => {
+    Photos.get(img.dataset.photo).then(src => { if(src) img.src = src; });
+  });
+}
+function readAsDataUrl(file){ return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(r.error || new Error('read')); r.readAsDataURL(file); }); }
+function loadImage(src, ms){
+  return new Promise(res => { const img = new Image(); let done = false; const fin = v => { if(!done){ done = true; res(v); } };
+    img.onload = () => fin(img); img.onerror = () => fin(null); setTimeout(() => fin(null), ms); img.src = src; });
+}
+/* Shrinks to max 1024 px JPEG (fits Gemini and the store); returns the original if the WebView cannot decode it. */
+async function shrink(dataUrl, max){
+  max = max || 1024;
+  const img = await loadImage(dataUrl, 3000);
+  if(!img || !img.naturalWidth) return dataUrl;
+  const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+  const ctx = c.getContext && c.getContext('2d'); if(!ctx) return dataUrl;
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', max > 1024 ? 0.85 : 0.8);
+}
+/* Picker: camera or gallery; PDFs only where a document is expected. */
+let pick = null;
+function canPick(){ return !HOST || HOST.permissions.has('import_export'); }
+function choosePhoto(src, cb, opts){
+  opts = opts || {};
+  if(!canPick()){ log('warn', 'photo', 'import_export not granted'); alert(t('noPickPerm')); return; }
+  pick = {cb, max:opts.max || 1024, pdf:!!opts.pdf};
+  const inp = $(src === 'cam' ? '#pickCam' : '#pickGal');
+  if(src !== 'cam') inp.accept = opts.pdf ? 'image/*,application/pdf' : 'image/*';
+  inp.click();
+}
+for(const sel of ['#pickCam', '#pickGal']){
+  document.querySelector(sel).addEventListener('change', async e => {
+    const file = e.target.files && e.target.files[0]; e.target.value = '';
+    const p = pick; pick = null;
+    if(!file || !p) return;
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+    if(file.size > (isPdf ? 8 : 20) * 1024 * 1024){ log('warn', 'photo', 'File too large', file.size + ' bytes'); toast(t('photoTooBig')); return; }
+    try{
+      toast(t('photoBusy'));
+      let raw = await readAsDataUrl(file);
+      if(isPdf){
+        if(!p.pdf) throw new Error('PDF not accepted here');
+        raw = 'data:application/pdf;base64,' + raw.slice(raw.indexOf(',') + 1);
+        p.cb(raw, 'pdf'); return;
+      }
+      if(!/^data:image\//.test(raw)) throw new Error('Not an image: ' + (file.type || 'unknown type'));
+      p.cb(await shrink(raw, p.max), 'img');
+    }catch(err){ log('error', 'photo', 'File not readable', String(err && err.message)); toast(t('photoFailed')); }
+  });
+}
+function pickButtons(pdf){ return `<div class="btns"><button class="btn ghost" type="button" data-pick="cam">${esc(t('takePhoto'))}</button><button class="btn ghost" type="button" data-pick="gal">${esc(pdf ? t('gallery') : t('galleryImg'))}</button></div>`; }
+
+/* =====================================================================
+   Gemini — always the newest available model, with fallback and logging
+   ===================================================================== */
+function apiKey(){ return (storeGet(KEY_API) || '').trim(); }
+function AppError(code, detail, status){ const e = new Error(code); e.code = code; e.detail = detail; e.status = status; return e; }
+function userMessage(e){
+  const c = e && e.code;
+  if(c === 'http') return t('err_http', {s:e.status});
+  if(c && STR.fr['err_' + c]) return t('err_' + c);
+  if(c === 'notPlant') return t('notPlant');
+  return t('err_generic');
+}
+function checkNet(){
+  if(!apiKey()) throw AppError('noKey');
+  if(HOST && !HOST.permissions.has('internet')) throw AppError('noInternetPerm');
+  if(typeof window.fetch !== 'function') throw AppError('network', 'fetch unavailable');
+  if(navigator.onLine === false) throw AppError('offline');
+}
+async function http(url, opts, ms){
+  const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), ms) : 0;
+  let res;
+  try{ res = await window.fetch(url, Object.assign({}, opts, ctrl ? {signal:ctrl.signal} : {})); }
+  catch(e){ throw AppError(e && e.name === 'AbortError' ? 'timeout' : 'network', String(e && e.message || e)); }
+  finally{ clearTimeout(timer); }
+  let text = '', body = null;
+  try{ text = await res.text(); body = JSON.parse(text); }catch(e){}
+  if(!res.ok){
+    const g = (body && body.error) || {};
+    const msg = String(g.message || text || '').slice(0, 600);
+    let code = 'http';
+    if(res.status === 400 && /api key/i.test(msg)) code = 'badKey';
+    else if(res.status === 401 || res.status === 403) code = 'denied';
+    else if(res.status === 429) code = 'quota';
+    else if(res.status >= 500) code = 'server';
+    throw AppError(code, `HTTP ${res.status} ${g.status || ''} ${msg}`.trim(), res.status);
+  }
+  return body;
+}
+function headers(){ return {'Content-Type':'application/json', 'x-goog-api-key':apiKey()}; }
+
+/* Ranks model names: newest version first, stable before preview, preferred family first. */
+function parseModel(name){
+  const m = /^gemini-(\d+(?:\.\d+)?)-(flash-lite|flash|pro)(-[a-z0-9.-]+)?$/i.exec(name);
+  if(!m) return null;
+  const suffix = (m[3] || '').toLowerCase();
+  if(/(tts|live|image|audio|embed|robot|computer|translate|omni|veo|thinking|dialog|native|search|lite)/.test(suffix)) return null;
+  return {name, ver:m[1].split('.').map(Number), family:m[2].toLowerCase(), stage:/exp/.test(suffix) ? 2 : /preview/.test(suffix) ? 1 : 0, plain:!suffix};
+}
+function cmpVer(a, b){ for(let i = 0; i < Math.max(a.length, b.length); i++){ const d = (b[i] || 0) - (a[i] || 0); if(d) return d; } return 0; }
+function rankModels(names){
+  const fam = {flash:0, pro:1, 'flash-lite':2};
+  return names.map(parseModel).filter(Boolean).sort((a, b) =>
+    cmpVer(a.ver, b.ver) || a.stage - b.stage || fam[a.family] - fam[b.family] || (b.plain - a.plain) || a.name.localeCompare(b.name)).map(x => x.name);
+}
+function candidates(){
+  const pref = {flash:'flash', pro:'pro', lite:'flash-lite'}[state.settings.model];
+  let list = state.gemini.models.slice();
+  if(pref){ const mine = list.filter(n => (parseModel(n) || {}).family === pref); list = mine.concat(list.filter(n => !mine.includes(n))); }
+  list = list.slice(0, 4);
+  for(const alias of ['gemini-flash-latest', 'gemini-pro-latest']) if(!list.includes(alias)) list.push(alias);
+  return list;
+}
+async function refreshModels(force){
+  const g = state.gemini;
+  if(!force && g.models.length && Date.now() - g.fetchedAt < MODEL_TTL) return g.models;
+  checkNet();
+  const names = []; let token = '';
+  try{
+    for(let page = 0; page < 5; page++){
+      const body = await http(API + '/models?pageSize=1000' + (token ? '&pageToken=' + encodeURIComponent(token) : ''), {headers:headers()}, 20000);
+      for(const m of (body && body.models) || []){
+        const methods = m.supportedGenerationMethods || [];
+        if(methods.length && !methods.includes('generateContent')) continue;
+        names.push(String(m.name || '').replace(/^models\//, ''));
+      }
+      token = body && body.nextPageToken; if(!token) break;
+    }
+  }catch(e){
+    log('error', 'models', 'Model list failed: ' + userMessage(e), e.detail); e.logged = true;
+    if(g.models.length && !['badKey', 'denied'].includes(e.code)) return g.models;   // keep using the cached list
+    throw e;
+  }
+  const ranked = rankModels(names);
+  if(!ranked.length){ log('error', 'models', 'No compatible model in the list', names.slice(0, 40).join(', ')); throw AppError('noModel'); }
+  const before = g.models[0];
+  g.models = ranked; g.fetchedAt = Date.now(); save();
+  if(before !== ranked[0]) log('info', 'models', 'Newest model: ' + ranked[0], ranked.slice(0, 6).join(', '));
+  return ranked;
+}
+function extractJson(text){
+  let s = String(text || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+  const a = s.indexOf('{'), b = s.lastIndexOf('}');
+  if(a < 0 || b <= a) throw AppError('parse', 'No JSON object: ' + s.slice(0, 400));
+  try{ return JSON.parse(s.slice(a, b + 1)); }
+  catch(e){ throw AppError('parse', e.message + ' — ' + s.slice(0, 400)); }
+}
+async function callModel(model, parts, thinking){
+  const ver = (parseModel(model) || {ver:[0]}).ver;
+  const cfg = {responseMimeType:'application/json'};
+  if(thinking && ver[0] >= 3) cfg.thinkingConfig = {thinkingLevel:'low'};
+  let body;
+  try{
+    body = await http(`${API}/models/${encodeURIComponent(model)}:generateContent`,
+      {method:'POST', headers:headers(), body:JSON.stringify({contents:Array.isArray(parts) ? [{role:'user', parts}] : parts.contents, generationConfig:cfg})}, 90000);
+  }catch(e){
+    if(cfg.thinkingConfig && e.status === 400 && /thinking/i.test(e.detail || '')){
+      log('warn', 'models', model + ': thinking setting refused, retrying without it', e.detail);
+      return callModel(model, parts, false);
+    }
+    throw e;
+  }
+  const cand = body && body.candidates && body.candidates[0];
+  if(!cand){ throw AppError('blocked', 'No candidate. ' + JSON.stringify((body && body.promptFeedback) || {}).slice(0, 300)); }
+  const text = ((cand.content && cand.content.parts) || []).filter(p => !p.thought && typeof p.text === 'string').map(p => p.text).join('');
+  if(!text) throw AppError(cand.finishReason === 'SAFETY' ? 'blocked' : 'parse', 'Empty answer, finishReason=' + cand.finishReason);
+  try{ return extractJson(text); }
+  catch(e){ e.detail = 'finishReason=' + cand.finishReason + ' — ' + e.detail; throw e; }
+}
+/* Tries the newest model, then the next ones when a model is missing, overloaded, out of quota or unreadable. */
+async function generate(ctx, parts){
+  checkNet();
+  await refreshModels(false);
+  const list = candidates();
+  let last = null;
+  for(const model of list){
+    try{
+      const out = await callModel(model, parts, true);
+      if(state.gemini.lastModel !== model){ state.gemini.lastModel = model; save(); }
+      return {model, out};
+    }catch(e){
+      last = e;
+      const retry = ['quota', 'server', 'timeout', 'parse', 'blocked'].includes(e.code) || (e.code === 'http' && [400, 404].includes(e.status));
+      log(retry ? 'warn' : 'error', ctx, model + ' — ' + userMessage(e), e.detail); e.logged = true;
+      if(e.code === 'http' && e.status === 404){ state.gemini.fetchedAt = 0; save(); }
+      if(!retry) break;
+    }
+  }
+  throw last || AppError('noModel');
+}
+function imagePart(dataUrl){
+  const m = /^data:([^;,]+);base64,(.*)$/.exec(dataUrl || '');
+  if(!m) throw AppError('parse', 'Photo is not a base64 data URL');
+  return {inlineData:{mimeType:m[1], data:m[2]}};
+}
+function answerLang(){ return lang() === 'en' ? 'English' : 'French'; }
+function where(){ return state.settings.place || 'Algeria'; }
+function vehicleLine(v){
+  if(!v) return 'Vehicle: unknown.';
+  const L = lastReading(v), a = avgKmDay(v);
+  let s = `Vehicle: ${[v.make, v.model, v.year, v.engine].filter(Boolean).join(' ') || v.name}; energy: ${v.energy}.`;
+  if(L) s += ` Odometer: about ${estKm(v)} km (last reading ${L.km} km on ${L.date})${a ? `, about ${Math.round(a)} km per day` : ''}.`;
+  return s;
+}
+function historyLine(v){
+  const lines = planOf(v).map(p => { const r = maintStatus(p, v);
+    return `- ${pname(p)}: every ${p.km || '-'} km / ${p.mo || '-'} months; last done ${r.last ? r.last.date + (r.last.km != null ? ' at ' + r.last.km + ' km' : '') : 'unknown'}; status ${r.status}`; });
+  const recent = ofV(state.services, v).slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
+    .map(s => `- ${s.date}${s.km != null ? ' ' + s.km + ' km' : ''}: ${[...s.items.map(i => i.name), s.other].filter(Boolean).join(', ')}`);
+  const fs = fuelStats(v);
+  return lines.join('\n') + (recent.length ? '\nRecent work:\n' + recent.join('\n') : '') + (fs.avg ? `\nAverage consumption: ${fs.avg.toFixed(1)} L/100 km.` : '');
+}
+async function aiReadDoc(files, hint){
+  const prompt = `You read vehicle and driver documents, especially Algerian ones (carte grise, attestation or police d'assurance, contrôle technique, vignette, permis de conduire, procuration). They may be in French and/or Arabic.
+Extract the information from the attached page(s)${hint ? ` (the user says it is: ${hint})` : ''}. Dates are usually printed day/month/year: return them as YYYY-MM-DD.
+Rules: insurance → expiryDate is the end of cover. Contrôle technique → expiryDate is the date of the next inspection. Vignette → end of validity. Carte grise → usually no expiry (null), fill "vehicle".
+Write "title", "extra" labels and "warnings" in ${answerLang()}; copy names, numbers and plates exactly as printed.
+Return ONLY a JSON object, no markdown:
+{"isDocument": true, "docType": "carte_grise|assurance|controle|vignette|permis|procuration|autre", "title": "", "number": "", "holder": "", "issuer": "", "issueDate": null, "expiryDate": null, "amountDA": null,
+ "vehicle": {"plate": "", "vin": "", "make": "", "model": "", "year": null, "energy": "essence|diesel|gpl|hybride|electrique|", "color": "", "engine": ""},
+ "extra": [{"label": "", "value": ""}], "warnings": [""]}
+"extra": other useful fields (cover type, inspection result, fiscal power…). If the image is not a document, set isDocument to false.`;
+  const {model, out} = await generate('doc', [{text:prompt}, ...files.map(imagePart)]);
+  if(out.isDocument === false) throw AppError('notDoc');
+  const date = x => isDate(x) && x >= '1950-01-01' && x <= '2100-12-31' ? x : null;
+  const vh = out.vehicle && typeof out.vehicle === 'object' ? out.vehicle : {};
+  const year = num(vh.year, 1900, 2100);
+  return {model, type:DOC_TYPES.includes(out.docType) ? out.docType : 'autre', title:str(out.title, 120), number:str(out.number, 80), holder:str(out.holder, 120),
+    issuer:str(out.issuer, 120), issueDate:date(out.issueDate), expiry:date(out.expiryDate), cost:num(out.amountDA, 0, 1e9),
+    vehicle:{plate:str(vh.plate, 30), vin:str(vh.vin, 40), make:str(vh.make, 60), model:str(vh.model, 80), year:year == null ? null : Math.round(year),
+             energy:ENERGIES.includes(vh.energy) ? vh.energy : '', color:str(vh.color, 40), engine:str(vh.engine, 80)},
+    extra:(Array.isArray(out.extra) ? out.extra : []).filter(x => x && x.label && x.value).slice(0, 12).map(x => ({label:str(x.label, 80), value:str(x.value, 300)})),
+    warnings:strList(out.warnings, 4)};
+}
+async function aiOdometer(photo){
+  const prompt = 'Read the TOTAL odometer (not the trip meter) on this car dashboard photo. Return ONLY JSON: {"isOdometer": true, "value": 123456, "unit": "km|mi", "confidence": 0.0}. If you cannot read it, set isOdometer to false.';
+  const {model, out} = await generate('odo', [{text:prompt}, imagePart(photo)]);
+  const v = num(out.value, 0, 5e6);
+  if(out.isOdometer === false || v == null) throw AppError('notOdo', JSON.stringify(out).slice(0, 200));
+  return {value:Math.round(v), unit:out.unit === 'mi' ? 'mi' : 'km', model};
+}
+async function aiPlan(v){
+  const prompt = `You are a master mechanic. Give the manufacturer-recommended maintenance schedule for this vehicle, for use in ${where()} (hot climate, dust, variable fuel quality: use the "severe conditions" intervals when the manufacturer defines them).
+${vehicleLine(v)}
+Use these item types when they apply: ${Object.keys(MAINT).filter(k => k !== 'custom').join(', ')}. Use type "custom" with a name for anything else important for this model (max 4).
+Write "name" and "note" in ${answerLang()}. km and months are whole numbers, 0 when not applicable.
+Return ONLY JSON, no markdown: {"items": [{"type": "oil", "name": "", "km": 10000, "months": 12, "note": ""}], "notes": ""}`;
+  const {model, out} = await generate('plan', [{text:prompt}]);
+  const items = (Array.isArray(out.items) ? out.items : []).map(x => ({type:MAINT[x && x.type] ? x.type : 'custom', name:str(x && x.name, 80),
+      km:Math.round(num(x && x.km, 0, 1e6) || 0), mo:Math.round(num(x && x.months, 0, 240) || 0), note:str(x && x.note, 300)}))
+    .filter(x => (x.km || x.mo) && (x.type !== 'custom' || x.name)).slice(0, 20);
+  if(!items.length) throw AppError('parse', 'No plan items: ' + JSON.stringify(out).slice(0, 300));
+  return {model, items, notes:str(out.notes, 600)};
+}
+function mechanicPrompt(v){
+  return `You are an experienced, honest car mechanic advising a driver in ${where()}. Likely causes first, then simple checks the driver can do safely, then solutions. Say clearly when the car must not be driven. Give rough repair costs in Algerian dinars (DA) as a range, parts and labour.
+${vehicleLine(v)}
+Service status:
+${historyLine(v)}
+Write every text value in ${answerLang()}.
+Always answer with ONLY a JSON object, no markdown:
+{"summary": "", "urgency": "low|medium|high|critical", "canDrive": "yes|caution|no", "causes": [{"name": "", "likelihood": "high|medium|low", "why": ""}], "checks": [""], "fixes": [{"action": "", "diy": false, "difficulty": "easy|medium|hard", "cost": ""}], "mechanic": "", "safety": "", "followUps": [""]}
+"followUps": up to 3 short questions the driver could answer to refine the diagnosis.`;
+}
+async function aiMechanic(th, v){
+  const contents = [];
+  for(let i = 0; i < th.msgs.length; i++){
+    const m = th.msgs[i];
+    if(m.r === 'u'){
+      const parts = [{text:(i === 0 ? mechanicPrompt(v) + '\n\nDriver: ' : 'Driver (follow-up; answer with the same JSON format): ') + (m.text || '(see photo)')}];
+      if(m.photo){ const url = await Photos.get(m.photo); if(url) parts.push(imagePart(url)); }
+      contents.push({role:'user', parts});
+    } else contents.push({role:'model', parts:[{text:JSON.stringify(m.a)}]});
+  }
+  const {model, out} = await generate('mechanic', {contents});
+  const a = cleanAnswer(out);
+  if(!a.summary && !a.causes.length) throw AppError('parse', 'Empty answer: ' + JSON.stringify(out).slice(0, 300));
+  return {a, model};
+}
+function aiBusy(label){ return `<div class="aibox"><span class="spin"></span>${esc(label)}</div>`; }
+function aiError(e){ return `<div class="aibox err" data-err="${esc(e.code || 'generic')}">⚠️ ${esc(userMessage(e))}${e.code === 'noKey' || e.code === 'badKey' ? `<div class="btns"><button class="btn" type="button" data-act="goSettings">${esc(t('openSettings'))}</button></div>` : `<div class="tiny" style="margin-top:4px">${esc(t('seeLog'))}</div>`}</div>`; }
+function logAppError(ctx, e){
+  // Errors from generate()/refreshModels() are already logged (per model); log every other one here.
+  if(e && e.logged) return;
+  log(e && e.code === 'notPlant' ? 'warn' : 'error', ctx, userMessage(e), (e && (e.detail || e.stack)) || String(e));
+  if(e) e.logged = true;
+}
+
+
+/* =====================================================================
+   Rendering
+   ===================================================================== */
+function render(){
+  document.documentElement.lang = lang();
+  const el = $('#view');
+  if(ui.view === 'settings') el.innerHTML = viewSettings();
+  else if(ui.view === 'log') el.innerHTML = viewLog();
+  else el.innerHTML = ({home:viewHome, docs:viewDocs, maint:viewMaint, book:viewBook, ai:viewAi})[ui.tab]();
+  $('#fab').classList.toggle('hidden', !(!ui.view && cur() && (ui.tab === 'docs' || (ui.tab === 'book' && ui.seg !== 'expenses'))));
+  renderTabs();
+  hydratePhotos(el);
+  if(ui.view === 'settings') Notif.paint();
+}
+function renderTabs(){
+  const v = cur();
+  const docN = v ? ofV(state.docs, v).filter(d => ['over', 'soon'].includes(docStatus(d).s)).length : 0;
+  const mntN = v ? planOf(v).filter(p => maintStatus(p, v).status === 'over').length : 0;
+  const tabs = [['home', '🚗', t('tabHome'), 0], ['docs', '📄', t('tabDocs'), docN], ['maint', '🔧', t('tabMaint'), mntN], ['book', '📒', t('tabBook'), 0], ['ai', '🤖', t('tabAi'), 0]];
+  $('#tabs').innerHTML = tabs.map(([k, e, l, n]) => `<button type="button" class="${ui.tab === k && !ui.view ? 'on' : ''}" data-act="tab" data-tab="${k}"><span>${e}</span>${esc(l)}${n ? `<i class="dot">${n}</i>` : ''}</button>`).join('');
+}
+function topbar(){
+  const v = cur(), errs = unseenErrors();
+  return `<div class="topbar"><button class="vbtn" type="button" data-act="switchVehicle">${v
+      ? `${photoHtml(v.photo, 'thumb', '🚗')}<span class="grow" style="min-width:0"><b>${esc(v.name)}</b><span class="tiny muted ellipsis">${esc(vehicleTitle(v))} ${v.plate ? `<span class="plate">${esc(v.plate)}</span>` : ''}</span></span><span class="muted">▾</span>`
+      : `<span class="grow"><b>🚗 Ma voiture</b></span>`}</button>
+    <button class="icon-btn gear" type="button" data-act="settings" aria-label="${esc(t('settings'))}">⚙️${errs ? '<i class="dot2"></i>' : ''}</button></div>`;
+}
+function noKeyCard(){ return apiKey() ? '' : `<div class="card"><div class="small">${esc(t('noKeyCard'))}</div><div class="btns"><button class="btn ghost" type="button" data-act="goSettings">🔑 ${esc(t('openSettings'))}</button></div></div>`; }
+function onboarding(){
+  return `<div class="card"><h3>${esc(t('welcome'))}</h3><p class="small">${esc(t('welcomeText'))}</p>
+    <div class="btns" style="flex-direction:column"><button class="btn" type="button" data-act="onboardCG">${esc(t('fromCG'))}</button>
+    <button class="btn ghost" type="button" data-act="addVehicle">${esc(t('manual'))}</button></div></div>` + noKeyCard();
+}
+function viewHome(){
+  const v = cur();
+  let h = topbar();
+  if(loadFailed) h += `<div class="alert over"><span class="e">⚠️</span><span>${esc(t('loadFailed'))}</span></div>`;
+  if(!v) return h + onboarding();
+  const L = lastReading(v), a = avgKmDay(v), k = estKm(v);
+  h += `<div class="card"><div class="hero">${photoHtml(v.photo, '', '🚗')}<div class="grow" style="min-width:0">
+      <div class="kmbig" data-km>${L ? esc(fmtKm(L.km)) : esc(t('noKm'))}</div>
+      ${L ? `<div class="tiny muted">${esc(t('lastReading', {d:fmtDay(L.date)}))}${k > L.km ? ' · ' + esc(t('estToday', {n:nf(k)})) : ''}${a ? ' · ' + esc(t('perDay', {n:nf(a)})) : ''}</div>` : ''}
+      <div class="btns" style="margin-top:8px"><button class="btn ghost" type="button" data-act="km">${esc(t('updateKm'))}</button></div></div></div></div>`;
+  h += alertsFor(v).map(x => `<button type="button" class="alert ${x.lvl}" data-act="${x.act}"${x.id ? ` data-id="${esc(x.id)}"` : ''}${x.tab ? ` data-tab="${x.tab}"` : ''}><span class="e">${x.e}</span><span class="grow">${esc(x.text)}</span><span>›</span></button>`).join('');
+  const oil = planOf(v).find(p => p.type === 'oil');
+  if(oil){
+    const r = maintStatus(oil, v);
+    h += `<h2>${esc(t('oilCard'))}</h2><div class="card" data-oil>`;
+    if(!r.last) h += `<p class="small">${esc(t('oilNever'))}</p>`;
+    else h += `<div class="row between"><b>${esc(remText(r) || dueText(r))}</b>${stPill(r.status)}</div>
+      <div class="bar ${r.status}"><i style="width:${Math.min(100, Math.round(r.frac * 100))}%"></i></div>
+      <div class="tiny muted">${esc(t('lastDone', {d:fmtDay(r.last.date), k:fmtKm(r.last.km)}))}</div>
+      <div class="small">${esc(t('nextDue', {w:dueText(r)}))}</div>${oil.km && !L ? `<p class="small">${esc(t('oilNeedKm'))}</p>` : ''}`;
+    h += `<div class="btns"><button class="btn" type="button" data-act="service" data-pid="${esc(oil.id)}">${esc(r.last ? t('oilDone') : t('noteLast'))}</button></div></div>`;
+  }
+  h += `<div class="qa" style="margin-top:12px">
+    <button type="button" data-act="addDoc">📄 ${esc(t('addDoc'))}</button><button type="button" data-act="addFuel">${esc(t('addFuel'))}</button>
+    <button type="button" data-act="service">${esc(t('serviceDone'))}</button><button type="button" data-act="tab" data-tab="ai">🤖 ${esc(t('aiTitle'))}</button></div>`;
+  return h + `<div style="margin-top:12px">${noKeyCard()}</div>`;
+}
+function viewDocs(){
+  const v = cur();
+  let h = topbar();
+  if(!v) return h + onboarding();
+  const list = ofV(state.docs, v).slice().sort((a, b) => (a.expiry ? 0 : 1) - (b.expiry ? 0 : 1) || (a.expiry || '').localeCompare(b.expiry || '') || docName(a).localeCompare(docName(b)));
+  if(!list.length) h += `<div class="empty"><div class="e">📄</div><p><b>${esc(t('docEmpty'))}</b></p><p class="small">${esc(t('docEmptyHint'))}</p>
+    <div class="btns"><button class="btn" type="button" data-act="addDoc">＋ ${esc(t('addDoc'))}</button></div></div>`;
+  else h += `<div class="card">${list.map(d => `<div class="row-item" role="button" tabindex="0" data-act="openDoc" data-id="${esc(d.id)}">
+      ${d.files[0] && d.files[0].kind === 'img' ? photoHtml(d.files[0].id, 'thumb', DOC_ICON[d.type]) : `<span class="e">${DOC_ICON[d.type]}</span>`}
+      <div class="grow" style="min-width:0"><div class="ellipsis"><b>${esc(docName(d))}</b></div><div class="tiny muted ellipsis">${esc([d.number, d.issuer].filter(Boolean).join(' · ')) || '&nbsp;'}</div></div>${docPill(d)}</div>`).join('')}</div>`;
+  return h + `<p class="hint">${esc(t('privacy'))}</p>`;
+}
+function viewMaint(){
+  const v = cur();
+  let h = topbar();
+  if(!v) return h + onboarding();
+  h += `<div class="btns" style="margin-top:0"><button class="btn ghost" type="button" data-act="aiPlan">${esc(t('aiPlan'))}</button><button class="btn ghost" type="button" data-act="addItem">${esc(t('addItem'))}</button></div>`;
+  const rank = {over:0, soon:1, unknown:2, ok:3};
+  const items = planOf(v).map(p => ({p, r:maintStatus(p, v)})).sort((a, b) => rank[a.r.status] - rank[b.r.status] || (a.r.remDays ?? 1e9) - (b.r.remDays ?? 1e9));
+  h += `<h2>${esc(t('plan'))}</h2>` + items.map(({p, r}) => `<div class="card" data-item="${esc(p.id)}">
+    <div class="row between"><div class="row grow" style="min-width:0"><span style="font-size:22px">${picon(p)}</span><b class="ellipsis">${esc(pname(p))}</b></div>${stPill(r.status)}</div>
+    ${r.last ? `<div class="bar ${r.status}"><i style="width:${Math.min(100, Math.round(r.frac * 100))}%"></i></div>
+      <div class="tiny muted">${esc(t('lastDone', {d:fmtDay(r.last.date), k:fmtKm(r.last.km)}))}</div>
+      <div class="small">${esc(t('nextDue', {w:dueText(r) || intervalText(p)}))}${remText(r) ? ` · <b>${esc(remText(r))}</b>` : ''}</div>`
+      : `<div class="small muted" style="margin-top:6px">${esc(t('neverDone'))} · ${esc(t('intervalFmt', {w:intervalText(p)}))}</div>`}
+    <div class="btns"><button class="btn ${r.status === 'over' || r.status === 'soon' ? '' : 'ghost'}" type="button" data-act="service" data-pid="${esc(p.id)}">${esc(r.last ? t('done') : t('noteLast'))}</button>
+      <button class="icon-btn" type="button" data-act="editItem" data-id="${esc(p.id)}" aria-label="${esc(t('edit'))}">✎</button></div></div>`).join('');
+  return h;
+}
+function viewBook(){
+  const v = cur();
+  let h = topbar();
+  if(!v) return h + onboarding();
+  h += `<div class="seg">${[['services', t('servicesTab')], ['fuel', t('fuelTab')], ['expenses', t('expenses')]].map(([k, l]) => `<button type="button" class="${ui.seg === k ? 'on' : ''}" data-act="seg" data-seg="${k}">${esc(l)}</button>`).join('')}</div>`;
+  if(ui.seg === 'services'){
+    const list = ofV(state.services, v).slice().sort((a, b) => b.date.localeCompare(a.date) || (b.km || 0) - (a.km || 0));
+    h += list.length ? `<div class="card">${list.map(s => `<div class="row-item" role="button" tabindex="0" data-act="editService" data-id="${esc(s.id)}"><span class="e">🔧</span>
+      <div class="grow" style="min-width:0"><div><b>${esc(fmtDay(s.date))}</b>${s.km != null ? ` <span class="muted small">· ${esc(fmtKm(s.km))}</span>` : ''}</div>
+      <div class="tiny muted">${esc([...s.items.map(i => { const p = state.plan.find(x => x.id === i.pid); return p ? pname(p) : i.name; }), s.other].filter(Boolean).join(', '))}</div></div>
+      ${s.cost ? `<b class="small">${esc(fmtDA(s.cost))}</b>` : ''}</div>`).join('')}</div>`
+      : `<div class="empty"><div class="e">🔧</div><p>${esc(t('noServices'))}</p><div class="btns"><button class="btn" type="button" data-act="service">${esc(t('serviceDone'))}</button></div></div>`;
+  } else if(ui.seg === 'fuel'){
+    const fs = fuelStats(v);
+    h += `<div class="card"><div class="stat"><div><span class="tiny muted">${esc(t('consumption'))}</span><b>${fs.avg ? esc(t('l100', {n:nf(fs.avg, 1)})) : '—'}</b></div>
+      <div><span class="tiny muted">${esc(t('perKm'))}</span><b>${fs.perKm ? esc(nf(fs.perKm, 2) + '\u00a0DA') : '—'}</b></div>
+      <div><span class="tiny muted">${esc(t('lastPrice'))}</span><b>${fs.lastPrice ? esc(nf(fs.lastPrice, 2) + '\u00a0DA/L') : '—'}</b></div></div>
+      ${fs.avg ? '' : `<p class="hint">${esc(t('fuelHint'))}</p>`}</div>`;
+    const list = ofV(state.fuel, v).slice().sort((a, b) => b.date.localeCompare(a.date) || (b.km || 0) - (a.km || 0));
+    h += list.length ? `<div class="card">${list.map(f => `<div class="row-item" role="button" tabindex="0" data-act="editFuel" data-id="${esc(f.id)}"><span class="e">⛽</span>
+      <div class="grow"><div><b>${esc(fmtDay(f.date))}</b>${f.km != null ? ` <span class="muted small">· ${esc(fmtKm(f.km))}</span>` : ''}</div>
+      <div class="tiny muted">${esc(nf(f.liters || 0, 2))} L${f.full ? '' : ' · ½'}${fs.seg[f.id] ? ' · ' + esc(t('l100', {n:nf(fs.seg[f.id], 1)})) : ''}</div></div>
+      <b class="small">${esc(fmtDA(f.total))}</b></div>`).join('')}</div>`
+      : `<div class="empty"><div class="e">⛽</div><p>${esc(t('noFuel'))}</p><div class="btns"><button class="btn" type="button" data-act="addFuel">${esc(t('addFuel'))}</button></div></div>`;
+  } else {
+    const years = yearsOf(v); if(!ui.year || !years.includes(ui.year)) ui.year = years[0];
+    const e = expenses(v, ui.year), max = Math.max(1, ...e.m);
+    const months = Array.from({length:12}, (_, i) => new Date(2000, i, 1).toLocaleDateString(locale(), {month:'narrow'}));
+    h += `<div class="chips" style="margin-bottom:10px">${years.map(y => `<button type="button" class="chip ${y === ui.year ? 'on' : ''}" data-act="year" data-y="${y}">${y}</button>`).join('')}</div>`;
+    h += e.total ? `<div class="card"><div class="tiny muted">${esc(t('totalYear', {y:ui.year}))}</div><div class="kmbig" data-total>${esc(fmtDA(e.total))}</div>
+      ${fmtMil(e.total) ? `<div class="tiny muted">${esc(fmtMil(e.total))}</div>` : ''}
+      <div class="list" style="margin-top:8px">${[['fuel', '⛽'], ['service', '🔧'], ['docs', '📄']].map(([c, i]) => `<div class="item"><span>${i}</span><span class="grow">${esc(t('cat_' + c))}</span><b data-cat="${c}">${esc(fmtDA(e.cat[c]))}</b></div>`).join('')}</div>
+      <div class="bars">${e.m.map((x, i) => `<div><i style="height:${Math.round(x / max * 100)}%"></i>${esc(months[i])}</div>`).join('')}</div>
+      ${e.dist ? `<div class="stat" style="margin-top:12px"><div><span class="tiny muted">${esc(t('distYear'))}</span><b>${esc(fmtKm(e.dist))}</b></div><div><span class="tiny muted">${esc(t('costPerKm'))}</span><b>${esc(nf(e.total / e.dist, 2))}\u00a0DA</b></div></div>` : ''}</div>`
+      : `<div class="empty"><div class="e">💰</div><p>${esc(t('noExpenses', {y:ui.year}))}</p></div>`;
+  }
+  return h;
+}
+function viewAi(){
+  const v = cur();
+  let h = topbar();
+  if(!v) return h + onboarding();
+  const th = ofV(state.threads, v).slice().sort((a, b) => b.date.localeCompare(a.date));
+  h += `<div class="card"><h3>🤖 ${esc(t('aiTitle'))}</h3><p class="small">${esc(t('aiIntro'))}</p>
+    <div class="chips">${['light', 'noise', 'smoke', 'start', 'conso', 'trip'].map(k => `<button type="button" class="chip" data-act="qp" data-q="${k}">${esc(t('q_' + k))}</button>`).join('')}</div>
+    <textarea class="input" id="q" style="margin-top:10px" maxlength="2000" placeholder="${esc(t('aiPh'))}">${esc(ui.aiText)}</textarea>
+    ${ui.aiPhoto ? `<div class="files"><div class="f"><img src="${esc(ui.aiPhoto)}" alt=""><button class="x" type="button" data-act="aiClear" aria-label="${esc(t('delete'))}">✕</button></div></div>` : ''}
+    <div class="btns"><button class="btn ghost" type="button" data-act="aiPick" data-src="cam">${esc(t('takePhoto'))}</button><button class="btn ghost" type="button" data-act="aiPick" data-src="gal">${esc(t('galleryImg'))}</button></div>
+    <div class="btns"><button class="btn block" type="button" data-act="ask" ${ui.aiBusy ? 'disabled' : ''}>${esc(t('ask'))}</button></div>
+    <div id="aiSlot">${ui.aiBusy ? aiBusy(t('asking')) : ''}</div>
+    <p class="hint">${esc(t('aiDisclaimer'))}</p></div>` + noKeyCard();
+  h += `<h2>${esc(t('threads'))}</h2><div class="card">${th.length ? th.map(x => { const a = x.msgs.find(m => m.r === 'a'); const u = x.msgs[0];
+      return `<div class="row-item" role="button" tabindex="0" data-act="openThread" data-id="${esc(x.id)}"><span class="e">${a ? urgIcon(a.a.urgency) : '⏳'}</span>
+        <div class="grow" style="min-width:0"><div class="ellipsis"><b>${esc(u.text || '📷')}</b></div><div class="tiny muted ellipsis">${esc(fmtTime(Date.parse(x.date)))}${a ? ' · ' + esc(a.a.summary) : ''}</div></div></div>`; }).join('')
+    : `<p class="small muted">${esc(t('noThreads'))}</p>`}</div>`;
+  return h;
+}
+function urgIcon(u){ return {low:'🟢', medium:'🟡', high:'🟠', critical:'🔴'}[u] || '🟡'; }
+function viewSettings(){
+  const s = state.settings, g = state.gemini, key = apiKey();
+  const nlog = readLog().length, sup = Notif.supported();
+  return `<div class="row"><button class="icon-btn" type="button" data-act="home" aria-label="${esc(t('back'))}">←</button><h3 class="grow" style="margin:0">${esc(t('settings'))}</h3></div>
+  <h2>${esc(t('gemini'))}</h2><div class="card">
+    <label class="f" for="apikey">${esc(t('apiKey'))}</label>
+    <div class="row"><input class="input grow" id="apikey" type="${ui.showKey ? 'text' : 'password'}" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(key)}" placeholder="AIza…">
+      <button class="icon-btn" type="button" data-act="toggleKey" aria-label="${esc(ui.showKey ? t('hide') : t('show'))}">${ui.showKey ? '🙈' : '👁'}</button></div>
+    <p class="hint">${esc(t('apiKeyHint'))} <a href="https://aistudio.google.com/apikey">${esc(t('getKey'))}</a></p>
+    <div class="btns"><button class="btn" type="button" data-act="saveKey" ${ui.keyBusy ? 'disabled' : ''}>${esc(t('saveKey'))}</button>
+      ${key ? `<button class="btn ghost" type="button" data-act="testKey" ${ui.keyBusy ? 'disabled' : ''}>${esc(t('testKey'))}</button><button class="btn danger" type="button" data-act="removeKey">${esc(t('removeKey'))}</button>` : ''}</div>
+    <div id="keyMsg">${ui.keyBusy ? aiBusy('…') : ui.keyMsg || ''}</div>
+    <label class="f" for="model">${esc(t('modelPref'))}</label>
+    <select class="input" id="model" data-input="model">${['auto', 'flash', 'pro', 'lite'].map(k => `<option value="${k}" ${s.model === k ? 'selected' : ''}>${esc(t('pref_' + k))}</option>`).join('')}</select>
+    <p class="small" style="margin-top:8px">${g.models.length ? esc(t('modelNow', {m:g.lastModel || candidates()[0]})) : esc(t('modelNone'))}${g.fetchedAt ? ` <span class="muted tiny">· ${esc(t('modelChecked', {d:ago(g.fetchedAt)}))}</span>` : ''}</p>
+    <p class="hint">${esc(t('modelHint'))}</p>
+    ${key ? `<div class="btns"><button class="btn ghost" type="button" data-act="refreshModels" ${ui.keyBusy ? 'disabled' : ''}>${esc(t('refreshModels'))}</button></div>` : ''}
+    <label class="f" for="place">${esc(t('place'))}</label><input class="input" id="place" data-input="place" value="${esc(s.place)}" autocomplete="off">
+    <p class="hint">${esc(t('placeHint'))}</p></div>
+  <h2>${esc(t('reminders'))}</h2><div class="card">
+    ${sup ? `<label class="switch"><input type="checkbox" data-input="notify" ${s.notify ? 'checked' : ''}><span>${esc(t('notifOn'))}</span></label>
+      <p class="hint">${esc(t('notifHint'))}</p><div id="notifState"></div>` : `<p class="small">${esc(t('notifUnsupported'))}</p>`}
+    <label class="f" for="hour">${esc(t('reminderHour'))}</label>
+    <select class="input" id="hour" data-input="hour">${Array.from({length:24}, (_, i) => `<option value="${i}" ${i === s.hour ? 'selected' : ''}>${String(i).padStart(2, '0')}:00</option>`).join('')}</select>
+    <label class="f">${esc(t('leadDays'))}</label>
+    <div class="chips">${LEADS.map(n => `<button type="button" class="chip ${s.leads.includes(n) ? 'on' : ''}" data-act="lead" data-n="${n}">${n} ${esc(t('dayUnit'))}</button>`).join('')}</div>
+    ${sup ? `<details style="margin-top:8px"><summary class="small">${esc(t('calendarAlt'))}</summary>${icsBlock()}</details>` : icsBlock()}</div>
+  <h2>${esc(t('vehicles'))}</h2><div class="card">${state.vehicles.map(v => `<div class="row-item" role="button" tabindex="0" data-act="editVehicle" data-id="${esc(v.id)}">${photoHtml(v.photo, 'thumb', '🚗')}
+      <div class="grow" style="min-width:0"><b class="ellipsis">${esc(v.name)}</b><div class="tiny muted ellipsis">${esc(vehicleTitle(v))}</div></div><span>✎</span></div>`).join('')}
+    <div class="btns"><button class="btn ghost" type="button" data-act="addVehicle">＋ ${esc(t('addVehicle'))}</button></div></div>
+  <h2>${esc(t('language'))}</h2><div class="card">
+    <select class="input" data-input="lang" aria-label="${esc(t('language'))}"><option value="auto" ${s.lang === 'auto' ? 'selected' : ''}>${esc(t('auto'))}</option><option value="fr" ${s.lang === 'fr' ? 'selected' : ''}>Français</option><option value="en" ${s.lang === 'en' ? 'selected' : ''}>English</option></select></div>
+  <h2>${esc(t('log'))}</h2><div class="card"><button class="btn ghost block" type="button" data-act="openLog">${esc(t('logOpen', {n:nlog}))}</button></div>
+  <h2>${esc(t('backup'))}</h2><div class="card">
+    <button class="btn block" type="button" data-act="exportJson">${esc(t('exportJson'))}</button>
+    <button class="btn ghost block" type="button" data-act="importJson" style="margin-top:8px">${esc(t('importJson'))}</button>
+    <p class="hint">${esc(HOST ? t('whereApp') : t('whereBrowser'))}</p></div>`;
+}
+function icsBlock(){
+  return `<p class="small">${esc(t('remindersText'))}</p><div class="btns"><button class="btn ghost" type="button" data-act="exportIcs">${esc(t('exportIcs'))}</button></div>`;
+}
+function viewLog(){
+  const list = readLog().slice().reverse();
+  return `<div class="row"><button class="icon-btn" type="button" data-act="home" aria-label="${esc(t('back'))}">←</button><h3 class="grow" style="margin:0">${esc(t('log'))}</h3></div>
+    <div class="btns"><button class="btn ghost" type="button" data-act="exportLog" ${list.length ? '' : 'disabled'}>${esc(t('logExport'))}</button><button class="btn danger" type="button" data-act="clearLog" ${list.length ? '' : 'disabled'}>${esc(t('logClear'))}</button></div>
+    ${list.length ? list.map(x => `<div class="log ${esc(x.lvl)}"><div class="row between"><b class="small">${x.lvl === 'error' ? '⛔' : x.lvl === 'warn' ? '⚠️' : 'ℹ️'} ${esc(t('ctx_' + x.ctx) === 'ctx_' + x.ctx ? x.ctx : t('ctx_' + x.ctx))}</b><span class="tiny muted">${esc(fmtTime(x.t))}</span></div>
+      <div class="small">${esc(x.msg)}</div>${x.detail ? `<pre>${esc(x.detail)}</pre>` : ''}</div>`).join('') : `<div class="empty"><div class="e">✅</div><p>${esc(t('logEmpty'))}</p></div>`}`;
+}
+function logText(){
+  return readLog().map(x => `[${new Date(x.t).toISOString()}] ${x.lvl.toUpperCase()} ${x.ctx}: ${x.msg}${x.detail ? '\n    ' + x.detail : ''}`).join('\n');
+}
+
+/* =====================================================================
+   Sheets (keyboard-safe: no autofocus, @keyframes, visualViewport)
+   ===================================================================== */
+function openSheet(html, onMount){
+  const scrim = document.createElement('div'); scrim.className = 'scrim';
+  const sheet = document.createElement('div'); sheet.className = 'sheet'; sheet.setAttribute('role', 'dialog');
+  sheet.innerHTML = '<div class="grab"></div>' + html;
+  document.body.append(scrim, sheet);
+  ui.sheets.push({scrim, sheet});
+  scrim.addEventListener('click', closeSheet);
+  sheet.addEventListener('focusin', e => {
+    const f = e.target; if(!f.matches || !f.matches('input,select,textarea')) return;
+    setTimeout(() => { fitViewport(); f.scrollIntoView({block:'center', behavior:'smooth'}); }, 320);
+  });
+  if(onMount) onMount(sheet);
+  hydratePhotos(sheet);
+  return sheet;
+}
+function closeSheet(){
+  const e = ui.sheets.pop(); if(!e) return false;
+  if(document.activeElement && e.sheet.contains(document.activeElement)) document.activeElement.blur();
+  e.scrim.classList.add('closing'); e.sheet.classList.add('closing');
+  setTimeout(() => { e.scrim.remove(); e.sheet.remove(); }, 230);
+  return true;
+}
+function closeAllSheets(){ while(ui.sheets.length) closeSheet(); }
+function fitViewport(){
+  const root = document.documentElement.style, vv = window.visualViewport;
+  const visible = vv ? vv.height : window.innerHeight;
+  const keyboard = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+  root.setProperty('--vh', visible + 'px'); root.setProperty('--kb', keyboard + 'px');
+}
+if(window.visualViewport){ visualViewport.addEventListener('resize', fitViewport); visualViewport.addEventListener('scroll', fitViewport); }
+window.addEventListener('resize', fitViewport);
+fitViewport();
+function field(sheet, name){ return sheet.querySelector(`[name="${name}"]`); }
+function slotOf(sheet){ return n => sheet.querySelector(`[data-slot="${n}"]`); }
+function inputRow(label, name, value, attrs){ return `<label class="f" for="f-${name}">${esc(label)}</label><input class="input" id="f-${name}" name="${name}" value="${esc(value ?? '')}" autocomplete="off" ${attrs || ''}>`; }
+function numAttrs(){ return 'type="text" inputmode="decimal"'; }
+function intAttrs(){ return 'type="text" inputmode="numeric"'; }
+
+/* ---------- vehicle ---------- */
+function openVehicleSheet(v){
+  const d = {photo:null};
+  openSheet(`<h3>${esc(v ? t('editVehicle') : t('addVehicle'))}</h3>
+    <div data-slot="photo">${v && v.photo ? photoHtml(v.photo, 'wide', '🚗') : `<div class="ph wide">🚗</div>`}</div>${pickButtons(false)}
+    ${inputRow(t('vName'), 'name', v ? v.name : '', 'maxlength="80"')}
+    <div class="two"><div>${inputRow(t('make'), 'make', v && v.make, 'maxlength="60"')}</div><div>${inputRow(t('vModel'), 'model', v && v.model, 'maxlength="80"')}</div></div>
+    <div class="two"><div>${inputRow(t('year'), 'year', v && v.year, intAttrs() + ' maxlength="4"')}</div><div><label class="f" for="f-energy">${esc(t('energy'))}</label>
+      <select class="input" id="f-energy" name="energy">${ENERGIES.map(e => `<option value="${e}" ${(v ? v.energy : 'essence') === e ? 'selected' : ''}>${esc(t('en_' + e))}</option>`).join('')}</select></div></div>
+    ${inputRow(t('engine'), 'engine', v && v.engine, 'maxlength="80"')}
+    <div class="two"><div>${inputRow(t('plate'), 'plate', v && v.plate, 'maxlength="30" autocapitalize="characters"')}</div><div>${inputRow(t('color'), 'color', v && v.color, 'maxlength="40"')}</div></div>
+    ${inputRow(t('vin'), 'vin', v && v.vin, 'maxlength="40" autocapitalize="characters"')}
+    ${v ? '' : inputRow(t('startKm'), 'km', '', intAttrs())}
+    <div class="btns">${v ? `<button class="btn danger" type="button" data-do="delete">🗑️</button>` : ''}<button class="btn ghost" type="button" data-do="cancel">${esc(t('cancel'))}</button><button class="btn" type="button" data-do="save">${esc(t('save'))}</button></div>`,
+  sheet => {
+    const slot = slotOf(sheet), f = n => field(sheet, n);
+    sheet.addEventListener('click', async e => {
+      const pk = e.target.closest('[data-pick]');
+      if(pk){ choosePhoto(pk.dataset.pick, url => { d.photo = url; slot('photo').innerHTML = `<div class="ph wide"><img src="${esc(url)}" alt=""></div>`; }); return; }
+      const b = e.target.closest('[data-do]'); if(!b) return;
+      if(b.dataset.do === 'cancel') closeSheet();
+      else if(b.dataset.do === 'delete'){
+        if(!confirm(t('confirmDelVehicle', {n:v.name}))) return;
+        await deleteVehicle(v); closeAllSheets(); ui.view = null; ui.tab = 'home'; render(); toast(t('deleted'));
+      } else if(b.dataset.do === 'save'){
+        const name = f('name').value.trim() || [f('make').value.trim(), f('model').value.trim()].filter(Boolean).join(' ');
+        if(!name){ toast(t('needVName')); return; }
+        const km = f('km') ? parseNum(f('km').value) : null;
+        if(km !== null && (Number.isNaN(km) || km < 0 || km > 5e6)){ toast(t('kmInvalid')); return; }
+        b.disabled = true;
+        const data = {name, make:f('make').value.trim(), model:f('model').value.trim(), year:num(f('year').value, 1900, 2100), energy:f('energy').value,
+                      engine:f('engine').value.trim(), plate:f('plate').value.trim(), color:f('color').value.trim(), vin:f('vin').value.trim()};
+        const target = v || cleanVehicle(Object.assign({id:uid(), readings:[], createdAt:Date.now()}, data));
+        if(d.photo){
+          try{ const id = await Photos.put(d.photo); if(target.photo) await Photos.del(target.photo); target.photo = id; }
+          catch(err){ log('error', 'photo', 'Vehicle photo not saved', String(err && err.message)); toast(t('photoSaveFailed')); }
+        }
+        if(v) Object.assign(v, cleanVehicle(Object.assign({}, v, data, {photo:target.photo})));
+        else {
+          if(km !== null) target.readings.push({date:today(), km:Math.round(km)});
+          state.vehicles.push(target); state.plan.push(...defaultPlan(target.id, target.energy));
+          state.current = target.id; ui.view = null; ui.tab = 'home';
+        }
+        save(); closeAllSheets(); render(); toast(t('saved'));
+      }
+    });
+  });
+}
+async function deleteVehicle(v){
+  const photos = [v.photo, ...ofV(state.docs, v).flatMap(d => d.files.map(f => f.id)), ...ofV(state.threads, v).flatMap(th => th.msgs.map(m => m.photo))].filter(Boolean);
+  state.vehicles = state.vehicles.filter(x => x !== v);
+  for(const k of ['docs', 'plan', 'services', 'fuel', 'threads']) state[k] = state[k].filter(x => x.vid !== v.id);
+  if(state.current === v.id) state.current = state.vehicles[0] ? state.vehicles[0].id : null;
+  save();
+  for(const id of photos) await Photos.del(id);
+}
+function openSwitchSheet(){
+  openSheet(`<h3>${esc(t('switchVehicle'))}</h3><div class="card" style="box-shadow:none">${state.vehicles.map(v => `<div class="row-item" role="button" tabindex="0" data-do="pick" data-id="${esc(v.id)}">${photoHtml(v.photo, 'thumb', '🚗')}
+      <div class="grow" style="min-width:0"><b class="ellipsis">${v.id === (cur() || {}).id ? '✓ ' : ''}${esc(v.name)}</b><div class="tiny muted ellipsis">${esc(vehicleTitle(v))} ${v.plate ? `<span class="plate">${esc(v.plate)}</span>` : ''}</div></div>
+      <button class="icon-btn" type="button" data-do="edit" data-id="${esc(v.id)}" aria-label="${esc(t('edit'))}">✎</button></div>`).join('')}</div>
+    <div class="btns"><button class="btn" type="button" data-do="add">＋ ${esc(t('addVehicle'))}</button></div>`,
+  sheet => sheet.addEventListener('click', e => {
+    const b = e.target.closest('[data-do]'); if(!b) return;
+    if(b.dataset.do === 'edit'){ const v = veh(b.dataset.id); if(v) openVehicleSheet(v); }
+    else if(b.dataset.do === 'add'){ closeSheet(); openVehicleSheet(null); }
+    else if(b.dataset.do === 'pick'){ state.current = b.dataset.id; save(); closeSheet(); render(); }
+  }));
+}
+
+/* ---------- odometer ---------- */
+function openKmSheet(v){
+  const recent = () => readings(v).slice(-6).reverse();
+  const list = () => recent().map(r => `<div class="item"><span class="grow">${esc(fmtDay(r.date))}</span><b>${esc(fmtKm(r.km))}</b>${v.readings.includes(r.src) ? `<button class="icon-btn" type="button" data-do="delReading" data-date="${r.date}" data-km="${r.km}" aria-label="${esc(t('delete'))}">✕</button>` : '<span style="width:44px"></span>'}</div>`).join('');
+  openSheet(`<h3>📍 ${esc(t('kmSheet'))}</h3>
+    <div class="two"><div><label class="f" for="f-date">${esc(t('date'))}</label><input class="input" id="f-date" name="date" type="date" max="${today()}" value="${today()}"></div>
+      <div>${inputRow(t('startKm'), 'km', '', intAttrs() + ` placeholder="${esc(estKm(v) != null ? nf(estKm(v)) : '')}"`)}</div></div>
+    <div class="btns"><button class="btn ghost block" type="button" data-do="odo">${esc(t('readOdo'))}</button></div><div data-slot="ai"></div>
+    <div class="btns"><button class="btn ghost" type="button" data-do="cancel">${esc(t('cancel'))}</button><button class="btn" type="button" data-do="save">${esc(t('save'))}</button></div>
+    ${readings(v).length ? `<h4>${esc(t('recentReadings'))}</h4><div class="list" data-slot="list">${list()}</div>` : ''}`,
+  sheet => {
+    const slot = slotOf(sheet), f = n => field(sheet, n);
+    sheet.addEventListener('click', e => {
+      const b = e.target.closest('[data-do]'); if(!b) return;
+      const act = b.dataset.do;
+      if(act === 'cancel') closeSheet();
+      else if(act === 'odo') choosePhoto('cam', async url => {
+        slot('ai').innerHTML = aiBusy(t('readingOdo'));
+        try{
+          const r = await aiOdometer(url);
+          if(!sheet.isConnected) return;
+          f('km').value = r.value;
+          slot('ai').innerHTML = `<div class="aibox small" data-ai="ok">${esc(r.unit === 'mi' ? t('kmMiles', {n:nf(r.value)}) : t('kmRead', {n:nf(r.value)}))}<div class="tiny muted">${esc(t('aiModel', {m:r.model}))}</div></div>`;
+        }catch(err){ logAppError('odo', err); if(sheet.isConnected) slot('ai').innerHTML = aiError(err); }
+      }, {max:1280});
+      else if(act === 'delReading'){
+        const i = v.readings.findIndex(r => r.date === b.dataset.date && r.km === Number(b.dataset.km));
+        if(i >= 0){ v.readings.splice(i, 1); save(); const l = slot('list'); if(l) l.innerHTML = list(); render(); }
+      } else if(act === 'save'){
+        const date = f('date').value, km = parseNum(f('km').value);
+        if(!isDate(date) || date > today() || km == null || Number.isNaN(km) || km < 0 || km > 5e6){ toast(t('kmInvalid')); return; }
+        const bad = kmConflict(v, date, Math.round(km)); if(bad){ toast(bad); return; }
+        v.readings.push({date, km:Math.round(km)}); save(); closeSheet(); render(); toast(t('kmSaved'));
+      }
+    });
+  });
+}
+
+/* =====================================================================
+   Document scanner. The image functions below are pure (they work on
+   {width, height, data}) so they can be tested without a browser.
+   ===================================================================== */
+/* SCAN-CORE-START */
+function imgNew(w, h){ return {width:w, height:h, data:new Uint8ClampedArray(w * h * 4)}; }
+function imgCopy(im){ return {width:im.width, height:im.height, data:new Uint8ClampedArray(im.data)}; }
+function toGray(im){ const n = im.width * im.height, g = new Float32Array(n), d = im.data; for(let i = 0, j = 0; i < n; i++, j += 4) g[i] = 0.299 * d[j] + 0.587 * d[j + 1] + 0.114 * d[j + 2]; return g; }
+function boxBlur(a, w, h, r){
+  const tmp = new Float32Array(a.length), out = new Float32Array(a.length), k = 2 * r + 1;
+  for(let y = 0; y < h; y++){ const o = y * w; let s = 0;
+    for(let x = -r; x <= r; x++) s += a[o + Math.min(w - 1, Math.max(0, x))];
+    for(let x = 0; x < w; x++){ tmp[o + x] = s / k; s += a[o + Math.min(w - 1, x + r + 1)] - a[o + Math.max(0, x - r)]; } }
+  for(let x = 0; x < w; x++){ let s = 0;
+    for(let y = -r; y <= r; y++) s += tmp[Math.min(h - 1, Math.max(0, y)) * w + x];
+    for(let y = 0; y < h; y++){ out[y * w + x] = s / k; s += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x]; } }
+  return out;
+}
+function maxFilter(a, w, h, r){
+  const tmp = new Float32Array(a.length), out = new Float32Array(a.length);
+  for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){ let m = 0; for(let k = Math.max(0, x - r); k <= Math.min(w - 1, x + r); k++) m = Math.max(m, a[y * w + k]); tmp[y * w + x] = m; }
+  for(let x = 0; x < w; x++) for(let y = 0; y < h; y++){ let m = 0; for(let k = Math.max(0, y - r); k <= Math.min(h - 1, y + r); k++) m = Math.max(m, tmp[k * w + x]); out[y * w + x] = m; }
+  return out;
+}
+/* Area-average downscale (keeps the image if already small enough). */
+function resizeImg(im, maxSide){
+  const s = Math.min(1, maxSide / Math.max(im.width, im.height)); if(s >= 1) return im;
+  const w = Math.max(1, Math.round(im.width * s)), h = Math.max(1, Math.round(im.height * s)), out = imgNew(w, h), d = im.data, W = im.width;
+  for(let y = 0; y < h; y++){
+    const y0 = Math.floor(y / s), y1 = Math.min(im.height, Math.max(y0 + 1, Math.floor((y + 1) / s)));
+    for(let x = 0; x < w; x++){
+      const x0 = Math.floor(x / s), x1 = Math.min(W, Math.max(x0 + 1, Math.floor((x + 1) / s)));
+      let r = 0, g = 0, b = 0, n = 0;
+      for(let yy = y0; yy < y1; yy++) for(let xx = x0; xx < x1; xx++){ const k = (yy * W + xx) * 4; r += d[k]; g += d[k + 1]; b += d[k + 2]; n++; }
+      const o = (y * w + x) * 4; out.data[o] = r / n; out.data[o + 1] = g / n; out.data[o + 2] = b / n; out.data[o + 3] = 255;
+    }
+  }
+  return out;
+}
+function otsu(g){
+  const hist = new Float64Array(256); for(let i = 0; i < g.length; i++) hist[Math.max(0, Math.min(255, g[i] | 0))]++;
+  let sum = 0; for(let i = 0; i < 256; i++) sum += i * hist[i];
+  let sB = 0, wB = 0, best = -1, thr = 127;
+  for(let i = 0; i < 256; i++){ wB += hist[i]; if(!wB) continue; const wF = g.length - wB; if(!wF) break;
+    sB += i * hist[i]; const mB = sB / wB, mF = (sum - sB) / wF, v = wB * wF * (mB - mF) * (mB - mF); if(v > best){ best = v; thr = i; } }
+  return thr;
+}
+function components(mask, w, h){
+  const lab = new Int32Array(w * h).fill(-1), comps = [], stack = new Int32Array(w * h);
+  for(let i = 0; i < w * h; i++){
+    if(!mask[i] || lab[i] >= 0) continue;
+    const id = comps.length; let sp = 0, area = 0, x0 = w, y0 = h, x1 = 0, y1 = 0, border = 0;
+    stack[sp++] = i; lab[i] = id;
+    while(sp){
+      const p = stack[--sp], x = p % w, y = (p / w) | 0; area++;
+      if(x < x0) x0 = x; if(x > x1) x1 = x; if(y < y0) y0 = y; if(y > y1) y1 = y;
+      if(x === 0 || y === 0 || x === w - 1 || y === h - 1) border++;
+      if(x > 0 && mask[p - 1] && lab[p - 1] < 0){ lab[p - 1] = id; stack[sp++] = p - 1; }
+      if(x < w - 1 && mask[p + 1] && lab[p + 1] < 0){ lab[p + 1] = id; stack[sp++] = p + 1; }
+      if(y > 0 && mask[p - w] && lab[p - w] < 0){ lab[p - w] = id; stack[sp++] = p - w; }
+      if(y < h - 1 && mask[p + w] && lab[p + w] < 0){ lab[p + w] = id; stack[sp++] = p + w; }
+    }
+    comps.push({id, area, x0, y0, x1, y1, border});
+  }
+  return {lab, comps};
+}
+function quadArea(q){ let a = 0; for(let i = 0; i < 4; i++){ const p = q[i], n = q[(i + 1) % 4]; a += p.x * n.y - n.x * p.y; } return Math.abs(a) / 2; }
+/* Corners in order top-left, top-right, bottom-right, bottom-left. */
+function sortQuad(q){
+  const cx = q.reduce((s, p) => s + p.x, 0) / 4, cy = q.reduce((s, p) => s + p.y, 0) / 4;
+  const byAngle = q.slice().sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx));
+  let start = 0; byAngle.forEach((p, i) => { if(p.x + p.y < byAngle[start].x + byAngle[start].y) start = i; });
+  return [0, 1, 2, 3].map(i => byAngle[(start + i) % 4]);
+}
+function isConvex(q){
+  let sign = 0;
+  for(let i = 0; i < 4; i++){ const a = q[i], b = q[(i + 1) % 4], c = q[(i + 2) % 4];
+    const z = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x); if(Math.abs(z) < 1e-6) return false;
+    if(!sign) sign = Math.sign(z); else if(Math.sign(z) !== sign) return false; }
+  return true;
+}
+function insetQuad(im, f){ const dx = im.width * f, dy = im.height * f; return [{x:dx, y:dy}, {x:im.width - dx, y:dy}, {x:im.width - dx, y:im.height - dy}, {x:dx, y:im.height - dy}]; }
+/* Finds the page: the largest light (or dark) region that is close to a quadrilateral. */
+function detectQuad(im){
+  const small = resizeImg(im, 360), w = small.width, h = small.height, sx = im.width / w, sy = im.height / h;
+  const g = boxBlur(toGray(small), w, h, 2), thr = otsu(g);
+  let best = null;
+  for(const bright of [true, false]){
+    const mask = new Uint8Array(w * h); for(let i = 0; i < w * h; i++) mask[i] = bright ? g[i] > thr : g[i] <= thr;
+    const {lab, comps} = components(mask, w, h);
+    for(const c of comps){
+      const frac = c.area / (w * h); if(frac < 0.1 || frac > 0.98) continue;
+      let tl, tr, br, bl, a = Infinity, b = -Infinity, cc = -Infinity, dd = Infinity, filled = 0;
+      for(let y = c.y0; y <= c.y1; y++){
+        let first = -1, last = -1;
+        for(let x = c.x0; x <= c.x1; x++){
+          if(lab[y * w + x] !== c.id) continue;
+          if(first < 0) first = x; last = x;
+          const s = x + y, df = x - y;
+          if(s < a){ a = s; tl = {x, y}; } if(s > b){ b = s; br = {x, y}; } if(df > cc){ cc = df; tr = {x, y}; } if(df < dd){ dd = df; bl = {x, y}; }
+        }
+        if(first >= 0) filled += last - first + 1;
+      }
+      const q = [tl, tr, br, bl], qa = quadArea(q);
+      if(qa < w * h * 0.08 || !isConvex(q)) continue;
+      const fill = filled / qa, solid = c.area / Math.max(1, filled), edge = c.border / (2 * (w + h));
+      if(fill < 0.85 || fill > 1.2 || solid < 0.7 || edge > 0.6) continue;   // a page is a solid shape; clutter and noise are full of holes
+      const score = Math.sqrt(frac) * (1 - Math.abs(1 - fill)) * (edge > 0.5 ? 0.3 : 1);
+      if(!best || score > best.score) best = {score, q};
+    }
+  }
+  return best ? best.q.map(p => ({x:Math.min(im.width, Math.max(0, (p.x + 0.5) * sx)), y:Math.min(im.height, Math.max(0, (p.y + 0.5) * sy))})) : null;
+}
+function solveLinear(A, b){
+  const n = b.length, M = A.map((r, i) => [...r, b[i]]);
+  for(let c = 0; c < n; c++){
+    let p = c; for(let r = c + 1; r < n; r++) if(Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    if(Math.abs(M[p][c]) < 1e-12) return null;
+    [M[c], M[p]] = [M[p], M[c]];
+    for(let r = 0; r < n; r++){ if(r === c) continue; const f = M[r][c] / M[c][c]; for(let k = c; k <= n; k++) M[r][k] -= f * M[c][k]; }
+  }
+  return M.map((r, i) => r[n] / r[i]);
+}
+/* 3×3 matrix mapping each src point to the matching dst point. */
+function homography(src, dst){
+  const A = [], B = [];
+  for(let i = 0; i < 4; i++){ const {x, y} = src[i], u = dst[i].x, v = dst[i].y;
+    A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]); B.push(u); A.push([0, 0, 0, x, y, 1, -v * x, -v * y]); B.push(v); }
+  const h = solveLinear(A, B); return h ? [...h, 1] : null;
+}
+function applyH(H, x, y){ const z = H[6] * x + H[7] * y + H[8]; return {x:(H[0] * x + H[1] * y + H[2]) / z, y:(H[3] * x + H[4] * y + H[5]) / z}; }
+/* Perspective correction: the quadrilateral becomes a straight rectangle. */
+function warpQuad(im, q, maxSide){
+  const d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  let W = Math.max(d(q[0], q[1]), d(q[3], q[2])), H = Math.max(d(q[0], q[3]), d(q[1], q[2]));
+  const s = Math.min(1, maxSide / Math.max(W, H)); W = Math.max(8, Math.round(W * s)); H = Math.max(8, Math.round(H * s));
+  const M = homography([{x:0, y:0}, {x:W, y:0}, {x:W, y:H}, {x:0, y:H}], q);
+  if(!M) return null;
+  const out = imgNew(W, H), sd = im.data, sw = im.width, sh = im.height, od = out.data;
+  for(let y = 0; y < H; y++) for(let x = 0; x < W; x++){
+    const X = x + 0.5, Y = y + 0.5, z = M[6] * X + M[7] * Y + M[8];
+    const u = Math.max(0, Math.min(sw - 1.001, (M[0] * X + M[1] * Y + M[2]) / z - 0.5)), v = Math.max(0, Math.min(sh - 1.001, (M[3] * X + M[4] * Y + M[5]) / z - 0.5));
+    const x0 = u | 0, y0 = v | 0, fx = u - x0, fy = v - y0, i00 = (y0 * sw + x0) * 4, i01 = i00 + sw * 4, o = (y * W + x) * 4;
+    for(let c = 0; c < 3; c++) od[o + c] = (sd[i00 + c] * (1 - fx) + sd[i00 + 4 + c] * fx) * (1 - fy) + (sd[i01 + c] * (1 - fx) + sd[i01 + 4 + c] * fx) * fy;
+    od[o + 3] = 255;
+  }
+  return out;
+}
+/* turns: 1 = 90° clockwise. */
+function rotate90(im, turns){
+  turns = ((turns % 4) + 4) % 4; if(!turns) return im;
+  const w = im.width, h = im.height, d = im.data, W = turns % 2 ? h : w, H = turns % 2 ? w : h, out = imgNew(W, H);
+  for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){
+    const X = turns === 1 ? h - 1 - y : turns === 2 ? w - 1 - x : y, Y = turns === 1 ? x : turns === 2 ? h - 1 - y : w - 1 - x;
+    const i = (y * w + x) * 4, o = (Y * W + X) * 4; out.data[o] = d[i]; out.data[o + 1] = d[i + 1]; out.data[o + 2] = d[i + 2]; out.data[o + 3] = 255;
+  }
+  return out;
+}
+function rotatePoint(p, w, h, turns){ return turns === 1 ? {x:h - 1 - p.y, y:p.x} : {x:p.y, y:w - 1 - p.x}; }   // 1 = clockwise, 3 = anticlockwise
+/* Paper colour everywhere: text and small marks removed by a max filter on a small copy. */
+function background(im){
+  const small = resizeImg(im, 160), w = small.width, h = small.height, r = Math.max(2, Math.round(Math.max(w, h) / 55));
+  const chans = [0, 1, 2].map(c => { const a = new Float32Array(w * h); for(let i = 0; i < w * h; i++) a[i] = small.data[i * 4 + c]; return boxBlur(maxFilter(a, w, h, r), w, h, r); });
+  return {w, h, chans, sx:w / im.width, sy:h / im.height};
+}
+function bgAt(bg, x, y, c){
+  const u = Math.max(0, Math.min(bg.w - 1.001, x * bg.sx - 0.5)), v = Math.max(0, Math.min(bg.h - 1.001, y * bg.sy - 0.5));
+  const x0 = u | 0, y0 = v | 0, fx = u - x0, fy = v - y0, a = bg.chans[c], i = y0 * bg.w + x0;
+  return (a[i] * (1 - fx) + a[i + 1] * fx) * (1 - fy) + (a[i + bg.w] * (1 - fx) + a[i + bg.w + 1] * fx) * fy;
+}
+/* Divides by the paper colour: shadows, stains and fingers fade, text stays. */
+function normalizeBg(im, bg){
+  const {width:w, height:h, data:d} = im;
+  for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){
+    const o = (y * w + x) * 4;
+    for(let c = 0; c < 3; c++){ const v = d[o + c] / Math.max(20, bgAt(bg, x, y, c)); d[o + c] = v >= 0.93 ? 255 : 255 * Math.pow(v / 0.93, 1.5); }
+  }
+  return im;
+}
+/* Removes large dark blobs touching the edge (fingers, shadows); thin lines of text and frames are kept. */
+function removeBlobs(im){
+  const small = resizeImg(im, 240), w = small.width, h = small.height, g = toGray(small);
+  const mask = new Uint8Array(w * h); for(let i = 0; i < w * h; i++) mask[i] = g[i] < 150;
+  const {lab, comps} = components(mask, w, h);
+  const kill = new Set(comps.filter(c => { const bw = c.x1 - c.x0 + 1, bh = c.y1 - c.y0 + 1;
+    return c.border > 0 && Math.min(bw, bh) > 0.06 * Math.min(w, h) && c.area / (bw * bh) > 0.3 && c.area > 0.004 * w * h; }).map(c => c.id));
+  if(!kill.size) return im;
+  const hit = new Uint8Array(w * h);
+  for(let y = 0; y < h; y++) for(let x = 0; x < w; x++) if(kill.has(lab[y * w + x]))
+    for(let yy = Math.max(0, y - 1); yy <= Math.min(h - 1, y + 1); yy++) for(let xx = Math.max(0, x - 1); xx <= Math.min(w - 1, x + 1); xx++) hit[yy * w + xx] = 1;
+  const sx = w / im.width, sy = h / im.height, d = im.data;
+  for(let y = 0; y < im.height; y++){ const yy = Math.min(h - 1, (y * sy) | 0);
+    for(let x = 0; x < im.width; x++) if(hit[yy * w + Math.min(w - 1, (x * sx) | 0)]){ const o = (y * im.width + x) * 4; d[o] = d[o + 1] = d[o + 2] = 255; } }
+  return im;
+}
+function cleanScan(im, bg){ return removeBlobs(normalizeBg(imgCopy(im), bg)); }
+function paintStrokes(im, strokes, bg){
+  const {width:w, height:h, data:d} = im;
+  const dot = (cx, cy, r) => {
+    for(let y = Math.max(0, Math.floor(cy - r)); y <= Math.min(h - 1, Math.ceil(cy + r)); y++)
+      for(let x = Math.max(0, Math.floor(cx - r)); x <= Math.min(w - 1, Math.ceil(cx + r)); x++){
+        if((x - cx) ** 2 + (y - cy) ** 2 > r * r) continue;
+        const o = (y * w + x) * 4; for(let c = 0; c < 3; c++) d[o + c] = bg ? bgAt(bg, x, y, c) : 255;
+      }
+  };
+  for(const s of strokes){
+    for(let i = 0; i < s.pts.length; i++){
+      const p = s.pts[i], q = s.pts[i - 1] || p, n = Math.max(1, Math.ceil(Math.hypot(p.x - q.x, p.y - q.y) / (s.r / 2)));
+      for(let k = 1; k <= n; k++) dot(q.x + (p.x - q.x) * k / n, q.y + (p.y - q.y) * k / n, s.r);
+    }
+  }
+  return im;
+}
+function stretch(im, sat){
+  const d = im.data, n = im.width * im.height, lo = [], hi = [];
+  for(let c = 0; c < 3; c++){
+    const hist = new Uint32Array(256); for(let i = 0; i < n; i++) hist[d[i * 4 + c]]++;
+    let acc = 0, l = 0, hgh = 255; for(let v = 0; v < 256; v++){ acc += hist[v]; if(acc >= n * 0.005){ l = v; break; } }
+    acc = 0; for(let v = 255; v >= 0; v--){ acc += hist[v]; if(acc >= n * 0.005){ hgh = v; break; } }
+    if(hgh - l < 40){ l = 0; hgh = 255; } lo.push(l); hi.push(hgh);
+  }
+  for(let i = 0; i < n; i++){
+    const o = i * 4, v = [0, 1, 2].map(c => Math.max(0, Math.min(255, (d[o + c] - lo[c]) * 255 / (hi[c] - lo[c]))));
+    const L = 0.299 * v[0] + 0.587 * v[1] + 0.114 * v[2];
+    for(let c = 0; c < 3; c++) d[o + c] = L + (v[c] - L) * sat;
+  }
+  return im;
+}
+/* Filters: original, auto (contrast), vivid (clean colours), gray, bw (black and white). */
+function applyFilter(im, f, bg, cleaned){
+  const {width:w, height:h, data:d} = im;
+  if(f === 'auto') return stretch(im, 1.15);
+  if(f === 'vivid'){ if(!cleaned) normalizeBg(im, bg); return stretch(im, 1.35); }
+  if(f === 'gray'){ for(let i = 0; i < w * h; i++){ const o = i * 4, L = 0.299 * d[o] + 0.587 * d[o + 1] + 0.114 * d[o + 2]; d[o] = d[o + 1] = d[o + 2] = L; } return stretch(im, 1); }
+  if(f === 'bw'){
+    for(let y = 0; y < h; y++) for(let x = 0; x < w; x++){
+      const o = (y * w + x) * 4, L = 0.299 * d[o] + 0.587 * d[o + 1] + 0.114 * d[o + 2];
+      const ref = cleaned ? 255 : 0.299 * bgAt(bg, x, y, 0) + 0.587 * bgAt(bg, x, y, 1) + 0.114 * bgAt(bg, x, y, 2);
+      const v = L / Math.max(20, ref), out = v < 0.66 ? 0 : v > 0.8 ? 255 : (v - 0.66) / 0.14 * 255;
+      d[o] = d[o + 1] = d[o + 2] = out;
+    }
+    return im;
+  }
+  return im;
+}
+/* SCAN-CORE-END */
+
+/* ---------- browser glue (replaced in tests) ---------- */
+function ctx2d(c){ try{ return c.getContext('2d'); }catch(e){ return null; } }
+async function decodeImage(url, maxSide){
+  const img = await loadImage(url, 8000);
+  if(!img || !img.naturalWidth) return null;
+  const s = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+  const ctx = ctx2d(c); if(!ctx) return null;
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  return ctx.getImageData(0, 0, c.width, c.height);
+}
+function paintCanvas(canvas, im){
+  canvas.width = im.width; canvas.height = im.height;
+  const ctx = ctx2d(canvas); if(ctx) ctx.putImageData(new ImageData(im.data, im.width, im.height), 0, 0);
+}
+function encodeImage(im, q){
+  const c = document.createElement('canvas'); paintCanvas(c, im);
+  return c.toDataURL('image/jpeg', q || 0.85);
+}
+
+/* ---------- scanner screen ---------- */
+const FILTERS = ['original', 'auto', 'vivid', 'gray', 'bw'];
+function openScanner(url, opts){
+  const S = {src:null, disp:null, q:null, detected:null, step:'corners', rot:0, filter:'auto', clean:false, strokes:[], eraser:false, cache:{}, drag:null, busy:false, out:null};
+  openSheet(`<div class="scan-top"><button class="icon-btn" type="button" data-s="close" aria-label="${esc(t('close'))}">✕</button>
+      <b class="grow" data-slot="title">${esc(t('scanTitle'))}</b><span data-slot="busy"></span></div>
+    <div class="scan-stage" data-slot="stage"><div>${aiBusy(t('scanBusy'))}</div></div>
+    <p class="hint" data-slot="hint"></p><div data-slot="tools"></div>`, sheet => {
+    sheet.classList.add('full', 'scanner');
+    const slot = slotOf(sheet);
+    const idle = () => new Promise(r => setTimeout(r, 20));
+    const busy = on => { S.busy = on; slot('busy').innerHTML = on ? '<span class="spin"></span>' : ''; };
+    const tool = (s, label, on, extra) => `<button class="tool ${on ? 'on' : ''}" type="button" data-s="${s}" ${extra || ''}>${label}</button>`;
+
+    async function load(u){
+      busy(true); await idle();
+      const src = await decodeImage(u, 2400);
+      if(!sheet.isConnected) return;
+      if(!src){ log('warn', 'photo', 'Scanner could not decode the image; added as is'); toast(t('scanFailed')); busy(false); closeSheet(); opts.onDone(u); return; }
+      S.src = src; S.disp = resizeImg(src, 1000); S.rot = 0; S.strokes = []; S.cache = {}; S.eraser = false;
+      S.detected = opts.existing ? null : detectQuad(src);
+      S.q = S.detected ? S.detected.map(p => ({...p})) : opts.existing ? insetQuad(src, 0) : insetQuad(src, 0.04);
+      busy(false); showCorners();
+    }
+    function showCorners(){
+      S.step = 'corners';
+      slot('title').textContent = t('scanCorners');
+      slot('stage').innerHTML = `<div class="crop-wrap" data-slot="wrap"><canvas class="scan-src"></canvas>
+        <svg class="crop-svg" viewBox="0 0 ${S.src.width} ${S.src.height}" preserveAspectRatio="none"><polygon data-slot="poly"></polygon></svg>
+        ${[0, 1, 2, 3].map(i => `<div class="hdl" data-h="${i}" role="slider" aria-label="${esc(t('scanCorner'))} ${i + 1}"></div>`).join('')}<canvas class="loupe" width="112" height="112"></canvas></div>`;
+      paintCanvas(sheet.querySelector('.scan-src'), S.disp);
+      slot('hint').textContent = S.detected ? t('scanFound') : opts.existing ? t('scanCornersHint') : t('scanNoDetect');
+      slot('tools').innerHTML = `<div class="tool-row">${tool('auto', t('scanAuto'))}${tool('full', t('scanFull'))}${tool('retake', t('scanRetake'))}${tool('delete', t('scanDelete'))}</div>
+        <div class="btns"><button class="btn block" type="button" data-s="next">${esc(t('scanNext'))}</button></div>`;
+      placeHandles();
+    }
+    function placeHandles(){
+      sheet.querySelectorAll('.hdl').forEach(el => { const p = S.q[el.dataset.h]; el.style.left = (p.x / S.src.width * 100) + '%'; el.style.top = (p.y / S.src.height * 100) + '%'; });
+      const poly = sheet.querySelector('[data-slot="poly"]'); if(poly) poly.setAttribute('points', S.q.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' '));
+    }
+    function loupe(p, show){
+      const L = sheet.querySelector('.loupe'); if(!L) return;
+      L.style.display = show ? 'block' : 'none'; if(!show) return;
+      L.style.left = (p.x / S.src.width * 100) + '%';
+      L.style.top = `calc(${p.y / S.src.height * 100}% ${p.y / S.src.height > 0.35 ? '- 150px' : '+ 40px'})`;
+      const ctx = ctx2d(L), c = sheet.querySelector('.scan-src'); if(!ctx || !c) return;
+      const k = S.disp.width / S.src.width, z = 28;
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 112, 112);
+      ctx.drawImage(c, p.x * k - z, p.y * k - z, 2 * z, 2 * z, 0, 0, 112, 112);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(56, 40); ctx.lineTo(56, 72); ctx.moveTo(40, 56); ctx.lineTo(72, 56); ctx.stroke();
+    }
+    async function process(){
+      busy(true); await idle();
+      const c = S.cache;
+      if(!c.warp){ c.warp = warpQuad(S.src, sortQuad(S.q), 1600); c.rotImg = null; }
+      if(!c.rotImg || c.rotN !== S.rot){ c.rotImg = rotate90(c.warp, S.rot); c.rotN = S.rot; c.bg = background(c.rotImg); c.clean = null; }
+      if(S.clean && !c.clean) c.clean = cleanScan(c.rotImg, c.bg);
+      const base = paintStrokes(imgCopy(S.clean ? c.clean : c.rotImg), S.strokes, S.clean ? null : c.bg);
+      S.out = applyFilter(base, S.filter, c.bg, S.clean);
+      const cv = sheet.querySelector('.scan-out'); if(cv) paintCanvas(cv, S.out);
+      busy(false);
+    }
+    function showEdit(){
+      S.step = 'edit';
+      slot('title').textContent = t('scanEdit');
+      slot('stage').innerHTML = `<canvas class="scan-out ${S.eraser ? 'erasing' : ''}"></canvas>`;
+      slot('hint').textContent = S.eraser ? t('scanEraserHint') : S.clean ? t('scanCleanHint') : '';
+      slot('tools').innerHTML = `<div class="chips scan-filters">${FILTERS.map(f => `<button type="button" class="chip ${S.filter === f ? 'on' : ''}" data-s="filter" data-f="${f}">${esc(t('f_' + f))}</button>`).join('')}</div>
+        <div class="tool-row">${tool('rotL', '↺', false, `aria-label="${esc(t('scanRotL'))}"`)}${tool('rotR', '↻', false, `aria-label="${esc(t('scanRotR'))}"`)}${tool('crop', t('scanCrop'))}
+          ${tool('clean', t('scanClean'), S.clean)}${tool('eraser', t('scanEraser'), S.eraser)}${S.strokes.length ? tool('undo', t('scanUndo')) : ''}</div>
+        <div class="tool-row">${tool('retake', t('scanRetake'))}${tool('delete', t('scanDelete'))}</div>
+        <div class="btns">${opts.onNext ? `<button class="btn ghost" type="button" data-s="doneNext">${esc(t('scanDoneNext'))}</button>` : ''}<button class="btn" type="button" data-s="done">${esc(t('scanDone'))}</button></div>`;
+      if(S.out) paintCanvas(sheet.querySelector('.scan-out'), S.out);
+    }
+    const imgPoint = (e, el, w, h) => { const r = el.getBoundingClientRect(); return {x:Math.max(0, Math.min(w, (e.clientX - r.left) / (r.width || 1) * w)), y:Math.max(0, Math.min(h, (e.clientY - r.top) / (r.height || 1) * h))}; };
+    let stroke = null;
+    sheet.addEventListener('pointerdown', e => {
+      const hd = e.target.closest('.hdl');
+      if(hd && S.step === 'corners'){ S.drag = Number(hd.dataset.h); hd.classList.add('on'); try{ hd.setPointerCapture(e.pointerId); }catch(x){} e.preventDefault(); return; }
+      const cv = e.target.closest('.scan-out');
+      if(cv && S.eraser && S.out){ stroke = {pts:[imgPoint(e, cv, S.out.width, S.out.height)], r:Math.max(6, Math.round(Math.min(S.out.width, S.out.height) * 0.03))}; try{ cv.setPointerCapture(e.pointerId); }catch(x){} e.preventDefault(); }
+    });
+    sheet.addEventListener('pointermove', e => {
+      if(S.drag != null){ const w = sheet.querySelector('[data-slot="wrap"]'); if(!w) return; const p = imgPoint(e, w, S.src.width, S.src.height); S.q[S.drag] = p; placeHandles(); loupe(p, true); e.preventDefault(); }
+      else if(stroke){
+        const cv = sheet.querySelector('.scan-out'), p = imgPoint(e, cv, S.out.width, S.out.height); stroke.pts.push(p);
+        const ctx = ctx2d(cv); if(ctx){ ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(p.x, p.y, stroke.r, 0, 7); ctx.fill(); }
+      }
+    });
+    const end = () => {
+      if(S.drag != null){ sheet.querySelectorAll('.hdl.on').forEach(h => h.classList.remove('on')); S.drag = null; S.cache = {}; S.strokes = []; loupe(null, false); }
+      if(stroke){ S.strokes.push(stroke); stroke = null; process().then(() => { if(sheet.isConnected && S.step === 'edit') showEdit(); }); }
+    };
+    sheet.addEventListener('pointerup', end); sheet.addEventListener('pointercancel', end);
+
+    sheet.addEventListener('click', async e => {
+      const b = e.target.closest('[data-s]'); if(!b || S.busy) return;
+      const s = b.dataset.s;
+      if(s === 'close'){ closeSheet(); return; }
+      if(s === 'delete'){
+        if(opts.existing && !confirm(t('scanConfirmDelete'))) return;
+        closeSheet(); if(opts.onDelete) opts.onDelete(); return;
+      }
+      if(s === 'retake'){ choosePhoto(opts.src || 'cam', u => load(u), {max:2400}); return; }
+      if(!S.src) return;
+      if(s === 'auto'){ const q = detectQuad(S.src); if(q){ S.detected = q; S.q = q.map(p => ({...p})); slot('hint').textContent = t('scanFound'); } else { toast(t('scanNoDetect')); } S.cache = {}; placeHandles(); }
+      else if(s === 'full'){ S.q = insetQuad(S.src, 0); S.cache = {}; placeHandles(); }
+      else if(s === 'next'){
+        const q = sortQuad(S.q);
+        if(!isConvex(q) || quadArea(q) < S.src.width * S.src.height * 0.02){ toast(t('scanBadQuad')); return; }
+        S.q = q; await process(); if(sheet.isConnected) showEdit();
+      }
+      else if(s === 'crop'){ S.strokes = []; S.eraser = false; showCorners(); }
+      else if(s === 'filter'){ S.filter = b.dataset.f; await process(); showEdit(); }
+      else if(s === 'clean'){ S.clean = !S.clean; await process(); showEdit(); }
+      else if(s === 'eraser'){ S.eraser = !S.eraser; showEdit(); }
+      else if(s === 'undo'){ S.strokes.pop(); await process(); showEdit(); }
+      else if(s === 'rotL' || s === 'rotR'){
+        const turn = s === 'rotR' ? 1 : 3, w = S.cache.rotImg.width, h = S.cache.rotImg.height;
+        S.strokes = S.strokes.map(st => ({r:st.r, pts:st.pts.map(p => rotatePoint(p, w, h, turn))}));
+        S.rot = (S.rot + turn) % 4; await process(); showEdit();
+      }
+      else if(s === 'done' || s === 'doneNext'){
+        busy(true); await idle();
+        let out;
+        try{ out = encodeImage(S.out, 0.85); }catch(err){ log('error', 'photo', 'Scanner could not encode the page', String(err && err.message)); toast(t('photoFailed')); busy(false); return; }
+        closeSheet(); opts.onDone(out);
+        if(s === 'doneNext' && opts.onNext) opts.onNext();
+      }
+    });
+    load(url);
+  });
+}
+
+
+/* ---------- documents ---------- */
+function fileTile(f, removable, idx){
+  const inner = f.kind === 'pdf' ? `📄<span class="tiny" style="position:absolute;bottom:4px">${esc(t('pdfLabel'))}</span>` : f.url ? `<img src="${esc(f.url)}" alt="">` : `${DOC_ICON.autre}<img data-photo="${esc(f.id)}" alt="">`;
+  return `<div class="f">${inner}${removable ? `<button class="x" type="button" data-do="rmFile" data-i="${idx}" aria-label="${esc(t('delete'))}">✕</button>` : ''}${removable && f.kind === 'img' ? `<button class="ed" type="button" data-do="editFile" data-i="${idx}" aria-label="${esc(t('scanEditPage'))}">✎</button>` : ''}</div>`;
+}
+/* Camera or gallery → scanner (PDFs are added as they are). "✓ + page" chains the next page. */
+function scanPick(src, draft, refresh){
+  choosePhoto(src, (url, kind) => {
+    const add = u => { if(draft.files.length < 8){ draft.files.push({url:u, kind:'img'}); refresh(); } };
+    if(kind === 'pdf'){ if(draft.files.length < 8){ draft.files.push({url, kind}); refresh(); } return; }
+    openScanner(url, {src, onDone:add, onNext:() => scanPick(src, draft, refresh)});
+  }, {max:2400, pdf:true});
+}
+function openDocSheet(d, opts){
+  opts = opts || {};
+  const v = cur();
+  const draft = {files:d ? d.files.map(f => ({id:f.id, kind:f.kind})) : [], removed:[], type:d ? d.type : (opts.type || 'assurance'), extra:d ? d.extra.slice() : [], vehicle:null, busy:false};
+  const typeChips = () => `<div class="chips">${DOC_TYPES.map(k => `<button type="button" class="chip ${k === draft.type ? 'on' : ''}" data-do="type" data-type="${k}">${DOC_ICON[k]} ${esc(t('dt_' + k))}</button>`).join('')}</div>`;
+  const filesHtml = () => draft.files.length ? `<div class="files">${draft.files.map((f, i) => fileTile(f, true, i)).join('')}</div>` : `<p class="small muted">${esc(t('addPages'))}</p>`;
+  const extraHtml = () => draft.extra.length ? `<h4>${esc(t('extra'))}</h4>${draft.extra.map(x => `<div class="kv"><b>${esc(x.label)}</b>${esc(x.value)}</div>`).join('')}` : '';
+  openSheet(`<h3>${esc(d ? t('editDoc') : t('addDoc'))}</h3>
+    <label class="f">${esc(t('docType'))}</label><div data-slot="types">${typeChips()}</div>
+    <label class="f">${esc(t('addPages'))}</label><div data-slot="files">${filesHtml()}</div>${pickButtons(true)}
+    <div class="btns"><button class="btn block" type="button" data-do="read">${esc(t('readDoc'))}</button></div>
+    <p class="hint">${esc(t('privacy'))}</p><div data-slot="ai"></div>
+    ${inputRow(t('docTitle'), 'title', d && d.title, 'maxlength="120"')}
+    ${inputRow(t('docNumber'), 'number', d && d.number, 'maxlength="80"')}
+    ${inputRow(t('issuer'), 'issuer', d && d.issuer, 'maxlength="120"')}
+    ${inputRow(t('holder'), 'holder', d && d.holder, 'maxlength="120"')}
+    <div class="two"><div><label class="f" for="f-issue">${esc(t('issueDate'))}</label><input class="input" id="f-issue" name="issue" type="date" value="${esc(d && d.issueDate || '')}"></div>
+      <div><label class="f" for="f-expiry">${esc(t('expiry'))}</label><input class="input" id="f-expiry" name="expiry" type="date" value="${esc(d && d.expiry || '')}"></div></div>
+    ${inputRow(t('cost'), 'cost', d && d.cost, numAttrs())}
+    <label class="f" for="f-notes">${esc(t('notes'))}</label><textarea class="input" id="f-notes" name="notes" maxlength="2000">${esc(d ? d.notes : '')}</textarea>
+    <div data-slot="extra">${extraHtml()}</div>
+    <div class="btns"><button class="btn ghost" type="button" data-do="cancel">${esc(t('cancel'))}</button><button class="btn" type="button" data-do="save">${esc(t('save'))}</button></div>`,
+  sheet => {
+    const slot = slotOf(sheet), f = n => field(sheet, n);
+    const refreshFiles = () => { slot('files').innerHTML = filesHtml(); hydratePhotos(slot('files')); };
+    sheet.addEventListener('click', async e => {
+      const pk = e.target.closest('[data-pick]');
+      if(pk){ scanPick(pk.dataset.pick, draft, refreshFiles); return; }
+      const b = e.target.closest('[data-do]'); if(!b) return;
+      const act = b.dataset.do;
+      if(act === 'cancel') closeSheet();
+      else if(act === 'type'){ draft.type = b.dataset.type; slot('types').innerHTML = typeChips(); }
+      else if(act === 'editFile'){
+        const x = draft.files[Number(b.dataset.i)]; if(!x || x.kind !== 'img') return;
+        const u = x.url || await Photos.get(x.id); if(!u) return;
+        openScanner(u, {src:'cam', existing:true,
+          onDone:out => { const k = draft.files.indexOf(x); if(k < 0) return; if(x.id) draft.removed.push(x.id); draft.files[k] = {url:out, kind:'img'}; refreshFiles(); },
+          onDelete:() => { const k = draft.files.indexOf(x); if(k < 0) return; draft.files.splice(k, 1); if(x.id) draft.removed.push(x.id); refreshFiles(); }});
+      }
+      else if(act === 'rmFile'){ const [x] = draft.files.splice(Number(b.dataset.i), 1); if(x && x.id) draft.removed.push(x.id); refreshFiles(); }
+      else if(act === 'fillVehicle'){ const tv = cur(); if(tv && draft.vehicle){ fillVehicle(tv, draft.vehicle); save(); render(); b.remove(); toast(t('vehicleFilled')); } }
+      else if(act === 'read'){
+        if(draft.busy) return;
+        if(!draft.files.length){ toast(t('needFile')); return; }
+        draft.busy = true; b.disabled = true; slot('ai').innerHTML = aiBusy(t('readingDoc'));
+        try{
+          const urls = [];
+          for(const x of draft.files){ const u = x.url || await Photos.get(x.id); if(u) urls.push(u); }
+          const r = await aiReadDoc(urls, t('dt_' + draft.type));
+          if(!sheet.isConnected) return;
+          draft.type = r.type; slot('types').innerHTML = typeChips();
+          const set = (n, val) => { if(val != null && val !== '') f(n).value = val; };
+          set('title', r.title); set('number', r.number); set('issuer', r.issuer); set('holder', r.holder);
+          set('issue', r.issueDate); set('expiry', r.expiry); if(r.cost != null && !f('cost').value) f('cost').value = r.cost;
+          draft.extra = r.extra; slot('extra').innerHTML = extraHtml();
+          const vd = r.vehicle; draft.vehicle = Object.values(vd).some(Boolean) ? vd : null;
+          const tv = cur(), canFill = tv && draft.vehicle && vehicleGaps(tv, draft.vehicle);
+          slot('ai').innerHTML = `<div class="aibox small" data-ai="ok">✓ ${esc(t('docRead'))}
+            ${r.expiry ? `<div style="margin-top:4px"><b>${esc(t('expiry'))} : ${esc(fmtDay(r.expiry))}</b></div>` : ''}
+            ${r.warnings.map(w => `<div style="margin-top:4px">⚠️ ${esc(w)}</div>`).join('')}
+            ${canFill ? `<div class="btns"><button class="btn ghost" type="button" data-do="fillVehicle">${esc(t('fillVehicle'))}</button></div>` : ''}
+            <div class="tiny muted" style="margin-top:4px">${esc(t('aiModel', {m:r.model}))}</div></div>`;
+        }catch(err){ logAppError('doc', err); if(sheet.isConnected) slot('ai').innerHTML = aiError(err); }
+        finally{ draft.busy = false; b.disabled = false; }
+      }
+      else if(act === 'save'){
+        const cost = parseNum(f('cost').value);
+        if(Number.isNaN(cost) || (cost != null && cost < 0)){ toast(t('costInvalid')); return; }
+        b.disabled = true;
+        let target = cur();
+        if(!target){   // first document of the onboarding creates the vehicle
+          const vd = draft.vehicle || {};
+          target = cleanVehicle({id:uid(), name:[vd.make, vd.model].filter(Boolean).join(' ') || 'Ma voiture', make:vd.make, model:vd.model, year:vd.year,
+                                 energy:vd.energy || 'essence', plate:vd.plate, vin:vd.vin, color:vd.color, engine:vd.engine, readings:[], createdAt:Date.now()});
+          state.vehicles.push(target); state.plan.push(...defaultPlan(target.id, target.energy)); state.current = target.id;
+        }
+        const files = [];
+        for(const x of draft.files){
+          if(x.id){ files.push({id:x.id, kind:x.kind}); continue; }
+          try{ files.push({id:await Photos.put(x.url), kind:x.kind}); }
+          catch(err){ log('error', 'photo', 'Document file not saved', String(err && err.message)); toast(t('photoSaveFailed')); }
+        }
+        const data = cleanDoc({id:d ? d.id : uid(), vid:d ? d.vid : target.id, type:draft.type, title:f('title').value.trim(), number:f('number').value.trim(),
+          issuer:f('issuer').value.trim(), holder:f('holder').value.trim(), issueDate:f('issue').value || null, expiry:f('expiry').value || null,
+          cost, notes:f('notes').value, files, extra:draft.extra, createdAt:d ? d.createdAt : Date.now()});
+        if(d) Object.assign(d, data); else state.docs.push(data);
+        save();
+        for(const id of draft.removed) await Photos.del(id);
+        closeAllSheets(); if(opts.onboard){ ui.tab = 'home'; } else ui.tab = 'docs';
+        ui.view = null; render(); toast(t('docSaved'));
+      }
+    });
+    hydratePhotos(sheet);
+  });
+}
+function vehicleGaps(v, vd){ return ['plate', 'vin', 'make', 'model', 'year', 'color', 'engine'].some(k => vd[k] && !v[k]); }
+function fillVehicle(v, vd){
+  for(const k of ['plate', 'vin', 'make', 'model', 'year', 'color', 'engine']) if(vd[k] && !v[k]) v[k] = vd[k];
+  if(vd.energy && !v.readings.length && !state.services.some(s => s.vid === v.id)) v.energy = vd.energy;
+}
+function openDocDetail(d){
+  const imgs = d.files.filter(f => f.kind === 'img'), pdfs = d.files.filter(f => f.kind === 'pdf');
+  const kv = [[t('docNumber'), d.number], [t('issuer'), d.issuer], [t('holder'), d.holder], [t('issueDate'), d.issueDate && fmtDay(d.issueDate)], [t('expiry'), d.expiry && fmtDay(d.expiry)], [t('cost'), d.cost != null && fmtDA(d.cost)]].filter(x => x[1]);
+  const leads = state.settings.leads.slice().sort((a, b) => b - a).map(n => n + ' ' + t('dayUnit')).join(', ');
+  openSheet(`<div class="row between"><h3 style="margin:0">${DOC_ICON[d.type]} ${esc(docName(d))}</h3>${docPill(d)}</div>
+    <div class="viewer" style="margin-top:10px">${imgs.map(f => `<img data-photo="${esc(f.id)}" alt="">`).join('')}</div>
+    ${pdfs.map((f, i) => `<div class="row-item"><span class="e">📄</span><span class="grow">${esc(t('pdfLabel'))} ${i + 1}</span><button class="btn ghost" type="button" data-do="copy" data-id="${esc(f.id)}">${esc(t('saveCopy'))}</button></div>`).join('')}
+    ${kv.map(([k, x]) => `<div class="kv"><b>${esc(k)}</b>${esc(x)}</div>`).join('')}
+    ${d.extra.map(x => `<div class="kv"><b>${esc(x.label)}</b>${esc(x.value)}</div>`).join('')}
+    ${d.notes ? `<div class="kv"><b>${esc(t('notes'))}</b>${esc(d.notes)}</div>` : ''}
+    ${d.expiry ? `<p class="hint">🔔 ${esc(t('docReminders', {l:leads || '0 ' + t('dayUnit')}))}</p>` : ''}
+    <div class="btns"><button class="btn" type="button" data-do="edit">✎ ${esc(t('edit'))}</button>${imgs.length ? `<button class="btn ghost" type="button" data-do="copyAll">${esc(t('saveCopy'))}</button>` : ''}</div>
+    <div class="btns"><button class="btn danger" type="button" data-do="delete">🗑️ ${esc(t('delete'))}</button><button class="btn ghost" type="button" data-do="close">${esc(t('close'))}</button></div>`,
+  sheet => sheet.addEventListener('click', async e => {
+    const b = e.target.closest('[data-do]'); if(!b) return;
+    const act = b.dataset.do;
+    if(act === 'close') closeSheet();
+    else if(act === 'edit'){ closeSheet(); openDocSheet(d); }
+    else if(act === 'copy' || act === 'copyAll'){
+      if(!checkExportPerm('backup')) return;
+      const list = act === 'copy' ? d.files.filter(f => f.id === b.dataset.id) : imgs;
+      let n = 0;
+      for(const [i, f] of list.entries()){
+        const url = await Photos.get(f.id); if(!url) continue;
+        const ext = f.kind === 'pdf' ? 'pdf' : 'jpg';
+        const name = `${(docName(d).normalize('NFD').replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '') || 'document').slice(0, 40)}${list.length > 1 ? '-' + (i + 1) : ''}.${ext}`;
+        try{ if(await saveDataUrl(name, url)) n++; }catch(err){ log('error', 'backup', 'Copy failed', String(err && err.message)); }
+      }
+      if(n) toast(t('copySaved'));
+    }
+    else if(act === 'delete'){
+      if(!confirm(t('confirmDelDoc', {n:docName(d)}))) return;
+      state.docs = state.docs.filter(x => x !== d); save(); closeSheet(); render(); toast(t('deleted'));
+      for(const f of d.files) await Photos.del(f.id);
+    }
+  }));
+}
+
+/* ---------- service plan ---------- */
+function openItemSheet(p){
+  const v = cur();
+  openSheet(`<h3>${esc(t('itemSheet'))}</h3>
+    <label class="f" for="f-type">${esc(t('itemType'))}</label>
+    <select class="input" id="f-type" name="type">${Object.keys(MAINT).map(k => `<option value="${k}" ${(p ? p.type : 'custom') === k ? 'selected' : ''}>${MAINT[k][2]} ${esc(t('m_' + k))}</option>`).join('')}</select>
+    ${inputRow(t('itemName'), 'name', p && p.name, 'maxlength="80"')}
+    <div class="two"><div>${inputRow(t('everyKm'), 'km', p && p.km || '', intAttrs())}</div><div>${inputRow(t('everyMonths'), 'mo', p && p.mo || '', intAttrs())}</div></div>
+    <p class="hint">${esc(t('intervalHint'))}</p>
+    <div class="btns">${p ? `<button class="btn danger" type="button" data-do="delete">🗑️</button>` : ''}<button class="btn ghost" type="button" data-do="cancel">${esc(t('cancel'))}</button><button class="btn" type="button" data-do="save">${esc(t('save'))}</button></div>`,
+  sheet => sheet.addEventListener('click', e => {
+    const b = e.target.closest('[data-do]'); if(!b) return;
+    const f = n => field(sheet, n);
+    if(b.dataset.do === 'cancel') closeSheet();
+    else if(b.dataset.do === 'delete'){ if(!confirm(t('confirmDelItem', {n:pname(p)}))) return; state.plan = state.plan.filter(x => x !== p); save(); closeSheet(); render(); }
+    else if(b.dataset.do === 'save'){
+      const km = num(parseNum(f('km').value), 0, 1e6) || 0, mo = num(parseNum(f('mo').value), 0, 240) || 0;
+      if(!km && !mo){ toast(t('needInterval')); return; }
+      const type = f('type').value, name = f('name').value.trim();
+      if(type === 'custom' && !name){ toast(t('needName')); return; }
+      const data = cleanPlanItem({id:p ? p.id : uid(), vid:p ? p.vid : v.id, type, name, km, mo, on:true});
+      if(p) Object.assign(p, data); else state.plan.push(data);
+      save(); closeSheet(); render(); toast(t('saved'));
+    }
+  }));
+}
+function openPlanAiSheet(v){
+  if(!v.make && !v.model){ toast(t('needVehicleInfo')); openVehicleSheet(v); return; }
+  let result = null;
+  openSheet(`<h3>${esc(t('aiPlan'))}</h3><div data-slot="ai">${aiBusy(t('planning'))}</div>`, sheet => {
+    const slot = slotOf(sheet);
+    aiPlan(v).then(r => {
+      result = r; if(!sheet.isConnected) return;
+      slot('ai').innerHTML = `<p class="small">${esc(t('planIntro', {v:vehicleTitle(v) || v.name}))}</p>
+        ${r.items.map((x, i) => `<label class="check"><input type="checkbox" data-i="${i}" checked><span class="grow">${(MAINT[x.type] || MAINT.custom)[2]} <b>${esc(x.type === 'custom' ? x.name : t('m_' + x.type))}</b>
+          <span class="small muted"> — ${esc(intervalText({km:x.km, mo:x.mo}))}</span>${x.note ? `<div class="tiny muted">${esc(x.note)}</div>` : ''}</span></label>`).join('')}
+        ${r.notes ? `<p class="small">${esc(r.notes)}</p>` : ''}<div class="tiny muted">${esc(t('aiModel', {m:r.model}))}</div>
+        <div class="btns"><button class="btn ghost" type="button" data-do="cancel">${esc(t('cancel'))}</button><button class="btn" type="button" data-do="apply">${esc(t('planApply'))}</button></div>`;
+    }).catch(err => { logAppError('plan', err); if(sheet.isConnected) slot('ai').innerHTML = aiError(err) + `<div class="btns"><button class="btn ghost" type="button" data-do="cancel">${esc(t('close'))}</button></div>`; });
+    sheet.addEventListener('click', e => {
+      const b = e.target.closest('[data-do]'); if(!b) return;
+      if(b.dataset.do === 'cancel') closeSheet();
+      else if(b.dataset.do === 'apply' && result){
+        const chosen = [...sheet.querySelectorAll('input[data-i]')].filter(x => x.checked).map(x => result.items[Number(x.dataset.i)]);
+        for(const x of chosen){
+          const ex = ofV(state.plan, v).find(p => x.type !== 'custom' ? p.type === x.type : p.type === 'custom' && p.name.toLowerCase() === x.name.toLowerCase());
+          if(ex) Object.assign(ex, {km:x.km, mo:x.mo, on:true});
+          else state.plan.push(cleanPlanItem({id:uid(), vid:v.id, type:x.type, name:x.type === 'custom' ? x.name : '', km:x.km, mo:x.mo}));
+        }
+        save(); closeSheet(); render(); toast(t('planApplied'));
+      }
+    });
+  });
+}
+
+/* ---------- services ---------- */
+function openServiceSheet(s, pid){
+  const v = s ? veh(s.vid) : cur();
+  const plan = planOf(v);
+  const pre = new Set(s ? s.items.map(i => i.pid) : pid ? [pid] : []);
+  const oil = plan.find(p => p.id === pid && p.type === 'oil');
+  if(oil){ const fl = plan.find(p => p.type === 'oil_filter'); if(fl) pre.add(fl.id); }
+  const k = estKm(v);
+  openSheet(`<h3>🔧 ${esc(t('serviceSheet'))}</h3>
+    <div class="two"><div><label class="f" for="f-date">${esc(t('date'))}</label><input class="input" id="f-date" name="date" type="date" max="${today()}" value="${esc(s ? s.date : today())}"></div>
+      <div>${inputRow(t('startKm'), 'km', s ? s.km : '', intAttrs() + ` placeholder="${esc(k != null ? nf(k) : '')}"`)}</div></div>
+    <label class="f">${esc(t('works'))}</label>
+    ${plan.map(p => `<label class="check"><input type="checkbox" data-pid="${esc(p.id)}" ${pre.has(p.id) ? 'checked' : ''}><span>${picon(p)} ${esc(pname(p))}</span></label>`).join('')}
+    ${inputRow(t('otherWork'), 'other', s && s.other, 'maxlength="500"')}
+    <div class="two"><div>${inputRow(t('cost'), 'cost', s && s.cost, numAttrs())}</div><div>${inputRow(t('garage'), 'garage', s && s.garage, 'maxlength="120"')}</div></div>
+    <label class="f" for="f-notes">${esc(t('notes'))}</label><textarea class="input" id="f-notes" name="notes" maxlength="2000">${esc(s ? s.notes : '')}</textarea>
+    <div class="btns">${s ? `<button class="btn danger" type="button" data-do="delete">🗑️</button>` : ''}<button class="btn ghost" type="button" data-do="cancel">${esc(t('cancel'))}</button><button class="btn" type="button" data-do="save">${esc(t('save'))}</button></div>`,
+  sheet => sheet.addEventListener('click', e => {
+    const b = e.target.closest('[data-do]'); if(!b) return;
+    const f = n => field(sheet, n);
+    if(b.dataset.do === 'cancel') closeSheet();
+    else if(b.dataset.do === 'delete'){ if(!confirm(t('confirmDelService'))) return; state.services = state.services.filter(x => x !== s); save(); closeSheet(); render(); toast(t('deleted')); }
+    else if(b.dataset.do === 'save'){
+      const date = f('date').value, km = parseNum(f('km').value), cost = parseNum(f('cost').value);
+      const items = [...sheet.querySelectorAll('input[data-pid]')].filter(x => x.checked).map(x => { const p = plan.find(q => q.id === x.dataset.pid); return {pid:p.id, name:pname(p)}; });
+      const other = f('other').value.trim();
+      if(!isDate(date) || date > today()){ toast(t('kmInvalid')); return; }
+      if(!items.length && !other){ toast(t('needWork')); return; }
+      if(km != null && (Number.isNaN(km) || km < 0 || km > 5e6)){ toast(t('kmInvalid')); return; }
+      if(Number.isNaN(cost) || (cost != null && cost < 0)){ toast(t('costInvalid')); return; }
+      if(km != null){ const bad = kmConflict(v, date, Math.round(km), s); if(bad){ toast(bad); return; } }
+      const data = cleanService({id:s ? s.id : uid(), vid:v.id, date, km, items, other, cost, garage:f('garage').value.trim(), notes:f('notes').value});
+      if(s) Object.assign(s, data); else state.services.push(data);
+      save(); closeAllSheets(); render(); toast(t('serviceSaved'));
+    }
+  }));
+}
+
+/* ---------- fuel ---------- */
+function openFuelSheet(fu){
+  const v = fu ? veh(fu.vid) : cur();
+  const fs = fuelStats(v), price = fu && fu.liters ? fu.total / fu.liters : fs.lastPrice;
+  openSheet(`<h3>⛽ ${esc(t('fuelSheet'))}</h3>
+    <div class="two"><div><label class="f" for="f-date">${esc(t('date'))}</label><input class="input" id="f-date" name="date" type="date" max="${today()}" value="${esc(fu ? fu.date : today())}"></div>
+      <div>${inputRow(t('startKm'), 'km', fu ? fu.km : '', intAttrs() + ` placeholder="${esc(estKm(v) != null ? nf(estKm(v)) : '')}"`)}</div></div>
+    <div class="two"><div>${inputRow(t('liters'), 'liters', fu ? fu.liters : '', numAttrs())}</div><div>${inputRow(t('pricePerL'), 'price', price ? round2(price) : '', numAttrs())}</div></div>
+    ${inputRow(t('total'), 'total', fu ? fu.total : '', numAttrs())}
+    <label class="check"><input type="checkbox" name="full" ${!fu || fu.full ? 'checked' : ''}><span>${esc(t('fullTank'))}</span></label>
+    <div class="btns">${fu ? `<button class="btn danger" type="button" data-do="delete">🗑️</button>` : ''}<button class="btn ghost" type="button" data-do="cancel">${esc(t('cancel'))}</button><button class="btn" type="button" data-do="save">${esc(t('save'))}</button></div>`,
+  sheet => {
+    const f = n => field(sheet, n);
+    sheet.addEventListener('input', e => {   // total = litres × price, or price = total ÷ litres
+      const L = parseNum(f('liters').value), P = parseNum(f('price').value), T = parseNum(f('total').value);
+      if((e.target.name === 'liters' || e.target.name === 'price') && L > 0 && P > 0) f('total').value = round2(L * P);
+      else if(e.target.name === 'total' && L > 0 && T > 0) f('price').value = round2(T / L);
+    });
+    sheet.addEventListener('click', e => {
+      const b = e.target.closest('[data-do]'); if(!b) return;
+      if(b.dataset.do === 'cancel') closeSheet();
+      else if(b.dataset.do === 'delete'){ if(!confirm(t('confirmDelFuel'))) return; state.fuel = state.fuel.filter(x => x !== fu); save(); closeSheet(); render(); toast(t('deleted')); }
+      else if(b.dataset.do === 'save'){
+        const date = f('date').value, km = parseNum(f('km').value), L = parseNum(f('liters').value), T = parseNum(f('total').value);
+        if(!isDate(date) || date > today()){ toast(t('kmInvalid')); return; }
+        if(!(L > 0) || !(T > 0)){ toast(t('needLiters')); return; }
+        if(km != null && (Number.isNaN(km) || km < 0 || km > 5e6)){ toast(t('kmInvalid')); return; }
+        if(km != null){ const bad = kmConflict(v, date, Math.round(km), fu); if(bad){ toast(bad); return; } }
+        const data = cleanFuel({id:fu ? fu.id : uid(), vid:v.id, date, km, liters:round2(L), total:round2(T), full:f('full').checked});
+        if(fu) Object.assign(fu, data); else state.fuel.push(data);
+        save(); closeSheet(); render(); toast(t('fuelSaved'));
+      }
+    });
+  });
+}
+
+/* ---------- mechanic ---------- */
+function answerHtml(a, model){
+  const lk = {high:'bad', medium:'warn', low:'good'};
+  return `<div class="answer" data-answer><div class="row" style="flex-wrap:wrap;gap:6px"><span class="pill ${{low:'good', medium:'warn', high:'bad', critical:'bad'}[a.urgency]}">${urgIcon(a.urgency)} ${esc(t('u_' + a.urgency))}</span>
+      <span class="pill ${{yes:'good', caution:'warn', no:'bad'}[a.canDrive]}">🚗 ${esc(t('drive_' + a.canDrive))}</span></div>
+    <p>${esc(a.summary)}</p>
+    ${a.safety ? `<div class="aibox err small">⚠️ ${esc(a.safety)}</div>` : ''}
+    ${a.causes.length ? `<h4>${esc(t('causes'))}</h4>${a.causes.map(x => `<div class="kv"><div class="row between"><b style="color:var(--text);font-size:14px">${esc(x.name)}</b><span class="pill ${lk[x.likelihood]}">${esc(t('lk_' + x.likelihood))}</span></div>${x.why ? `<div class="small">${esc(x.why)}</div>` : ''}</div>`).join('')}` : ''}
+    ${a.checks.length ? `<h4>${esc(t('checks'))}</h4><ul>${a.checks.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+    ${a.fixes.length ? `<h4>${esc(t('fixes'))}</h4><ol>${a.fixes.map(x => `<li><b>${esc(x.action)}</b><div class="tiny muted">${esc(x.diy ? t('diy') : t('garageNeeded'))} · ${esc(t('diff_' + x.difficulty))}${x.cost ? ' · ' + esc(x.cost) + ' (' + esc(t('estimate')) + ')' : ''}</div></li>`).join('')}</ol>` : ''}
+    ${a.mechanic ? `<h4>🔧 ${esc(t('mechanic'))}</h4><p class="small">${esc(a.mechanic)}</p>` : ''}
+    ${a.followUps.length ? `<div class="chips" style="margin-top:8px">${a.followUps.map(q => `<button type="button" class="chip" data-do="fu" data-q="${esc(q)}">❓ ${esc(q)}</button>`).join('')}</div>` : ''}
+    ${model ? `<div class="tiny muted" style="margin-top:6px">${esc(t('aiModel', {m:model}))}</div>` : ''}</div>`;
+}
+function threadHtml(th){
+  return th.msgs.map(m => m.r === 'u' ? `<div class="bubble">${esc(m.text || '📷')}${m.photo ? photoHtml(m.photo, 'wide', '📷') : ''}</div>` : answerHtml(m.a, m.model)).join('');
+}
+async function runThread(th, sheet){
+  const v = veh(th.vid);
+  const slot = sheet ? slotOf(sheet)('ai') : $('#aiSlot');
+  try{
+    const {a, model} = await aiMechanic(th, v);
+    th.msgs.push({r:'a', a, model}); save();
+    return true;
+  }catch(err){
+    logAppError('mechanic', err);
+    const s2 = sheet && sheet.isConnected ? slotOf(sheet)('ai') : $('#aiSlot');
+    if(s2) s2.innerHTML = aiError(err);
+    return false;
+  }
+}
+function openThreadSheet(th){
+  const lastIsUser = () => th.msgs[th.msgs.length - 1].r === 'u';
+  openSheet(`<div class="row between"><h3 style="margin:0">🤖 ${esc(t('aiTitle'))}</h3><button class="icon-btn" type="button" data-do="delete" aria-label="${esc(t('delete'))}">🗑️</button></div>
+    <div data-slot="msgs">${threadHtml(th)}</div><div data-slot="ai"></div>
+    <div data-slot="retry">${lastIsUser() ? `<div class="btns"><button class="btn" type="button" data-do="retry">🔄 ${esc(t('ask'))}</button></div>` : ''}</div>
+    <textarea class="input" name="fu" maxlength="2000" placeholder="${esc(t('followUp'))}" style="margin-top:10px"></textarea>
+    <div class="btns"><button class="btn ghost" type="button" data-do="close">${esc(t('close'))}</button><button class="btn" type="button" data-do="send">${esc(t('send'))}</button></div>
+    <p class="hint">${esc(t('aiDisclaimer'))}</p>`,
+  sheet => {
+    const slot = slotOf(sheet);
+    let busy = false;
+    const refresh = () => { slot('msgs').innerHTML = threadHtml(th); slot('retry').innerHTML = ''; hydratePhotos(sheet); };
+    const go = async () => {
+      busy = true; slot('ai').innerHTML = aiBusy(t('asking')); slot('retry').innerHTML = '';
+      const ok = await runThread(th, sheet);
+      busy = false;
+      if(!sheet.isConnected){ render(); return; }
+      if(ok){ slot('ai').innerHTML = ''; refresh(); const last = sheet.querySelectorAll('[data-answer]'); if(last.length) last[last.length - 1].scrollIntoView({block:'start'}); }
+      else slot('retry').innerHTML = `<div class="btns"><button class="btn" type="button" data-do="retry">🔄 ${esc(t('ask'))}</button></div>`;
+      render();
+    };
+    sheet.addEventListener('click', e => {
+      const b = e.target.closest('[data-do]'); if(!b) return;
+      const act = b.dataset.do;
+      if(act === 'close') closeSheet();
+      else if(act === 'fu'){ field(sheet, 'fu').value = b.dataset.q + ' '; }
+      else if(act === 'delete'){ if(!confirm(t('confirmDelThread'))) return; state.threads = state.threads.filter(x => x !== th); save(); closeSheet(); render(); th.msgs.forEach(m => m.photo && Photos.del(m.photo)); }
+      else if((act === 'retry' || act === 'send') && !busy){
+        if(act === 'send'){ const q = field(sheet, 'fu').value.trim(); if(!q){ toast(t('needQuestion')); return; } th.msgs.push({r:'u', text:q, photo:null}); save(); field(sheet, 'fu').value = ''; refresh(); }
+        go();
+      }
+    });
+  });
+}
+async function ask(){
+  const v = cur(); if(!v || ui.aiBusy) return;
+  const q = ($('#q') ? $('#q').value : ui.aiText).trim();
+  if(!q && !ui.aiPhoto){ toast(t('needQuestion')); return; }
+  let photo = null;
+  if(ui.aiPhoto){ try{ photo = await Photos.put(ui.aiPhoto); }catch(err){ log('error', 'photo', 'Question photo not saved', String(err && err.message)); } }
+  const th = cleanThread({id:uid(), vid:v.id, date:new Date().toISOString(), msgs:[{r:'u', text:q, photo}]});
+  state.threads.push(th); save();                                // the question is kept even if Gemini fails
+  ui.aiText = ''; ui.aiPhoto = null; ui.aiBusy = true; render();
+  const ok = await runThread(th, null);
+  ui.aiBusy = false;
+  if(ui.tab === 'ai' && !ui.view){ const keep = !ok && $('#aiSlot') ? $('#aiSlot').innerHTML : ''; render(); if(keep) $('#aiSlot').innerHTML = keep; }
+  if(ok) openThreadSheet(th);
+}
+
+/* ---------- calendar, files, backup ---------- */
+function icsEsc(s){ return String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); }
+function atHour(s){ const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d, state.settings.hour, 0, 0, 0).getTime(); }
+function futureAt(s){ let at = atHour(s); const now = Date.now(); if(at <= now){ at = atHour(today()); if(at <= now) at = atHour(addDays(today(), 1)); } return at; }
+function buildIcs(){
+  const pad = n => String(n).padStart(2, '0'), H = pad(state.settings.hour);
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
+  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Ortho Tips//Ma voiture//' + lang().toUpperCase(), 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
+  const ev = (uid, date, title, desc, leads) => {
+    L.push('BEGIN:VEVENT', `UID:${uid}@${ID}`, 'DTSTAMP:' + stamp, `DTSTART:${date.replace(/-/g, '')}T${H}0000`, 'DURATION:PT30M', 'SUMMARY:' + icsEsc(title), 'DESCRIPTION:' + icsEsc(desc));
+    for(const n of [0, ...leads]) L.push('BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + icsEsc(title), 'TRIGGER:' + (n ? `-P${n}D` : 'PT0M'), 'END:VALARM');
+    L.push('END:VEVENT');
+  };
+  let n = 0;
+  for(const v of state.vehicles){
+    for(const d of ofV(state.docs, v)) if(d.expiry && d.expiry >= today()){ n++; ev('doc-' + d.id, d.expiry, t('nDocDue', {doc:docName(d)}) + ' — ' + v.name, t('nDocDueBody'), state.settings.leads); }
+    for(const p of planOf(v)){ const r = maintStatus(p, v); if(r.est && r.est >= today()){ n++; ev('mnt-' + p.id, r.est, t('nMntDue', {x:pname(p)}) + ' — ' + v.name, t('nextDue', {w:dueText(r)}), [7]); } }
+  }
+  L.push('END:VCALENDAR');
+  return n ? L.join('\r\n') + '\r\n' : null;
+}
+async function saveText(name, text, mime){
+  if(HOST) return HOST.saveFile(name, text, mime);
+  const url = URL.createObjectURL(new Blob([text], {type:mime}));
+  const a = Object.assign(document.createElement('a'), {href:url, download:name});
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000);
+  return true;
+}
+function checkExportPerm(ctx){
+  if(HOST && !HOST.permissions.has('import_export')){ log('error', ctx, 'import_export not granted'); toast('⚠️ ' + t('noPickPerm')); return false; }
+  return true;
+}
+
+async function saveDataUrl(name, url){
+  const i = url.indexOf(','), mime = url.slice(5, url.indexOf(';')), bin = atob(url.slice(i + 1));
+  const bytes = new Uint8Array(bin.length); for(let k = 0; k < bin.length; k++) bytes[k] = bin.charCodeAt(k);
+  if(HOST) return HOST.saveFile(name, bytes, mime);
+  const blobUrl = URL.createObjectURL(new Blob([bytes], {type:mime}));
+  const a = Object.assign(document.createElement('a'), {href:blobUrl, download:name}); document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 5000); return true;
+}
+function allFileIds(s){ return [...s.vehicles.map(v => v.photo), ...s.docs.flatMap(d => d.files.map(f => f.id)), ...s.threads.flatMap(th => th.msgs.map(m => m.photo))].filter(Boolean); }
+async function exportBackup(){
+  if(!checkExportPerm('backup')) return;
+  flush();
+  const files = {};
+  for(const id of allFileIds(state)){ const v = await Photos.get(id); if(v) files[id] = v; }
+  const ok = await saveText(`${ID}-${today()}.json`, JSON.stringify({app:ID, v:SCHEMA, date:new Date().toISOString(), data:state, files}), 'application/json');
+  if(ok) toast(t('backupSaved'));
+}
+$('#pickJson').addEventListener('change', async e => {
+  const file = e.target.files && e.target.files[0]; e.target.value = '';
+  if(!file) return;
+  try{
+    const raw = JSON.parse(await file.text());
+    if(!raw || raw.app !== ID || !raw.data || typeof raw.data !== 'object' || !Array.isArray(raw.data.vehicles)) throw new Error('format');
+    if(!confirm(t('confirmRestore'))) return;
+    const next = migrate(raw.data);
+    const files = raw.files && typeof raw.files === 'object' ? raw.files : {};
+    for(const [id, url] of Object.entries(files))
+      if(typeof url === 'string' && /^data:(image\/|application\/pdf)/.test(url) && /^[a-z0-9]{1,60}$/i.test(id)){
+        try{ await Photos.put(url, id); }catch(err){ log('error', 'backup', 'File not restored: ' + id, String(err && err.message)); }
+      }
+    const keep = new Set(allFileIds(next));
+    for(const id of allFileIds(state)) if(!keep.has(id)) await Photos.del(id);
+    next.gemini = state.gemini;
+    state = next; loadFailed = false; flush();
+    ui.view = null; ui.tab = 'home'; render(); toast(t('restored'));
+  }catch(err){ log('error', 'backup', 'Restore refused', String(err && err.message)); alert(t('badBackup')); }
+});
+
+/* =====================================================================
+   Notifications — scheduled by the app (OrthoTips.notifications, bridge v3+)
+   ===================================================================== */
+function wantedReminders(){
+  const out = [], now = Date.now(), multi = state.vehicles.length > 1;
+  const tag = v => multi ? ' — ' + v.name : '';
+  for(const v of state.vehicles){
+    for(const d of ofV(state.docs, v)){
+      if(!d.expiry) continue;
+      for(const n of state.settings.leads){
+        const at = atHour(addDays(d.expiry, -n));
+        if(at > now) out.push({id:`doc-${d.id}-${n}`, title:t('nDocSoon', {doc:docName(d), n}) + tag(v), body:t('nDocSoonBody', {d:fmtDay(d.expiry)}), at, repeatDays:0, data:'doc:' + d.id});
+      }
+      const over = d.expiry < today();
+      out.push({id:`doc-${d.id}-due`, title:(over ? t('nDocOver', {doc:docName(d)}) : t('nDocDue', {doc:docName(d)})) + tag(v), body:t('nDocDueBody'), at:futureAt(d.expiry), repeatDays:1, data:'doc:' + d.id});
+    }
+    let kmBased = false;
+    for(const p of planOf(v)){
+      if(p.km) kmBased = true;
+      const r = maintStatus(p, v); if(!r.est) continue;
+      const body = t('nMntBody', {w:t('nextDue', {w:dueText(r)})});
+      const soon = atHour(addDays(r.est, -7));
+      if(soon > now) out.push({id:`mnt-${p.id}-soon`, title:t('nMntSoon', {x:pname(p)}) + tag(v), body, at:soon, repeatDays:0, data:'mnt:' + p.id});
+      out.push({id:`mnt-${p.id}-due`, title:t('nMntDue', {x:pname(p)}) + tag(v), body, at:futureAt(r.est), repeatDays:3, data:'mnt:' + p.id});
+    }
+    const L = lastReading(v);
+    if(kmBased && L) out.push({id:`odo-${v.id}`, title:t('nOdo') + tag(v), body:t('nOdoBody', {v:v.name}), at:futureAt(addDays(L.date, 7)), repeatDays:7, data:'odo:' + v.id});
+  }
+  return out.map(x => Object.assign(x, {title:x.title.slice(0, 100), body:x.body.slice(0, 300)})).sort((a, b) => a.at - b.at).slice(0, 60);
+}
+function notifStateHtml(){
+  if(!state.settings.notify) return `<p class="small muted">${esc(t('notifOff'))}</p>`;
+  if(Notif.failed) return `<div class="aibox err small">⚠️ ${esc(t('notifError'))}</div>`;
+  const st = Notif.status;
+  if(!st) return `<p class="small muted">${esc(t('notifWait'))}</p>`;
+  let h = '';
+  if(!st.granted) h += `<div class="aibox small">${esc(Notif.asked ? t('notifDenied') : t('notifAsk'))}<div class="btns"><button class="btn" type="button" data-act="notifAllow">${esc(t('notifAllow'))}</button></div></div>`;
+  if(Notif.count) h += `<p class="small" data-notif-count="${Notif.count}">${esc(t('notifActive', {n:Notif.count}))}${Notif.next ? ` <span class="muted">· ${esc(t('notifNext', {d:fmtTime(Notif.next)}))}</span>` : ''}</p>`;
+  return h;
+}
+const Notif = {
+  status:null, count:0, next:0, failed:false, asked:false, timer:0, running:null, again:false,
+  api(){ return HOST && HOST.notifications && typeof HOST.notifications.schedule === 'function' ? HOST.notifications : null; },
+  supported(){ return !!(this.api() && HOST.permissions.has('notifications')); },
+  sync(){ if(!this.supported()) return; clearTimeout(this.timer); this.timer = setTimeout(() => this.run(), 300); },
+  paint(){ const el = document.getElementById('notifState'); if(el) el.innerHTML = notifStateHtml(); },
+  async refreshStatus(){
+    try{ this.status = await this.api().status(); }
+    catch(e){ this.status = null; log('error', 'notif', 'Status unavailable', String(e && e.message)); }
+    this.paint();
+  },
+  async run(){
+    if(this.running){ this.again = true; return; }
+    if(!this.supported() || loadFailed) return;
+    const api = this.api();
+    this.running = (async () => {
+      let errors = 0;
+      const step = async (what, fn) => { try{ return await fn(); }catch(e){ errors++; log('error', 'notif', what, String(e && e.message)); return null; } };
+      const existing = (await step('List failed', () => api.list())) || [];
+      const want = state.settings.notify ? wantedReminders() : [];
+      const ids = new Set(want.map(w => w.id));
+      for(const n of existing) if(!ids.has(n.id)) await step('Cancel failed: ' + n.id, () => api.cancel(n.id));
+      let ok = 0;
+      for(const w of want){
+        const c = existing.find(n => n.id === w.id);
+        if(c && c.title === w.title && c.body === w.body && Number(c.at) === w.at && Number(c.repeatDays) === w.repeatDays && c.data === w.data){ ok++; continue; }
+        if(await step('Schedule failed: ' + w.id, () => api.schedule(w))) ok++;
+      }
+      this.count = ok; this.next = want.length ? want[0].at : 0; this.failed = errors > 0;
+      this.paint();
+    })();
+    try{ await this.running; } finally{ this.running = null; }
+    if(this.again){ this.again = false; this.run(); }
+  },
+  /* A tapped reminder opens what it is about. */
+  openFrom(ev){
+    const data = ev && ev.data ? String(ev.data) : '';
+    const [kind, id] = [data.slice(0, data.indexOf(':')), data.slice(data.indexOf(':') + 1)];
+    closeAllSheets(); ui.view = null;
+    if(kind === 'doc'){ const d = state.docs.find(x => x.id === id); if(!d) return false; state.current = d.vid; ui.tab = 'docs'; ui.pending = () => openDocDetail(d); return true; }
+    if(kind === 'mnt'){ const p = state.plan.find(x => x.id === id); if(!p) return false; state.current = p.vid; ui.tab = 'maint'; return true; }
+    if(kind === 'odo'){ const v = veh(id); if(!v) return false; state.current = v.id; ui.tab = 'home'; ui.pending = () => openKmSheet(v); return true; }
+    return false;
+  }
+};
+function runPending(){ const f = ui.pending; ui.pending = null; if(f) f(); }
+
+/* =====================================================================
+   Actions
+   ===================================================================== */
+async function testKey(){
+  ui.keyBusy = true; ui.keyMsg = null; render();
+  try{ const list = await refreshModels(true); ui.keyMsg = `<div class="aibox" data-ok="1">${esc(t('modelsOk', {m:candidates()[0] || list[0]}))}</div>`; }
+  catch(e){ logAppError('models', e); ui.keyMsg = aiError(e); }
+  ui.keyBusy = false;
+  if(ui.view === 'settings') render();
+}
+document.addEventListener('click', async e => {
+  const el = e.target.closest('[data-act]');
+  if(!el || (el.closest('.sheet') && el.dataset.act !== 'goSettings')) return;
+  const act = el.dataset.act, id = el.dataset.id, v = cur();
+  switch(act){
+    case 'tab': ui.tab = el.dataset.tab; ui.view = null; render(); window.scrollTo(0, 0); break;
+    case 'settings': ui.view = 'settings'; ui.keyMsg = null; render(); window.scrollTo(0, 0); break;
+    case 'home': ui.view = ui.view === 'log' ? 'settings' : null; render(); window.scrollTo(0, 0); break;
+    case 'goSettings': closeAllSheets(); ui.view = 'settings'; render(); window.scrollTo(0, 0); break;
+    case 'switchVehicle': if(state.vehicles.length) openSwitchSheet(); else openVehicleSheet(null); break;
+    case 'addVehicle': openVehicleSheet(null); break;
+    case 'editVehicle': { const x = veh(id); if(x) openVehicleSheet(x); break; }
+    case 'onboardCG': openDocSheet(null, {type:'carte_grise', onboard:true}); break;
+    case 'km': if(v) openKmSheet(v); break;
+    case 'addDoc': openDocSheet(null); break;
+    case 'openDoc': { const d = state.docs.find(x => x.id === id); if(d) openDocDetail(d); break; }
+    case 'fab': if(ui.tab === 'docs') openDocSheet(null); else if(ui.seg === 'fuel') openFuelSheet(null); else openServiceSheet(null, null); break;
+    case 'aiPlan': if(v) openPlanAiSheet(v); break;
+    case 'addItem': if(v) openItemSheet(null); break;
+    case 'editItem': { const p = state.plan.find(x => x.id === id); if(p) openItemSheet(p); break; }
+    case 'service': if(v) openServiceSheet(null, el.dataset.pid || null); break;
+    case 'editService': { const s = state.services.find(x => x.id === id); if(s) openServiceSheet(s); break; }
+    case 'addFuel': if(v) openFuelSheet(null); break;
+    case 'editFuel': { const f = state.fuel.find(x => x.id === id); if(f) openFuelSheet(f); break; }
+    case 'seg': ui.seg = el.dataset.seg; render(); break;
+    case 'year': ui.year = el.dataset.y; render(); break;
+    case 'qp': { const q = $('#q'); ui.aiText = t('q_' + el.dataset.q + '_t'); if(q) q.value = ui.aiText; if(el.dataset.q === 'light' && !ui.aiPhoto) choosePhoto('cam', url => { ui.aiPhoto = url; ui.aiText = $('#q') ? $('#q').value : ui.aiText; render(); }); break; }
+    case 'aiPick': choosePhoto(el.dataset.src, url => { ui.aiPhoto = url; ui.aiText = $('#q') ? $('#q').value : ui.aiText; render(); }); break;
+    case 'aiClear': ui.aiPhoto = null; ui.aiText = $('#q') ? $('#q').value : ui.aiText; render(); break;
+    case 'ask': await ask(); break;
+    case 'openThread': { const th = state.threads.find(x => x.id === id); if(th) openThreadSheet(th); break; }
+    case 'toggleKey': { const inp = $('#apikey'); const val = inp ? inp.value : ''; ui.showKey = !ui.showKey; render(); $('#apikey').value = val; break; }
+    case 'saveKey': {
+      const k = ($('#apikey').value || '').trim();
+      if(k.length < 20 || /\s/.test(k)){ ui.keyMsg = `<div class="aibox err">${esc(t('keyInvalidFormat'))}</div>`; log('warn', 'models', 'Key rejected before saving (format)'); render(); break; }
+      try{ storeSet(KEY_API, k); }catch(err){ log('error', 'storage', 'Key not saved', String(err && err.message)); break; }
+      state.gemini = {models:[], fetchedAt:0, lastModel:''}; save(); toast(t('keySaved'));
+      await testKey(); break;
+    }
+    case 'testKey': case 'refreshModels': await testKey(); break;
+    case 'removeKey': storeDel(KEY_API); state.gemini = {models:[], fetchedAt:0, lastModel:''}; ui.keyMsg = null; save(); render(); toast(t('keyRemoved')); break;
+    case 'lead': { const n = Number(el.dataset.n), L = state.settings.leads; state.settings.leads = L.includes(n) ? L.filter(x => x !== n) : [...L, n].sort((a, b) => b - a); save(); render(); break; }
+    case 'notifAllow': {
+      try{ Notif.status = await Notif.api().requestAccess(); }catch(err){ log('error', 'notif', 'Permission request failed', String(err && err.message)); }
+      Notif.asked = true;
+      if(Notif.status && !Notif.status.granted) log('warn', 'notif', 'Android notifications refused');
+      Notif.paint(); break;
+    }
+    case 'openLog': ui.view = 'log'; state.seenLog = Date.now(); save(); render(); window.scrollTo(0, 0); break;
+    case 'clearLog': if(confirm(t('confirmClearLog'))){ storeDel(KEY_LOG); render(); toast(t('logCleared')); } break;
+    case 'exportLog': if(checkExportPerm('backup')){ const ok = await saveText(`${ID}-journal-${today()}.txt`, logText(), 'text/plain'); if(ok) toast(t('backupSaved')); } break;
+    case 'exportIcs': {
+      const ics = buildIcs(); if(!ics){ toast(t('icsNone')); break; }
+      if(!checkExportPerm('ics')) break;
+      try{ if(await saveText('echeances-voiture.ics', ics, 'text/calendar')) toast(t('icsSaved')); }catch(err){ log('error', 'ics', 'Calendar export failed', String(err && err.message)); }
+      break;
+    }
+    case 'exportJson': await exportBackup(); break;
+    case 'importJson': if(checkExportPerm('backup')) $('#pickJson').click(); break;
+  }
+});
+document.addEventListener('change', e => {
+  const el = e.target, k = el.dataset && el.dataset.input; if(!k) return;
+  const s = state.settings;
+  if(k === 'hour') s.hour = clampInt(el.value, 0, 23, 9);
+  else if(k === 'model'){ s.model = el.value; state.gemini.lastModel = ''; }
+  else if(k === 'lang') s.lang = el.value;
+  else if(k === 'place') s.place = el.value.trim().slice(0, 120);
+  else if(k === 'notify') s.notify = !!el.checked;
+  save();
+  if(k !== 'place') render();
+});
+document.addEventListener('input', e => { if(e.target.id === 'q') ui.aiText = e.target.value; });
+document.getElementById('view').addEventListener('focusin', e => {
+  const f = e.target; if(!f.matches || !f.matches('input,textarea')) return;
+  setTimeout(() => { fitViewport(); f.scrollIntoView({block:'center', behavior:'smooth'}); }, 320);
+});
+
+/* ---------- theme, Back, start ---------- */
+function applyTheme(th){ document.documentElement.dataset.theme = th === 'dark' ? 'dark' : 'light'; }
+if(HOST){
+  applyTheme(HOST.theme); HOST.onThemeChange(applyTheme);
+  HOST.onBack(() => {
+    if(ui.sheets.length){ closeSheet(); return true; }
+    if(ui.view){ ui.view = ui.view === 'log' ? 'settings' : null; render(); return true; }
+    if(ui.tab !== 'home'){ ui.tab = 'home'; render(); return true; }
+    return false;
+  });
+} else {
+  const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  applyTheme(mq && mq.matches ? 'dark' : 'light');
+  if(mq && mq.addEventListener) mq.addEventListener('change', ev => applyTheme(ev.matches ? 'dark' : 'light'));
+}
+if(Notif.supported()){
+  Notif.openFrom(HOST.notifications.launch);
+  HOST.notifications.onOpen(ev => { if(Notif.openFrom(ev)){ render(); runPending(); window.scrollTo(0, 0); } });
+}
+render(); runPending();
+if(Notif.supported()){ Notif.refreshStatus(); Notif.sync(); }
+setTimeout(() => {
+  if(!apiKey() || (HOST && !HOST.permissions.has('internet'))) return;
+  refreshModels(false).then(() => { if(ui.view === 'settings') render(); }).catch(() => {});
+}, 0);
+
+</script>
+</body>
+</html>

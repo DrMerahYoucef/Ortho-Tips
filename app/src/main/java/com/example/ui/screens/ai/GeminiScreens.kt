@@ -223,6 +223,7 @@ fun GeminiSettingsScreen(viewModel: GeminiSettingsViewModel, onNavigateBack: () 
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(stringResource(R.string.gemini_privacy_title), style = MaterialTheme.typography.titleSmall)
                         Text(stringResource(R.string.gemini_privacy_body), style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.gemini_extensions_note), style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }

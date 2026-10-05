@@ -1,0 +1,19 @@
+{
+  "entry": "index.html",
+  "contentSchema": 1,
+  "kind": "html",
+  "author": "Ortho Tips",
+  "permissions": [
+    "internet",
+    "storage",
+    "import_export",
+    "notifications"
+  ],
+  "name": "Ma voiture",
+  "icon": "🚗",
+  "description": "Papiers du véhicule, vidange et entretien au kilomètre, carburant, dépenses, rappels et conseils de mécanicien avec Gemini.",
+  "minAppVersionCode": 0,
+  "attributes": {},
+  "id": "ma-voiture",
+  "version": "1.1"
+}

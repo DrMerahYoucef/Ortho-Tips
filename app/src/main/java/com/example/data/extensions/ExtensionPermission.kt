@@ -21,6 +21,9 @@ enum class ExtensionPermission(val key: String, val implemented: Boolean) {
 
     /** Read, create and update patient records and add media (never delete). */
     PATIENTS("patients", implemented = true),
+
+    /** Gemini through the app's own key (Réglages → Gemini); the key never reaches the extension. */
+    GEMINI("gemini", implemented = true),
     STORAGE("storage", implemented = true),
     ASSETS("assets", implemented = true),
     IMPORT_EXPORT("import_export", implemented = true),
