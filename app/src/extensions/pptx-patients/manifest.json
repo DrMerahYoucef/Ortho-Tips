@@ -6,6 +6,7 @@
   "permissions": [
     "internet",
     "patients",
+    "gemini",
     "storage",
     "import_export"
   ],
@@ -15,5 +16,5 @@
   "minAppVersionCode": 0,
   "attributes": {},
   "id": "pptx-patients",
-  "version": "1.7"
+  "version": "1.8"
 }

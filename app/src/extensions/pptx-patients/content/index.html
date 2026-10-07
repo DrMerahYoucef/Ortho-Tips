@@ -6,10 +6,10 @@
 <meta name="ortho-ext-id" content="pptx-patients">
 <meta name="ortho-ext-name" content="Import PowerPoint">
 <meta name="ortho-ext-description" content="Importe les patients, leurs images et vidéos depuis vos présentations .pptx : lecture sur le téléphone, surlignage des champs, vérification avant l'ajout. Gemini en option.">
-<meta name="ortho-ext-version" content="1.7">
+<meta name="ortho-ext-version" content="1.8">
 <meta name="ortho-ext-icon" content="📥">
 <meta name="ortho-ext-author" content="Ortho Tips">
-<meta name="ortho-ext-permissions" content="patients, import_export, storage, internet">
+<meta name="ortho-ext-permissions" content="patients, import_export, storage, internet, gemini">
 <title>Import PowerPoint</title>
 <style>
 
@@ -331,7 +331,7 @@ fr:{
   badBackup:'Ce fichier n’est pas une sauvegarde de Import PowerPoint.',confirmRestore:'Remplacer toutes les données de l’extension par celles de la sauvegarde ?',
   loadFailed:'Les données enregistrées sont illisibles : rien ne sera enregistré pour ne pas les écraser. Consultez le journal.',
   noPickPerm:'Fichiers indisponibles : la permission « import_export » n’est pas accordée à l’extension.',never:'jamais',delete:'Supprimer',close:'Fermer',back:'Retour',
-  err_noKey:'Aucune clé API Gemini. Ajoutez-la dans Réglages.',err_noInternetPerm:'Accès internet non accordé à l’extension.',err_offline:'Pas de connexion internet.',
+  err_noKey:'Aucune clé API Gemini. Ajoutez-la dans Réglages.',err_noKeyApp:'Configurez Gemini dans les Réglages de l’app, ou choisissez « Ma propre clé » ici.',keySource:'Clé Gemini utilisée',keyApp:'Clé de l’app (par défaut)',keyOwn:'Ma propre clé',appKeyOk:'✓ La clé des Réglages → Gemini de l’app est utilisée (modèle : {m}). Cette extension ne la voit jamais.',appKeyMissing:'Aucune clé Gemini n’est configurée dans l’app.',appKeyFallback:'Votre propre clé est utilisée en attendant.',openAppGemini:'⚙️ Réglages Gemini de l’app',err_noInternetPerm:'Accès internet non accordé à l’extension.',err_offline:'Pas de connexion internet.',
   err_network:'Connexion à Gemini impossible.',err_timeout:'Gemini met trop de temps à répondre.',err_badKey:'Clé API refusée par Google. Vérifiez-la dans Réglages.',
   err_denied:'Accès refusé par Google (clé ou API non activée).',err_quota:'Quota Gemini atteint : nouvel essai plus tard.',err_server:'Service Gemini momentanément indisponible.',
   err_parse:'Réponse de Gemini illisible.',err_blocked:'Gemini a refusé de répondre.',err_http:'Erreur Gemini ({s}).',err_noModel:'Aucun modèle Gemini compatible pour cette clé.',
@@ -419,7 +419,7 @@ en:{
   badBackup:'This file is not an Import PowerPoint backup.',confirmRestore:'Replace all the extension’s data with the backup?',
   loadFailed:'Saved data cannot be read: nothing will be saved so it is not overwritten. See the log.',
   noPickPerm:'Files unavailable: the “import_export” permission is not granted to the extension.',never:'never',delete:'Delete',close:'Close',back:'Back',
-  err_noKey:'No Gemini API key. Add it in Settings.',err_noInternetPerm:'Internet access not granted to the extension.',err_offline:'No internet connection.',
+  err_noKey:'No Gemini API key. Add it in Settings.',err_noKeyApp:'Set up Gemini in the app’s Settings, or choose « My own key » here.',keySource:'Gemini key used',keyApp:'The app’s key (default)',keyOwn:'My own key',appKeyOk:'✓ The key from the app’s Settings → Gemini is used (model: {m}). This extension never sees it.',appKeyMissing:'No Gemini key is set in the app.',appKeyFallback:'Your own key is used meanwhile.',openAppGemini:'⚙️ App’s Gemini settings',err_noInternetPerm:'Internet access not granted to the extension.',err_offline:'No internet connection.',
   err_network:'Cannot reach Gemini.',err_timeout:'Gemini is taking too long.',err_badKey:'Google refused the API key. Check it in Settings.',
   err_denied:'Access denied by Google (key or API not enabled).',err_quota:'Gemini quota reached: will try again later.',err_server:'Gemini is temporarily unavailable.',
   err_parse:'Unreadable answer from Gemini.',err_blocked:'Gemini declined to answer.',err_http:'Gemini error ({s}).',err_noModel:'No compatible Gemini model for this key.',
@@ -837,7 +837,7 @@ function log(lvl, ctx, msg, detail){
 /* ---------- state ---------- */
 const AI_IDLE = {status:'none', attempts:0, nextAt:0, error:'', model:'', at:0};
 function defaults(){
-  return {v:SCHEMA, settings:{lang:'auto', model:'auto', customModel:'', sendImages:false, hintSeen:false}, usage:{in:0, out:0, total:0, requests:0, since:Date.now()}, files:[], drafts:[], registry:[],
+  return {v:SCHEMA, settings:{keyMode:'app', lang:'auto', model:'auto', customModel:'', sendImages:false, hintSeen:false}, usage:{in:0, out:0, total:0, requests:0, since:Date.now()}, files:[], drafts:[], registry:[],
           lastCode:0, aiPaused:false, gemini:{models:[], fetchedAt:0, lastModel:''}, seenLog:0};
 }
 function cleanMark(m){
@@ -1440,7 +1440,7 @@ function aiEnqueue(f, opts){
 async function aiPump(){
   if(AIQ.running || loadFailed) return;
   clearTimeout(AIQ.timer);
-  if(state.aiPaused || !apiKey()) return;
+  if(state.aiPaused || !aiAvailable()) return;
   const now = Date.now();
   const f = state.files.find(x => x.ai.status === 'queued') || state.files.filter(x => x.ai.status === 'waiting' && x.ai.nextAt <= now).sort((a, b) => a.ai.nextAt - b.ai.nextAt)[0];
   if(!f){
@@ -1481,21 +1481,70 @@ async function aiPump(){
    Gemini — always the newest available model, with fallback and logging
    ===================================================================== */
 function apiKey(){ return (storeGet(KEY_API) || '').trim(); }
+/* The app's Gemini key (bridge v6, permission `gemini`): the key never reaches this page.
+   In that mode only the generateContent request goes through the app (http() below);
+   Google's answer comes back unchanged, so everything after it works as with an own key. */
+const APP_GEMINI = (HOST && HOST.gemini && HOST.permissions && HOST.permissions.has('gemini')) ? HOST.gemini : null;
+const APP_AVOID_LITE = true;
+let appGemini = null;   // { configured, model } once read from the app
+async function readAppGemini(){
+  if(!APP_GEMINI) return null;
+  try{ appGemini = await APP_GEMINI.status(); }catch(e){ appGemini = null; }
+  return appGemini;
+}
+function appKeyMode(){ return !!APP_GEMINI && state.settings.keyMode !== 'own'; }
+function useAppKey(){ return appKeyMode() && !!(appGemini && appGemini.configured); }
+/** Gemini can be used now: through the app, or with the extension's own key. */
+function aiAvailable(){ return useAppKey() || !!apiKey(); }
+/** The model asked of the app: this extension's own choice, else the app's. */
+function appModelChoice(){
+  const s = state.settings;
+  if(s.model === 'custom' && s.customModel) return s.customModel;
+  const alias = {flash:'gemini-flash-latest', pro:'gemini-pro-latest', lite:'gemini-flash-lite-latest'}[s.model];
+  if(alias) return alias;
+  const m = (appGemini && appGemini.model) || 'gemini-flash-latest';
+  return APP_AVOID_LITE && /flash-lite/.test(m) ? 'gemini-flash-latest' : m;
+}
+/** generateContent through the app: same input and output as fetch, errors in this extension's codes. */
+async function appGenerate(url, opts, ms){
+  const m = /\/models\/([^:/]+):generateContent/.exec(url);
+  let body = {};
+  try{ body = JSON.parse((opts && opts.body) || '{}'); }catch(e){}
+  let timer = 0;
+  try{
+    const res = await Promise.race([
+      APP_GEMINI.generate({body, model:m ? decodeURIComponent(m[1]) : ''}),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(AppError('timeout', 'App Gemini: no answer after ' + Math.round((ms + 30000) / 1000) + ' s')), ms + 30000); })
+    ]);
+    if(res && res.model && appGemini) appGemini.lastModel = res.model;
+    return (res && res.response) || {};
+  }catch(e){
+    if(e && e.code) throw e;
+    const msg = String((e && e.message) || e);
+    const status = +((/\((\d{3})\)/.exec(msg) || [])[1] || 0) || undefined;
+    const code = {no_key:'noKey', key:'badKey', quota:'quota', server:'server', network:'network', blocked:'blocked', model:'noModel'}[e && e.kind]
+      || (e && e.kind === 'format' ? (status ? 'http' : 'parse') : 'server');
+    throw AppError(code, 'App Gemini (' + ((e && e.kind) || 'error') + '): ' + msg, status || (code === 'quota' ? 429 : undefined));
+  }finally{ clearTimeout(timer); }
+}
 function AppError(code, detail, status){ const e = new Error(code); e.code = code; e.detail = detail; e.status = status; return e; }
 function userMessage(e){
   const c = e && e.code;
+  if(c === 'noKey' && appKeyMode() && !apiKey()) return t('err_noKeyApp');
   if(c === 'http') return t('err_http', {s:e.status});
   if(c && STR.fr['err_' + c]) return t('err_' + c);
   if(c === 'notPlant') return t('notPlant');
   return t('err_generic');
 }
 function checkNet(){
+  if(useAppKey()){ if(navigator.onLine === false) throw AppError('offline'); return; }   // the app makes the request
   if(!apiKey()) throw AppError('noKey');
   if(HOST && !HOST.permissions.has('internet')) throw AppError('noInternetPerm');
   if(typeof window.fetch !== 'function') throw AppError('network', 'fetch unavailable');
   if(navigator.onLine === false) throw AppError('offline');
 }
 async function http(url, opts, ms){
+  if(useAppKey() && /:generateContent/.test(url)) return appGenerate(url, opts, ms);
   const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
   const timer = ctrl ? setTimeout(() => ctrl.abort(), ms) : 0;
   let res;
@@ -1533,6 +1582,7 @@ function rankModels(names){
     cmpVer(a.ver, b.ver) || a.stage - b.stage || fam[a.family] - fam[b.family] || (b.plain - a.plain) || a.name.localeCompare(b.name)).map(x => x.name);
 }
 function candidates(){
+  if(useAppKey()) return [appModelChoice()];   // the app falls back to its own models if needed
   if(state.settings.model === 'custom' && state.settings.customModel) return [state.settings.customModel];
   const pref = {flash:'flash', pro:'pro', lite:'flash-lite'}[state.settings.model];
   let list = state.gemini.models.slice();
@@ -1543,6 +1593,7 @@ function candidates(){
   return list;
 }
 async function refreshModels(force){
+  if(useAppKey()) return state.gemini.models;   // the app keeps its own list
   const g = state.gemini;
   if(!force && g.models.length && Date.now() - g.fetchedAt < MODEL_TTL) return g.models;
   checkNet();
@@ -1762,7 +1813,7 @@ function fileCard(f){
     <div class="small" style="margin-top:6px">${esc(t('fileDrafts', {n:ds.length, r:n(['ready']), i:n(['imported', 'partial'])}))}</div>${aiLine}
     ${f.mediaLost ? `<div class="small bad-t" style="margin-top:6px">⚠️ ${esc(t('mediaLost'))}</div>` : ''}
     <div class="btns"><button class="btn" type="button" data-act="openFile" data-id="${esc(f.id)}">${esc(t('openFile'))}</button>
-      ${apiKey() && !['queued', 'running'].includes(ai.status) ? `<button class="btn ghost" type="button" data-act="aiFile" data-id="${esc(f.id)}">🤖 ${esc(ai.status === 'failed' ? t('aiRetry') : 'Gemini')}</button>` : ''}
+      ${aiAvailable() && !['queued', 'running'].includes(ai.status) ? `<button class="btn ghost" type="button" data-act="aiFile" data-id="${esc(f.id)}">🤖 ${esc(ai.status === 'failed' ? t('aiRetry') : 'Gemini')}</button>` : ''}
       <button class="icon-btn" type="button" data-act="delFile" data-id="${esc(f.id)}" aria-label="${esc(t('delete'))}">🗑️</button></div></div>`;
 }
 function viewWorkspace(f){
@@ -1938,7 +1989,7 @@ function openGoto(f){
 }
 function openFileMenu(f){
   openSheet(`<h3>${esc(f.name)}</h3>
-    ${apiKey() ? `<button class="btn ghost block menu-btn" type="button" data-do="ai">🤖 ${esc(t('aiFill'))}</button>` : ''}
+    ${aiAvailable() ? `<button class="btn ghost block menu-btn" type="button" data-do="ai">🤖 ${esc(t('aiFill'))}</button>` : ''}
     <button class="btn ghost block menu-btn" type="button" data-do="patients">👤 ${esc(t('tabPatients'))}</button>
     <button class="btn ghost block menu-btn" type="button" data-do="how">❓ ${esc(t('showHowTo'))}</button>
     <button class="btn danger block menu-btn" type="button" data-do="clear">🧹 ${esc(t('clearAll'))}</button>
@@ -1991,14 +2042,21 @@ function viewSettings(){
   const s = state.settings, g = state.gemini, key = apiKey(), nlog = readLog().length;
   return `<h2>Gemini (${esc(t('optional'))})</h2><div class="card">
     <p class="small">${esc(t('geminiIntro'))}</p>
-    <label class="f" for="apikey">${esc(t('apiKey'))}</label>
+    ${APP_GEMINI ? `<label class="f">${esc(t('keySource'))}</label>
+    <div class="row" style="gap:8px;flex-wrap:wrap">
+      <button class="btn ${appKeyMode() ? '' : 'ghost'}" type="button" data-act="keyMode" data-mode="app">${esc(t('keyApp'))}</button>
+      <button class="btn ${appKeyMode() ? 'ghost' : ''}" type="button" data-act="keyMode" data-mode="own">${esc(t('keyOwn'))}</button></div>
+    ${appKeyMode() ? `<p class="small" style="margin-top:8px">${appGemini && appGemini.configured ? esc(t('appKeyOk', {m:(appGemini && (appGemini.lastModel || appGemini.model)) || '—'}))
+      : esc(t('appKeyMissing')) + (apiKey() ? ' ' + esc(t('appKeyFallback')) : '')}</p>
+    <div class="btns"><button class="btn ghost" type="button" data-act="openAppGemini">${esc(t('openAppGemini'))}</button></div>` : ''}` : ''}
+    ${!useAppKey() ? `    <label class="f" for="apikey">${esc(t('apiKey'))}</label>
     <div class="row"><input class="input grow" id="apikey" type="${ui.showKey ? 'text' : 'password'}" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(key)}" placeholder="AIza…">
       <button class="icon-btn" type="button" data-act="toggleKey" aria-label="${esc(ui.showKey ? t('hide') : t('show'))}">${ui.showKey ? '🙈' : '👁'}</button></div>
     <p class="hint">${esc(t('apiKeyHint'))} <a href="https://aistudio.google.com/apikey">${esc(t('getKey'))}</a></p>
     <div class="btns"><button class="btn" type="button" data-act="saveKey" ${ui.keyBusy ? 'disabled' : ''}>${esc(t('saveKey'))}</button>
       ${key ? `<button class="btn ghost" type="button" data-act="testKey" ${ui.keyBusy ? 'disabled' : ''}>${esc(t('testKey'))}</button><button class="btn danger" type="button" data-act="removeKey">${esc(t('removeKey'))}</button>` : ''}</div>
     <div id="keyMsg">${ui.keyBusy ? aiBusy('…') : ui.keyMsg || ''}</div>
-    <label class="f" for="model">${esc(t('modelPref'))}</label>
+` : ''}    <label class="f" for="model">${esc(t('modelPref'))}</label>
     <select class="input" id="model" data-input="model">${['auto', 'flash', 'pro', 'lite', 'custom'].map(k => `<option value="${k}" ${s.model === k ? 'selected' : ''}>${esc(t('pref_' + k))}</option>`).join('')}</select>
     ${s.model === 'custom' ? `<label class="f" for="cmodel">${esc(t('customModel'))}</label><input class="input" id="cmodel" data-input="customModel" value="${esc(s.customModel)}" placeholder="gemini-2.5-flash" autocapitalize="off" spellcheck="false">` : ''}
     <p class="small" style="margin-top:8px">${s.model === 'custom' ? esc(t('modelNow', {m:s.customModel || '—'})) : g.models.length ? esc(t('modelNow', {m:g.lastModel || candidates()[0]})) : esc(t('modelNone'))}</p>
@@ -2067,7 +2125,7 @@ function field(sheet, name){ return sheet.querySelector(`[name="${name}"]`); }
 /* ---------- Gemini: what will be sent, and its estimated size, before sending ---------- */
 function fmtTok(n){ return new Intl.NumberFormat(locale()).format(Math.round(n || 0)); }
 async function openAiSheet(f){
-  if(!apiKey()){ toast(t('err_noKey')); return; }
+  if(!aiAvailable()){ toast(userMessage(AppError('noKey'))); return; }
   const c = await ensureContent(f.id); if(!c){ toast(t('errContent')); return; }
   let images = f.ai.status === 'failed' && f.ai.progress ? !!f.ai.images : !!state.settings.sendImages;
   const replaces = draftsOf(f.id).some(d => !locked(d)) && !(f.ai.status === 'failed' && f.ai.progress);
@@ -2599,6 +2657,8 @@ document.addEventListener('click', async e => {
   switch(act){
     case 'tab': ui.tab = el.dataset.tab; ui.view = null; ui.sel = null; render(); window.scrollTo(0, 0); break;
     case 'home': ui.view = null; ui.sel = null; render(); window.scrollTo(0, 0); break;
+    case 'keyMode': state.settings.keyMode = el.dataset.mode === 'own' ? 'own' : 'app'; save(); readAppGemini().then(() => render()); break;
+    case 'openAppGemini': if(APP_GEMINI) APP_GEMINI.openSettings().catch(e => toast(String((e && e.message) || e))); break;
     case 'goSettings': closeAllSheets(); ui.tab = 'settings'; ui.view = null; render(); break;
     case 'hintSeen': state.settings.hintSeen = true; save(); render(); break;
     case 'addFiles': if(!canPick()){ log('warn', 'pptx', 'import_export not granted'); alert(t('noPickPerm')); break; } $('#pickPptx').click(); break;
@@ -2687,7 +2747,13 @@ if(HOST){
   if(mq && mq.addEventListener) mq.addEventListener('change', ev => applyTheme(ev.matches ? 'dark' : 'light'));
 }
 render();
-setTimeout(() => {
+if(APP_GEMINI){
+  // Back from the app's settings (or any switch back to the page): the key may have been set meanwhile.
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') readAppGemini().then(() => render()); });
+}
+setTimeout(async () => {
+  if(APP_GEMINI){ await readAppGemini(); render(); if(useAppKey()) aiPump(); }
+  if(useAppKey()) return;   // the app keeps the model list and makes the requests
   if(!apiKey() || (HOST && !HOST.permissions.has('internet'))) return;
   if(state.settings.model !== 'custom') refreshModels(false).then(() => { if(ui.tab === 'settings' && !ui.view) render(); }).catch(() => {});
   aiPump();
