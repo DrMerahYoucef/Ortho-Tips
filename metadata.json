@@ -1,6 +1,0 @@
-{
-  "name": "Ortho Tips",
-  "description": "Comprehensive orthopedic surgical tips, operative techniques, bone reference library, anatomical approaches, pearls and pitfalls.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
